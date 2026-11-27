@@ -191,7 +191,7 @@ func TestNoContent(t *testing.T) {
 		method, path, body string
 		status             int
 	}{
-		{http.MethodPatch, "/api/tasks", `{"taskProject":"p","task":"#1","title":"a"}`, http.StatusOK},
+		{http.MethodPatch, "/api/tasks", `{"taskProject":"p","task":"#1","new":true,"title":"a"}`, http.StatusOK},
 		{http.MethodDelete, "/api/tasks?taskProject=p&task=%231", "", http.StatusNoContent},
 		{http.MethodPost, "/api/pages/d/read", `{"n":9,"at":"x"}`, http.StatusOK},
 		{http.MethodDelete, "/api/pages/d/read", "", http.StatusNoContent},

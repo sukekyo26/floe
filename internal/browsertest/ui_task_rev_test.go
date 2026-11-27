@@ -20,9 +20,9 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if _, err := st.Edit("pa", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--slug", "pa", "--task", "#130", "--state", "doing")
-	s.floe(t, "task", "--project", project, "--task", "#up", "--state", "doing")
-	s.floe(t, "task", "--project", project, "--task", "#kid", "--state", "doing", "--parent", "#up")
+	s.floe(t, "task", "--slug", "pa", "--task", "#130", "--state", "doing", "--new")
+	s.floe(t, "task", "--project", project, "--task", "#up", "--state", "doing", "--new")
+	s.floe(t, "task", "--project", project, "--task", "#kid", "--state", "doing", "--parent", "#up", "--new")
 
 	// The test's script: every write to the store kept as sent, and counted answered; down fails every read, pageDown a page's write
 	const watch = `if (!window.sent) { window.sent = []; window.answered = 0; window.realFetch = fetch; window.down = false; window.pageDown = false;

@@ -196,7 +196,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("not on a task's page", shown("add-task"), "false")
 
 	// One of pages alone, archived: there all the same, and said so.
-	s.floe(t, "task", "--slug", "b2", "--task", "#20", "--title", "old", "--state", "archived")
+	s.floe(t, "task", "--slug", "b2", "--task", "#20", "--title", "old", "--state", "archived", "--new")
 	s.floe(t, "archive", "b2")
 	b.navigate("/tasks?project=beta")
 	open("add-task")
@@ -205,7 +205,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	closeKin(b)
 
 	// The same ID in another project is another task: the store's rows say so.
-	s.floe(t, "task", "--project", "alpha", "--task", "#7", "--state", "todo")
+	s.floe(t, "task", "--project", "alpha", "--task", "#7", "--state", "todo", "--new")
 	b.navigate("/tasks?project=alpha")
 	open("add-task")
 	name("#1", "alpha's one")
@@ -219,7 +219,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// A screen gone stale: made meanwhile, refused, read again, and the dialog stays with what is there now.
 	open("add-task")
 	name("#9", "mine")
-	s.floe(t, "task", "--project", "alpha", "--task", "#9", "--title", "theirs")
+	s.floe(t, "task", "--project", "alpha", "--task", "#9", "--title", "theirs", "--new")
 	b.eval("document.getElementById('kin-submit').click()")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
 	got := b.eval(said)
@@ -232,7 +232,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	closeKin(b)
 
 	// Drawn once, with the new task: never the words of a list with none, from the tasks before.
-	s.floe(t, "task", "--project", "gamma", "--task", "#40", "--state", "done")
+	s.floe(t, "task", "--project", "gamma", "--task", "#40", "--state", "done", "--new")
 	b.navigate("/tasks?project=gamma&view=done")
 	open("add-task")
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
@@ -243,7 +243,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// A poll asked while the write's answer is on its way waits for it: drawn after, the list still goes to the new row.
 	const holdWrite = "window.realFetch ??= window.fetch; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => new Promise((go) => { window.letWrite = () => go(r); })) : window.realFetch(u, o))"
-	s.floe(t, "task", "--project", "delta", "--task", "#50", "--state", "done")
+	s.floe(t, "task", "--project", "delta", "--task", "#50", "--state", "done", "--new")
 	b.navigate("/tasks?project=delta&view=done")
 	open("add-task")
 	b.eval(holdWrite)
@@ -259,7 +259,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// A poll asked before the write and answered after it is of the tasks before: it draws neither the words of a list with none nor over the row.
 	// The save's load waits for it, so it is let go once the write is answered.
-	s.floe(t, "task", "--project", "epsilon", "--task", "#60", "--state", "done")
+	s.floe(t, "task", "--project", "epsilon", "--task", "#60", "--state", "done", "--new")
 	b.navigate("/tasks?project=epsilon&view=done")
 	open("add-task")
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")

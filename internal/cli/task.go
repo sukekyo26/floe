@@ -22,7 +22,7 @@ import (
 type taskFlags struct {
 	task, project, category, state, title, parent string
 	slugs, urls, removeURLs, categories           []string
-	pin, unpin, clear, forget                     bool
+	pin, unpin, clear, forget, isNew              bool
 }
 
 // taskFieldFlags are the flags that write a field of a task's row.
@@ -46,16 +46,18 @@ other flag, tell each page as it is, writing nothing; with --task alone, tell th
 use it.
 
 The pages and their tasks are written in one write, checked whole before anything is written, so that a refusal
-writes nothing; a page the system cannot write then stops it there, and the same command given again finishes it. A
-task a page comes to be on gets its row when it has none, and the page's category is added at the end of its
+writes nothing; a page the system cannot write then stops it there, and the same command given again finishes it. A task
+is made only with --new, which is refused for a task there is; the page's category is added at the end of its task's
 categories. Each task written is told on a line of its own, as the store left it (made, changed, or unchanged when a
 field was given), then each page with its task, category and pin. A page's category is where the task's page places
 it among its pages, which the user decides.
 
   floe task
     task #130 in project floe: state doing, title "Fix login"
+  floe task --task "#130" --new --title "Fix login"
+    task #130 in project floe: made; title "Fix login"
   floe task --slug design-notes --task "#130"
-    task #130 in project floe: made
+    task #130 in project floe: unchanged
     page design-notes: task #130 in project floe
   floe task --task "#130" --state doing
     task #130 in project floe: changed; state doing
@@ -98,13 +100,15 @@ it among its pages, which the user decides.
 	flags.BoolVar(&f.unpin, "unpin", false, "take the pages' pin off")
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")
 	flags.BoolVar(&f.forget, "forget", false, "remove the task, which no page or child task may be on")
+	flags.BoolVar(&f.isNew, "new", false, "make the task, which is refused when it is there; a task is made by it alone")
 	cmd.MarkFlagsMutuallyExclusive("pin", "unpin")
 	for _, other := range append([]string{"task", "category", "pin", "unpin"}, taskFieldFlags...) {
 		cmd.MarkFlagsMutuallyExclusive("clear", other)
 	}
-	for _, other := range taskFieldFlags {
+	for _, other := range append([]string{"new"}, taskFieldFlags...) {
 		cmd.MarkFlagsMutuallyExclusive("forget", other)
 	}
+	cmd.MarkFlagsMutuallyExclusive("clear", "new")
 	cmd.AddCommand(a.docGuideCmd("Print how to read the task list, put pages on a task and change a task", docs.TaskGuide))
 	return cmd
 }
@@ -132,6 +136,9 @@ func taskEdit(cmd *cobra.Command, f taskFlags) store.TaskEdit {
 	if cmd.Flags().Changed("parent") {
 		ed.Parent = &f.parent
 	}
+	if f.isNew {
+		ed.New = &f.isNew
+	}
 	return ed
 }
 
@@ -156,7 +163,7 @@ func (a *app) changeTask(cmd *cobra.Command, f taskFlags) error {
 	}
 	ed := taskEdit(cmd, f)
 	var sent jsontext.Value
-	writing := !f.forget && len(changed(cmd, taskFieldFlags...)) > 0
+	writing := writesTask(cmd, f)
 	if writing {
 		body := store.TaskChange{
 			TaskEdit: ed, Slugs: nil, TaskProject: &t.project, Task: &t.name, Category: nil, Pin: nil, Clear: false, Rename: nil,
@@ -190,6 +197,11 @@ func (a *app) changeTask(cmd *cobra.Command, f taskFlags) error {
 		a.print("%s", english.Msg("cli_task_forgotten", t.name, store.Project(t.project)))
 	}
 	return nil
+}
+
+// writesTask tells whether the flags write the task --task names: --new, or a field, but not with --forget.
+func writesTask(cmd *cobra.Command, f taskFlags) bool {
+	return !f.forget && (f.isNew || len(changed(cmd, taskFieldFlags...)) > 0)
 }
 
 // readTask tells the task t as the store has it, its state and the fields it has, writing nothing.
@@ -422,11 +434,39 @@ func (a *app) pagesTask(cmd *cobra.Command, f taskFlags) error {
 		return usageOf(usererr.New("cli_task_parent_projects"))
 	}
 	var written store.TaskChangeResult
-	if err = c.do(ctx, http.MethodPatch, "/api/tasks", sent, &written); err != nil {
+	err = c.do(ctx, http.MethodPatch, "/api/tasks", sent, &written)
+	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
+		// The pages' own tasks too: a page may name a task of no row, as a hand edit leaves
+		all, ofErr := tasksOfPages(list, slugs, name, named, false, true)
+		if ofErr != nil {
+			return ofErr
+		}
+		if len(all) == 0 {
+			return err
+		}
+		return noRowOf(ctx, c, all)
+	}
+	if err != nil {
 		return err
 	}
 	a.tellChange(written, ed, len(onTask) > 0)
 	return nil
+}
+
+// noRowOf says which of tasks, the tasks a write of pages came to be on, has no row, the server having said one has
+// none: the first of them that has none as read now.
+func noRowOf(ctx context.Context, c client, tasks []taskOf) error {
+	var all store.Tasks
+	if err := c.do(ctx, http.MethodGet, "/api/tasks", nil, &all); err != nil {
+		return err
+	}
+	for _, t := range tasks {
+		if _, ok := all[t.project][t.name]; !ok {
+			return usererr.New("cli_task_no_row_pages", t.name, store.Project(t.project))
+		}
+	}
+	// Made meanwhile: the write is refused all the same, and given again it goes through
+	return usererr.New("cli_task_no_row_pages", tasks[0].name, store.Project(tasks[0].project))
 }
 
 // tellChange says a write of pages and their tasks: each task made or written, or each when fields were asked, with its
@@ -450,8 +490,8 @@ func pageFlags(cmd *cobra.Command, f taskFlags) (onTask, needTask []string, name
 		return nil, nil, "", usageOf(usererr.New("cli_task_no_pages", off[0]))
 	}
 	named := cmd.Flags().Changed("task")
-	if cmd.Flags().Changed("parent") && !named {
-		return nil, nil, "", usageOf(usererr.New("cli_task_parent_task"))
+	if lone := changed(cmd, "parent", "new"); len(lone) > 0 && !named {
+		return nil, nil, "", usageOf(usererr.New("cli_task_parent_task", lone[0]))
 	}
 	onTask = changed(cmd, taskFieldFlags...)
 	if name, err = store.TaskName(f.task); err != nil {
@@ -460,6 +500,9 @@ func pageFlags(cmd *cobra.Command, f taskFlags) (onTask, needTask []string, name
 	needTask = slices.Clone(onTask)
 	if f.category != "" {
 		needTask = append(needTask, "category")
+	}
+	if f.isNew {
+		needTask = append(needTask, "new")
 	}
 	if named && name == "" && len(needTask) > 0 {
 		return nil, nil, "", usageOf(usererr.New("cli_task_task_off", needTask[0]))

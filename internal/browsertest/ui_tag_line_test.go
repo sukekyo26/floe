@@ -268,7 +268,7 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.pressKey(kb.Escape)
 
 	// On a task's page, the page beside its list has the line too.
-	s.floe(t, "task", "--slug", "one", "--task", "#1")
+	s.floe(t, "task", "--slug", "one", "--task", "#1", "--new")
 	b.reread()
 	const taskTag = "document.querySelector('#list li[data-slug=one] [data-testid=task-tag]')"
 	b.until("the page on its task", taskTag)

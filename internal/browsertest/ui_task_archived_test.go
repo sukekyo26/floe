@@ -28,12 +28,16 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 		b.until(slug+" read", "document.querySelector('[data-testid=toast][data-page]')")
 	}
 	// In the order made, which orders the pages of a category: a0 is made after a1 and before a2, o1 before n1
-	for _, p := range [][2]string{{"a1", "案"}, {"a0", "案"}, {"a2", "案"}, {"o1", "旧"}, {"n1", "新"}, {"v1", "設計"}, {"v0", "設計"}} {
+	for i, p := range [][2]string{{"a1", "案"}, {"a0", "案"}, {"a2", "案"}, {"o1", "旧"}, {"n1", "新"}, {"v1", "設計"}, {"v0", "設計"}} {
 		publish(p[0], "one")
 		if _, err := st.Edit(p[0], store.Edit{Project: new("proj")}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, "task", "--slug", p[0], "--task", "T1", "--category", p[1])
+		args := []string{"task", "--slug", p[0], "--task", "T1", "--category", p[1]}
+		if i == 0 {
+			args = append(args, "--new")
+		}
+		s.floe(t, args...)
 	}
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.write(t, "fold/sub/two.html", "<title>two</title><p>two</p>")

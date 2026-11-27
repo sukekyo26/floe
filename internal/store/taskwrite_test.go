@@ -74,7 +74,7 @@ func TestTaskWriteOne(t *testing.T) {
 	}
 
 	// A page on a task of no row makes it: todo, of the title given, rev 1.
-	got := change(store.TaskChange{Title: new("T"), Slugs: []string{"a"}, Task: new("#9")})
+	got := change(store.TaskChange{TaskEdit: store.TaskEdit{Title: new("T"), New: new(true)}, Slugs: []string{"a"}, Task: new("#9")})
 	if len(got.Tasks) != 1 || !got.Tasks[0].Made || got.Tasks[0].Row.Rev != 1 || got.Tasks[0].Row.Title != "T" || got.Tasks[0].Row.State != "todo" {
 		t.Errorf("made: %+v", got.Tasks)
 	}
@@ -100,7 +100,7 @@ func TestTaskWriteOne(t *testing.T) {
 		t.Errorf("an order and a category: %v", r.Categories)
 	}
 	// Two pages on tasks of two projects: each task written, both in the answer.
-	change(store.TaskChange{Slugs: []string{"b"}, Task: new("#9")})
+	change(store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"b"}, Task: new("#9")})
 	got = change(store.TaskChange{State: new("done"), Slugs: []string{"a", "b"}})
 	if len(got.Tasks) != 2 || row("p", "#9").State != "done" || row("q", "#9").State != "done" {
 		t.Errorf("two tasks: %+v", got.Tasks)
@@ -147,7 +147,7 @@ func TestTaskWriteTime(t *testing.T) {
 	s := store.New(root)
 	pageIn(t, s, root, "a", "p")
 	for _, name := range []string{"#1", "#2"} {
-		if _, err := s.ChangeTasks(store.TaskChange{Categories: &[]string{"x", "y"}, TaskProject: new("p"), Task: new(name)}); err != nil {
+		if _, err := s.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{Categories: &[]string{"x", "y"}, New: new(true)}, TaskProject: new("p"), Task: new(name)}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -221,11 +221,11 @@ func TestTaskWriteOffTask(t *testing.T) {
 		w    store.TaskChange
 		want string
 	}{
-		{"from no task", store.TaskChange{Slugs: []string{"a"}, Task: new("#1"), Category: new("x")}, "/"},
+		{"from no task", store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"a"}, Task: new("#1"), Category: new("x")}, "/"},
 		{"the same task, another category", store.TaskChange{Slugs: []string{"a"}, Task: new(" #1 "), Category: new("y")}, "/"},
 		{"its pin", store.TaskChange{Slugs: []string{"a"}, Pin: new(true)}, "/"},
-		{"another task, a category of the same name", store.TaskChange{Slugs: []string{"a"}, Task: new("#2"), Category: new("y")}, "#1/y"},
-		{"another task, no category", store.TaskChange{Slugs: []string{"a"}, Task: new("#3")}, "#2/y"},
+		{"another task, a category of the same name", store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"a"}, Task: new("#2"), Category: new("y")}, "#1/y"},
+		{"another task, no category", store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"a"}, Task: new("#3")}, "#2/y"},
 		{"off its task", store.TaskChange{Slugs: []string{"a"}, Task: new("")}, "#3/"},
 		{"cleared, from no task", store.TaskChange{Slugs: []string{"a"}, Clear: true}, "/"},
 	} {
@@ -243,7 +243,7 @@ func TestEditProjectTakesOffTask(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
 	pageIn(t, s, root, "a", "p")
-	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"a"}, Task: new("#9"), Category: new("x"), Pin: new(true)}); err != nil {
+	if _, err := s.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"a"}, Task: new("#9"), Category: new("x"), Pin: new(true)}); err != nil {
 		t.Fatal(err)
 	}
 	before, err := os.ReadFile(filepath.Join(root, "tasks.json"))
@@ -288,9 +288,9 @@ func TestTaskParentOfPages(t *testing.T) {
 	pageIn(t, s, root, "x", "p")
 	pageIn(t, s, root, "y", "p")
 	for _, w := range []store.TaskChange{
-		{Title: new("parent"), TaskProject: new("p"), Task: new("#P")},
-		{Slugs: []string{"x"}, Task: new("#1")},
-		{Slugs: []string{"y"}, Task: new("#2")},
+		{TaskEdit: store.TaskEdit{Title: new("parent"), New: new(true)}, TaskProject: new("p"), Task: new("#P")},
+		{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"x"}, Task: new("#1")},
+		{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"y"}, Task: new("#2")},
 		{Parent: new("#P"), Slugs: []string{"x", "y"}},
 	} {
 		if _, err := s.ChangeTasks(w); err != nil {
@@ -320,7 +320,7 @@ func TestCategoryPagedNamed(t *testing.T) {
 
 			root := filepath.Join(t.TempDir(), "S")
 			s := store.New(root)
-			if _, err := editTask(s, "p", "#1", store.TaskEdit{Categories: &[]string{c.name}}); err != nil {
+			if _, err := editTask(s, "p", "#1", store.TaskEdit{Categories: &[]string{c.name}, New: new(true)}); err != nil {
 				t.Fatal(err)
 			}
 			pageOn(t, s, root, "a", "p", false)
@@ -340,5 +340,40 @@ func TestCategoryPagedNamed(t *testing.T) {
 				t.Errorf("in Japanese: %q, want %q", ja, c.ja)
 			}
 		})
+	}
+}
+
+// A task's row is made only by a write that says the task is new: a field written or a page put on a task of no row
+// is ErrNotFound and writes nothing; New makes it, and is refused for a task there is and for pages of two projects.
+func TestTaskMadeOnlyNew(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	pageIn(t, s, root, "a", "p")
+	pageIn(t, s, root, "b", "q")
+	before := written(t, root)
+	for _, w := range []store.TaskChange{
+		{TaskEdit: store.TaskEdit{State: new("done")}, TaskProject: new("p"), Task: new("#1")},
+		{Slugs: []string{"a"}, Task: new("#1")},
+	} {
+		if _, err := s.ChangeTasks(w); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("%+v without New: %v, want ErrNotFound", w, err)
+		}
+	}
+	if got := written(t, root); got != before {
+		t.Errorf("a refusal wrote:\n%s", got)
+	}
+	got, err := s.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"a"}, Task: new("#1")})
+	if err != nil || len(got.Tasks) != 1 || !got.Tasks[0].Made {
+		t.Fatalf("New: %+v, %v", got, err)
+	}
+	_, err = s.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, TaskProject: new("p"), Task: new("#1")})
+	if _, conflict := errors.AsType[*store.Conflict](err); !conflict || keyArgs(err) != "store_task_there [#1]" {
+		t.Errorf("New of a task there is: %v", err)
+	}
+	_, err = s.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"a", "b"}, Task: new("#2")})
+	if keyArgs(err) != "store_task_new_projects [2]" {
+		t.Errorf("New of pages of two projects: %v", err)
 	}
 }

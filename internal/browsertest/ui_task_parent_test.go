@@ -36,14 +36,14 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Helper()
 		s.floe(t, append([]string{"task", "--project", project, "--task"}, args...)...)
 	}
-	page("p1", "--task", "#1", "--title", "free")
-	page("p2", "--task", "#2", "--title", "a child")
-	task("#3", "--title", "up")
+	page("p1", "--task", "#1", "--title", "free", "--new")
+	page("p2", "--task", "#2", "--title", "a child", "--new")
+	task("#3", "--title", "up", "--new")
 	task("#2", "--parent", "#3")
-	page("p4", "--task", "#4", "--title", "a parent")
-	task("#5", "--title", "its child")
+	page("p4", "--task", "#4", "--title", "a parent", "--new")
+	task("#5", "--title", "its child", "--new")
 	task("#5", "--parent", "#4")
-	page("p7", "--task", "#7", "--title", "by hand")
+	page("p7", "--task", "#7", "--title", "by hand", "--new")
 	parentOf := func(name string) string {
 		t.Helper()
 		all, err := st.ReadTasks()
@@ -396,10 +396,10 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
 		t.Helper()
 		s.floe(t, append([]string{"task", "--project", "proj", "--task"}, args...)...)
 	}
-	task("#1", "--title", "up")
-	task("#2", "--title", "two", "--state", "doing", "--parent", "#1")
-	task(long, "--title", longTitle, "--state", "done", "--parent", "#1")
-	task("#4", "--title", "four", "--parent", "#1")
+	task("#1", "--title", "up", "--new")
+	task("#2", "--title", "two", "--state", "doing", "--parent", "#1", "--new")
+	task(long, "--title", longTitle, "--state", "done", "--parent", "#1", "--new")
+	task("#4", "--title", "four", "--parent", "#1", "--new")
 	touch := func(on bool) {
 		t.Helper()
 		if _, err := chromedp.Call(b.ctx, emulation.SetTouchEmulationEnabled, emulation.SetTouchEmulationEnabledParams{Enabled: on, MaxTouchPoints: 1}); err != nil {

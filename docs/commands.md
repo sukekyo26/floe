@@ -310,6 +310,7 @@ A page's category is where the task's page places it among the task's pages, und
 
 ```sh
 floe task                                                           # the project's open tasks, nothing written
+floe task --task "#130" --new --title "Fix login"                  # a new task
 floe task --slug design-notes --task "#130"                         # the page on the task
 floe task --task "#130" --state doing                               # the task's state
 floe task --task "#130" --url https://example.com/issues/482        # a link added to the task
@@ -329,8 +330,10 @@ With no flag but `--project`, the open tasks of a project are told, the states `
 ```text
 $ floe task
 task #130 in project floe: state doing, title "Fix login"
+$ floe task --task "#130" --new --title "Fix login"
+task #130 in project floe: made; title "Fix login"
 $ floe task --slug design-notes --task "#130"
-task #130 in project floe: made
+task #130 in project floe: unchanged
 page design-notes: task #130 in project floe
 $ floe task --task "#130" --state doing
 task #130 in project floe: changed; state doing
@@ -354,11 +357,12 @@ With `--slug`, the task's project is each page's: `--task` puts the pages on tha
 | `--category <category>` | pages | With `--slug` only, of pages on a task. One not among the task's categories is added at their end, in the same write. `""` takes it off |
 | `--state <state>` | the task | `todo`, `doing`, `done` or `archived` |
 | `--url <url>` | the task | An outside link, `http` or `https`, added after its others; give it again for more. A task holds 10 at most: one that would bring it over is refused, while a task over 10 by hand still takes the other writes |
-| `--remove-url <url>` | the task | A link taken off; give it again for more. One the task does not have is no mistake. A link in both `--url` and `--remove-url` stays on. Of a task of no row it makes none: floe says there is no such task |
+| `--remove-url <url>` | the task | A link taken off; give it again for more. One the task does not have is no mistake. A link in both `--url` and `--remove-url` stays on |
 | `--parent <task ID>` | the task | With `--slug`, with `--task`: of the one task the pages go on. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
 | `--title <title>` | the task | `""` takes it off |
 | `--categories <name>` | the task | A category of the task; given again for each, the order of its categories, as written; a page's category not in it is added at its end, and one a page has is refused left out. `""` takes them all off |
 | `--pin`, `--unpin` | pages | With `--slug` only |
+| `--new` | the task | Makes the task named, in the state `todo`, with the fields given; refused for a task there is, and, with `--slug`, for pages of more than one project. A task is made by `--new` alone: any other write of a task of no row is refused, saying there is no such task |
 | `--clear` | pages | Off their task, and their pin off; the task stays |
 | `--forget` | the task | Without `--slug`. Refused while a page is on it, an archived one too, or it has a child task |
 
