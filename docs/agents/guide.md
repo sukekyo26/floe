@@ -122,7 +122,7 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 - When the user types an ID, run `floe task --project <project> --task "<ID>"`, which tells a task in any state: it is a new task only when floe says there is none (`no task #20 in project app`). For a task there is, leave the words after its ID unused.
 - A category name the user types that is one of the task's categories but for upper and lower case is that category, named as read from `floe task`; one that matches none is a new category.
 - Put the page there without reading `floe task guide`: `floe task --slug <slug> --task "<ID>"`, the ID `#` and all (`--task "#12"`), with `--category '<name>'` for a category.
-- Give `--title '<title>'` for a new task only: given for a task there is, it changes that task's title.
+- For a new task, add `--new --title '<title>'` to that command: floe makes a task by `--new` alone. Do not give `--title` for a task there is: it changes that task's title.
 
 ## Themes
 

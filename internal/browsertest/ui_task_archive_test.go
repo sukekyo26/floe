@@ -33,18 +33,18 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 		t.Helper()
 		s.floe(t, append([]string{"task", "--project", project, "--task"}, args...)...)
 	}
-	task("#none", "--state", "done", "--title", "no page")
-	page("p1", "--task", "#pages", "--state", "done")
+	task("#none", "--state", "done", "--title", "no page", "--new")
+	page("p1", "--task", "#pages", "--state", "done", "--new")
 	page("p2", "--task", "#pages")
-	page("m1", "--task", "#marked", "--state", "done")
+	page("m1", "--task", "#marked", "--state", "done", "--new")
 	s.floe(t, "archive", "m1")
-	page("w1", "--task", "#work", "--state", "doing")
+	page("w1", "--task", "#work", "--state", "doing", "--new")
 	s.floe(t, "archive", "w1")
-	task("#up", "--state", "done", "--title", "the parent")
-	task("#kid", "--state", "doing", "--parent", "#up")
-	task("#kid2", "--state", "archived", "--parent", "#up")
-	task("#forgot", "--state", "done")
-	page("f1", "--task", "#refused", "--state", "done")
+	task("#up", "--state", "done", "--title", "the parent", "--new")
+	task("#kid", "--state", "doing", "--parent", "#up", "--new")
+	task("#kid2", "--state", "archived", "--parent", "#up", "--new")
+	task("#forgot", "--state", "done", "--new")
+	page("f1", "--task", "#refused", "--state", "done", "--new")
 	defer b.unsize()
 	b.size(1440, 900, false)
 
@@ -89,7 +89,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, "said: "+toast())
 
 	// Of no page, drawn by the press itself: the looks at the list answer the tasks as they were, so that none draws it for it.
-	task("#still", "--state", "done")
+	task("#still", "--state", "done", "--new")
 	open("#still")
 	release := b.staleReads("/api/tasks", "")
 	begun := b.pollEnded()
@@ -99,7 +99,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	release()
 
 	// A double press: the second lands on the button turned the other way, and is no press more.
-	task("#double", "--state", "done")
+	task("#double", "--state", "done", "--new")
 	open("#double")
 	b.eval("window.patches = 0; window.countFetch = fetch; fetch = (u, o) => { if (o?.method === 'PATCH') window.patches++; return countFetch(u, o); }")
 	r := b.rect(button)
@@ -150,7 +150,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, "the children: "+b.eval(kids))
 	pressTaskArchive(b, "Restore")
 	out = append(out, "the parent archived: "+b.eval(kids))
-	task("#kid3", "--state", "todo", "--parent", "#up")
+	task("#kid3", "--state", "todo", "--parent", "#up", "--new")
 	b.until("a child more", "document.querySelectorAll('#task-family [data-testid=kin-row]').length === 3")
 	out = append(out, "a child added: "+b.eval(kids))
 	out = append(out, "the child: "+taskState(t, st, "#kid"))
@@ -186,7 +186,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, "not reached: "+b.eval("document.getElementById('error').textContent + ' | ' + document.getElementById('task-state').value"))
 
 	// Archived elsewhere with the choices open: they stay until closed, and the word takes their place then.
-	task("#open", "--state", "done")
+	task("#open", "--state", "done", "--new")
 	open("#open")
 	r = b.rect("document.getElementById('task-state')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
@@ -200,7 +200,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, "closed: "+b.eval("document.getElementById('task-state').hidden + ' ' + document.getElementById('task-archived').hidden"))
 
 	// Archived elsewhere with the focus on the choices, closed: it goes to the button beside the word.
-	task("#focused", "--state", "doing")
+	task("#focused", "--state", "doing", "--new")
 	open("#focused")
 	b.eval("document.getElementById('task-state').focus()")
 	task("#focused", "--state", "archived")
@@ -208,9 +208,9 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, "the focus on the choices: "+b.eval("document.activeElement.id"))
 
 	// The archive's latest first, by when each went there.
-	task("#first", "--state", "archived")
+	task("#first", "--state", "archived", "--new")
 	time.Sleep(2 * time.Millisecond) // the times are of milliseconds, and the same two go by name
-	task("#second", "--state", "archived")
+	task("#second", "--state", "archived", "--new")
 	b.navigate("/tasks?project=proj&view=archived")
 	b.until("the rows", "document.querySelector('#list li [data-testid=title] [data-testid=tname]')")
 	out = append(out, "the latest first: "+b.eval("[...document.querySelectorAll('#list li [data-testid=title] [data-testid=tname]')].map((e) => e.textContent).slice(0, 3).join()"))
@@ -294,12 +294,12 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
 	project := "proj"
-	s.floe(t, "task", "--project", project, "--task", "#gone", "--state", "done")
+	s.floe(t, "task", "--project", project, "--task", "#gone", "--state", "done", "--new")
 	s.floe(t, "publish", s.page(t, "p.yaml", "T p", ""), "--slug", "p")
 	if _, err := st.Edit("p", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--slug", "p", "--task", "#pages")
+	s.floe(t, "task", "--slug", "p", "--task", "#pages", "--new")
 	// No row for #pages, which the command made.
 	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(`{"proj": {"#gone": {"state": "done", "at": "2026-01-01T00:00:00Z"}}}`), 0o600); err != nil {
 		t.Fatal(err)
@@ -325,7 +325,7 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	// A write refused by anything else reads the tasks: the page shows the state another session wrote since, with the looks at the list
 	// answered the tasks as they were so that none draws them for it, and the refusal stays.
 	const refuse = "window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o))"
-	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "done")
+	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "done", "--new")
 	b.navigate("/tasks?project=proj&task=%23other")
 	b.until("the state", "document.getElementById('task-state').value === 'done'")
 	b.eval(refuse)

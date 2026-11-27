@@ -391,7 +391,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the guide", "!document.getElementById('tasks-empty').hidden")
 	s.floe(t, "publish", s.page(t, "p1.yaml", "p1", ""), "--slug", "p1")
-	s.floe(t, "task", "--slug", "p1", "--task", "#1", "--state", "done")
+	s.floe(t, "task", "--slug", "p1", "--task", "#1", "--state", "done", "--new")
 	writeTasks(tasksJSON)
 
 	if got, want := strings.Join(out, "\n"), taskListWant; got != want {

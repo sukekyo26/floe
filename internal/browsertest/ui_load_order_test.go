@@ -338,7 +338,7 @@ func loadMistakes(t *testing.T, s *site, st *store.Store, msg func(string, ...an
 	if _, err := st.Edit("kept", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--slug", "kept", "--task", "T1", "--category", "c")
+	s.floe(t, "task", "--slug", "kept", "--task", "T1", "--category", "c", "--new")
 	b.navigate("/tasks?project=proj&task=T1")
 	b.until("the task's rows", "document.querySelector('#list li[data-slug=kept]')")
 	b.eval(loadOrderJS)

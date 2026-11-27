@@ -593,7 +593,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	tasks := &site{Site: servetest.Start(t, nil)}
 	tasks.b = newBrowser(t, tasks.Base, lang)
 	tasks.floe(t, "publish", tasks.page(t, "p.yaml", "P", ""), "--slug", "p")
-	tasks.floe(t, "task", "--slug", "p", "--task", "#1", "--title", "one")
+	tasks.floe(t, "task", "--slug", "p", "--task", "#1", "--title", "one", "--new")
 	tasks.b.navigate("/tasks")
 	tasks.b.until("the task list's shelf", "document.querySelector('#shelf [data-project]') && document.getElementById('add-task')")
 	shelves = append(shelves, narrowest(tasks.b, "add-task"))

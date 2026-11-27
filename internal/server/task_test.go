@@ -70,7 +70,7 @@ func TestTaskAPI(t *testing.T) {
 		t.Errorf("no tasks = %v", got)
 	}
 	// The answer is the row as written, under its keys
-	if code, body := patch("/", "#a/b", `{"state":"done"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
+	if code, body := patch("/", "#a/b", `{"new":true,"state":"done"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
 		t.Errorf("a name of / = %d, %s", code, body)
 	}
 	if got := tasks()["/"]["#a/b"]; got.State != "done" {
@@ -84,7 +84,7 @@ func TestTaskAPI(t *testing.T) {
 	if code, body := patch(" shop ", " #1 ", `{}`); code != http.StatusNotFound {
 		t.Errorf("an empty write of no row = %d, %s", code, body)
 	}
-	if code, body := patch(" shop ", " #1 ", `{"state":"todo"}`); code != http.StatusOK || answer(body) != "shop #1 1" {
+	if code, body := patch(" shop ", " #1 ", `{"new":true,"state":"todo"}`); code != http.StatusOK || answer(body) != "shop #1 1" {
 		t.Errorf("a write = %d, %s", code, body)
 	}
 	if got := tasks()["shop"]["#1"]; got.State != "todo" {
@@ -97,13 +97,13 @@ func TestTaskAPI(t *testing.T) {
 		return fmt.Sprintf("%t %t", w.Made, w.Wrote)
 	}
 	for _, c := range []struct{ body, want string }{
-		{`{"title":"t"}`, "true true"}, {`{"title":"t"}`, "false false"}, {`{"title":"u"}`, "false true"},
+		{`{"new":true,"title":"t"}`, "true true"}, {`{"title":"t"}`, "false false"}, {`{"title":"u"}`, "false true"},
 	} {
 		if code, body := patch("shop", "#m", c.body); code != http.StatusOK || madeWrote(body) != c.want {
 			t.Errorf("made and wrote of %s = %d, %s; want %s", c.body, code, body, c.want)
 		}
 	}
-	if code, body := patch("shop", "#c", `{"parent":"#1"}`); code != http.StatusOK {
+	if code, body := patch("shop", "#c", `{"new":true,"parent":"#1"}`); code != http.StatusOK {
 		t.Errorf("a parent = %d, %s", code, body)
 	}
 	if got := tasks()["shop"]["#c"].Parent; got != "#1" {

@@ -53,7 +53,7 @@ func TestUIProjectPills(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the search's rows", "document.querySelectorAll('#find-list li').length === 3")
 	say("in the search", "[...document.querySelectorAll('#find-list li')].map((li) => li.querySelector('[data-testid=proj-name]')?.textContent ?? '-').join(',')")
 
-	s.floe(t, "task", "--slug", "a", "--task", "#1", "--category", "one")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--category", "one", "--new")
 	b.navigate("/tasks?project=floe&task=%231")
 	b.until("the task's page", "document.querySelector('#list li[data-slug=a]') && document.querySelector('#task-project [data-testid=proj-name]')")
 	say("on a task's page", "document.querySelector('#task-project [data-testid=proj-name]').textContent+' '+document.querySelectorAll('#list li[data-slug] [data-testid=proj-name]').length")

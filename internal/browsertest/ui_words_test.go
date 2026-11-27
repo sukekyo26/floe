@@ -23,7 +23,7 @@ func wordsSite(t *testing.T, lang i18n.Lang) (*site, []string) {
 	if _, err := store.New(s.Env["FLOE_DIR"]).Edit("a", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "one", "--state", "doing")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "one", "--state", "doing", "--new")
 	return s, []string{"/", "/tasks?project=proj&task=%231", "/a/a/"}
 }
 

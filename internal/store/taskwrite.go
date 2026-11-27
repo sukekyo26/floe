@@ -46,18 +46,6 @@ func (ed TaskEdit) hasFields() bool {
 	return ed.Title != nil || ed.State != nil || ed.URLs != nil || ed.Categories != nil || ed.Parent != nil
 }
 
-// makesRow tells whether ed writes a field of a task of no row: what makes the row. URLs taken off or ordered, and a
-// parent taken off, change nothing of none, so that a mistyped ID makes no empty task.
-func (ed TaskEdit) makesRow() bool {
-	if ed.URLs != nil && len(ed.URLs.Add) == 0 {
-		ed.URLs = nil
-	}
-	if ed.Parent != nil && *ed.Parent == "" {
-		ed.Parent = nil
-	}
-	return ed.hasFields()
-}
-
 // ChangeTasks writes w under one lock: the pages are read, each one's task as it comes to be, and the tasks it comes to
 // be on (the task named without pages), are checked, and only then tasks.json and the pages' meta.json are written, in
 // that order, so that a refusal writes nothing, and a task a page names always has a row and the page's category among
@@ -270,10 +258,14 @@ func pagesTasks(w TaskChange, pages []changedPage) ([]taskRef, error) {
 }
 
 // checkChange refuses w before anything is written: what the screen saw (New, Rev), which is of one task, the parent,
-// a task of nothing to write and no row, and a category with pages left out of the categories written.
+// a new task of pages of more than one project, a task of no row not said to be new, and a category with pages
+// left out of the categories written.
 func (s *Store) checkChange(all Tasks, w TaskChange, refs []taskRef, pages []changedPage) error {
 	if projects := projectsOf(refs); w.Parent != nil && projects > 1 {
 		return usererr.New("store_parent_projects", projects)
+	}
+	if w.New != nil && *w.New && len(refs) > 1 {
+		return usererr.New("store_task_new_projects", projectsOf(refs))
 	}
 	if (w.New != nil || w.Rev != nil) && len(refs) != 1 {
 		// The tasks come of the pages as read under the lock: a write of one task, of pages moved meanwhile
@@ -305,7 +297,8 @@ func (s *Store) checkTask(rows map[string]Task, w TaskChange, ref taskRef, pages
 	if err := checkURLCount(rows[ref.name], ref.name, w.URLs); err != nil {
 		return err
 	}
-	if _, had := rows[ref.name]; !had && len(pages) == 0 && !w.makesRow() {
+	// A row is made only of a write that says the task is new: a mistyped ID or a project mistaken makes no task
+	if _, had := rows[ref.name]; !had && w.New == nil {
 		return ErrNotFound
 	}
 	if w.Categories == nil {
