@@ -281,7 +281,7 @@ func TestPagesURLOrder(t *testing.T) {
 	dw := picKit(t, "", "")
 	for _, c := range []struct{ slug, task string }{{"d", "#1"}, {"e", "#2"}} {
 		publish(t, s, dw, c.slug+".yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-		if _, err := s.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{c.slug}, Task: new(c.task)}); err != nil {
+		if _, err := s.ChangeTasks(store.TaskChange{New: new(true), Slugs: []string{c.slug}, Task: new(c.task)}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -488,7 +488,7 @@ func TestPageTask(t *testing.T) {
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	pageTask := func(ed store.PageTaskEdit, isNew *bool, want string) {
 		t.Helper()
-		if _, err := s.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{New: isNew}, Slugs: []string{"d"}, Task: ed.Name, Category: ed.Category, Pin: ed.Pin}); err != nil {
+		if _, err := s.ChangeTasks(store.TaskChange{New: isNew, Slugs: []string{"d"}, Task: ed.Name, Category: ed.Category, Pin: ed.Pin}); err != nil {
 			t.Fatal(err)
 		}
 		b, err := json.Marshal(s.ReadMeta("d").Task)

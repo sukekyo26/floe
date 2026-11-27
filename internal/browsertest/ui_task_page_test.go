@@ -69,7 +69,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if _, err := st.Edit("fold", store.Edit{Project: new("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{New: new(true)}, Slugs: []string{"fold"}, Task: new("#1")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{New: new(true), Slugs: []string{"fold"}, Task: new("#1")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "done")
