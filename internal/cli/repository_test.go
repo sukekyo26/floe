@@ -354,8 +354,8 @@ func TestRepositoryCommands(t *testing.T) {
 	t.Parallel()
 
 	dir := repo(t, map[string]string{}, "docs")
-	if code, _, _ := run(dir, "repository", "theme", "default"); code == 0 {
-		t.Error("floe repository theme default ran")
+	if code, _, stderr := run(dir, "repository", "theme", "default"); code == 0 || !strings.Contains(stderr, `unknown command "default"`) {
+		t.Errorf("floe repository theme default = %d, %q", code, stderr)
 	}
 	for _, kind := range []string{"part", "template", "theme"} {
 		for _, sub := range []string{"", "list", "show", "new", "check"} {
