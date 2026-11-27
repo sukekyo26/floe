@@ -386,6 +386,7 @@ var messagesEN = map[string]string{
 	"cli_new_exists":             "there is something of this name here already: pick another name, or remove it",
 	"cli_new_no_dir":             "there is no default directory, as %s is not an absolute path; set %s to an absolute path",
 	"cli_made":                   "made %s",
+	"cli_new_next":               "next: read %[1]s guide; %[1]s show %[2]s %[3]s prints floe's own to start from",
 	"cli_skill_agent":            "name one agent to install floe's skill for: %s",
 	"cli_skill_same":             "%s is this floe's skill already",
 	"cli_skill_kept":             "this is not this floe's skill, so it is kept: pass --force to write this floe's skill over it",

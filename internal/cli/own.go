@@ -123,23 +123,30 @@ func (a *app) ownPlace(kind string) (dataPlace, error) {
 }
 
 // ownKind is a kind of one's own: its name (ownPlace), its directory in the sources of a kit, its kind to the kit,
-// and the files new makes of it.
+// the files new makes of it, its command, and the file of floe's own new names to start from (model).
 type ownKind struct {
-	name     string
-	in       func(*kit.Sources) *kit.Dir
-	kind     kit.Kind
-	skeleton func(name string) map[string][]byte
+	name      string
+	in        func(*kit.Sources) *kit.Dir
+	kind      kit.Kind
+	skeleton  func(name string) map[string][]byte
+	command   string
+	model     string
+	modelFile string
 }
 
 // The kinds of one's own.
 var (
-	ownParts  = ownKind{"parts", func(s *kit.Sources) *kit.Dir { return &s.Parts }, kit.KindPart, kit.PartSkeleton}
+	ownParts = ownKind{
+		"parts", func(s *kit.Sources) *kit.Dir { return &s.Parts }, kit.KindPart, kit.PartSkeleton,
+		"part", "note", "part.html",
+	}
 	ownThemes = ownKind{
 		"themes", func(s *kit.Sources) *kit.Dir { return &s.Themes }, kit.KindTheme,
-		func(string) map[string][]byte { return kit.ThemeSkeleton() },
+		func(string) map[string][]byte { return kit.ThemeSkeleton() }, "theme", "default", "palette.css",
 	}
 	ownTemplates = ownKind{
 		"templates", func(s *kit.Sources) *kit.Dir { return &s.Templates }, kit.KindTemplate, kit.TemplateSkeleton,
+		"template", "report", "page.html",
 	}
 )
 
@@ -397,6 +404,7 @@ func (a *app) newOwn(of ownKind, name string) error {
 		return usererr.CannotWrite(at, err)
 	}
 	a.print("%s", english.Msg("cli_made", at))
+	a.print("%s", english.Msg("cli_new_next", a.commandHead()+" "+of.command, of.model, of.modelFile))
 	return nil
 }
 

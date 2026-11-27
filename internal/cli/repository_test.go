@@ -167,11 +167,13 @@ func TestRepositoryOwnPlaces(t *testing.T) {
 			t.Errorf("floe repository template check in %s = %d, %q", at, code, stderr)
 		}
 	}
-	if code, stdout, stderr := runIn(dir, env, "repository", "template", "new", "memo"); code != 0 ||
-		stdout != "made "+filepath.Join(dir, ".floe", "templates", "memo")+"\n" || stderr != "" {
+	code, stdout, stderr := runIn(dir, env, "repository", "template", "new", "memo")
+	if code != 0 || stderr != "" {
 		t.Errorf("floe repository template new = %d, %q, %q", code, stdout, stderr)
 	}
-	_, stdout, _ := runIn(dir, env, "repository", "template", "list")
+	wantMade(t, stdout, filepath.Join(dir, ".floe", "templates", "memo"), "floe repository template",
+		func(args ...string) (int, string, string) { return runIn(dir, env, args...) }, true)
+	_, stdout, _ = runIn(dir, env, "repository", "template", "list")
 	if !strings.Contains(stdout, "pic\t"+filepath.Join(dir, ".floe", "templates", "pic")+"\t") || strings.Contains(stdout, `\\?\`) {
 		t.Errorf("floe repository template list = %q", stdout)
 	}

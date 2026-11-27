@@ -29,6 +29,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Change the theme `app` so that each part takes an app's shape on its white card: a note is a notification with a large rounded-square icon on a face barely of its tone, a decision a sheet pulled up with a grabber, a fold a settings row with its chevron at the right, a quote a message bubble, a table's dark head a rounded bar inside its card; numbers are drawn in the text's face, a section's heading has a short raspberry bar under it, a line's code is on grey, and the Latin is drawn in the Japanese face, as in `default`, where Segoe UI drew it wide on Windows.
 
+- Change `floe part new`, `theme new` and `template new`, and those of `floe repository`, to print a line after `made <path>` that names the guide to read and a file of floe's to start from: `next: read floe theme guide; floe theme show default palette.css prints floe's own to start from`.
+
 ### Fixed
 
 - Fix the rows of the search and of Add a page in the management page hiding a link's path when what is under the title does not fit: a long project or the task a page is on ran past the row and out of the modal, the path squeezed to nothing; the line now goes on to a line of its own as the list's rows do, a pill wider than the line is cut at its end with "…", and the path keeps its room.

@@ -279,12 +279,12 @@ func (a *app) repositoryGiven(paths []string) ([]arg, error) {
 	return a.repo.documentArgs()
 }
 
-// renderCommand is the command that writes the pages of the command running.
-func (a *app) renderCommand() string {
+// commandHead is the head of the commands of the command running: floe repository's under it.
+func (a *app) commandHead() string {
 	if a.repo != nil {
-		return "floe repository render"
+		return "floe repository"
 	}
-	return "floe render"
+	return "floe"
 }
 
 // repositoryCmd holds the commands of a repository's documents: each but new and the guides works in the
