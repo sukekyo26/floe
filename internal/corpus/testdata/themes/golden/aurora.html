@@ -200,6 +200,9 @@ blockquote > * + * { margin-top: 0.6rem; }
   --bg: #f3f0fa; --surface: #fdfcff; --fg: #231d38; --muted: #554e70; --line: #ddd6ee;
   --accent: #6234c8; --accent-soft: #ebe3ff;
   --good: #156a42; --good-soft: #daf3e6; --warn: #844f00; --warn-soft: #fbead0; --bad: #ab2146; --bad-soft: #fde1e8;
+  /* A note's glass (--tone-fill): each tone's soft one step deeper, so that it stands off the wash, whose violet the
+     accent's soft all but matches. The step is the same for every tone, in OKLCH: lightness 0.076 down, chroma 2.16 times */
+  --accent-fill: #d6c4ff; --good-fill: #abe2c7; --warn-fill: #f2ce95; --bad-fill: #f8bece; --muted-fill: #d4d0db;
   --code-bg: #241c3d; --code-fg: #ece8fb; --code-prompt: #c6a8ff;
   /* The wash, placed on the whole document: violet at its top, a rose lilac at a fifth of its height, a pale violet at its
      foot, all of one hue for the words and boxes to lead. Its colours keep --muted, --accent and the tones at 4.5:1 on
@@ -642,7 +645,7 @@ blockquote { border: 1px solid var(--line); border-radius: var(--radius); paddin
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A note is glass tinted with its tone */
 :scope {
-  background: color-mix(in srgb, var(--tone-soft) var(--aurora-tint), transparent);
+  background: color-mix(in srgb, var(--tone-fill) var(--aurora-tint), transparent);
   --floe-shadow-color: var(--shadow);
 }
 }

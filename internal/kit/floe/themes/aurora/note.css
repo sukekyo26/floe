@@ -1,5 +1,5 @@
 /* A note is glass tinted with its tone */
 :scope {
-  background: color-mix(in srgb, var(--tone-soft) var(--aurora-tint), transparent);
+  background: color-mix(in srgb, var(--tone-fill) var(--aurora-tint), transparent);
   --floe-shadow-color: var(--shadow);
 }
