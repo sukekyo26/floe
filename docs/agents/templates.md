@@ -98,6 +98,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 | `markdownLabel` | A line of Markdown as `markdownLine` writes it, its links (written or found, such as a URL) as their words: a label that goes in a link of the template's own |
 | `contents` | The script that marks, in the contents just before it (`<nav data-floe-look="toc">…</nav>{{contents}}`), the link to the part of the page being read: `aria-current="location"` |
 | `num` | A number with its digits grouped (`{{.Calc.total \| num}}` is `1,234,567`), or rounded to significant digits (`{{.Calc.rate \| num 3}}` is `0.00648`) |
+| `count` | The index of a `range`, from 0, as a number from 1 (`{{range $i, $a := .Data.asks}}Q{{count $i}}{{end}}` writes `Q1`, `Q2`…): a number in the page's text, which a reader can copy and a screen reader reads, unlike a CSS counter. It takes an `int` alone |
 | `bytes` | A count of bytes in a binary unit (`{{.Calc.size \| bytes}}` is `1.5 KiB`) |
 | `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |
 | `word` | A word of the template's `words.yaml` in the page's language (`{{word "status_doing"}}`) |

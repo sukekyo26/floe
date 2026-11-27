@@ -600,6 +600,39 @@ func TestPartExecPlaced(t *testing.T) {
 	}
 }
 
+// count counts a range from 1 in page.html and part.html, and a value not an int is refused by text/template in its
+// words, at the line and column of the file that passed it.
+func TestCount(t *testing.T) {
+	t.Parallel()
+
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": `
+	parts := map[string]string{
+		"pb/schema.json": head + `{"t": {}}}`,
+		"pb/part.html":   "<div data-floe-part=\"pb\">\n{{range $i, $a := .t}}[{{count $i}}]{{end}}</div>",
+		"pb/part.css":    "",
+	}
+	k := ownKit(t, parts, mine(htmlPage("<p>{{range $i, $a := .Data.x}}({{count $i}}){{end}}</p>\n{{.Data.b}}"),
+		head+`{"x": {}, "b": {"$ref": "floe:///parts/pb.json"}}}`, nil))
+	page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nx: [a, b, c]\nb: {t: [a, b]}\n"), none)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	for _, want := range []string{"<p>(1)(2)(3)</p>", "[1][2]</div>"} {
+		if !bytes.Contains(page, []byte(want)) {
+			t.Errorf("draws no %s in\n%s", want, page)
+		}
+	}
+	for src, at := range map[string]string{
+		"x: [a]\nb: {t: {k: v}}\n": "parts/pb/part.html:2:32:",
+		"x: {a: 1}\nb: {t: []}\n":  "templates/mine/page.html:4:40:",
+	} {
+		got := drawn(t, k, "lang: en\ntemplate: mine\n"+src, none)
+		if !strings.HasPrefix(got, at) || !strings.Contains(got, "wrong type for value; expected int; got string") {
+			t.Errorf("%s: told %q, want text/template's wrong type at %s", src, got, at)
+		}
+	}
+}
+
 // An item of a part of one's own that bars refuses, one not written as keys and values, a value below 0, not a
 // number or missing, or an of not a number, not above 0 or below the value, is told at the key of the item it is of
 // (the item for one not written), an of of null drawn as none.

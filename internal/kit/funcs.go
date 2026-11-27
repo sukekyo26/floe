@@ -22,6 +22,8 @@ import (
 var funcs = template.FuncMap{
 	"bytes":    formatBytes,
 	"contents": contentsScript,
+	// count writes the index of a range, from 0, as a number from 1: {{count $i}}.
+	"count":    func(i int) int { return i + 1 },
 	"num":      formatNum,
 	"markdown": Markdown,
 	// markdownLine writes a line of Markdown, such as a table cell, as HTML without a paragraph around it.
