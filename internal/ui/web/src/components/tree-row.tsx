@@ -74,7 +74,9 @@ export function TreeRow({
       style={style as CSSProperties}
       className="group/tree relative flex flex-wrap items-center gap-x-2 border border-y-0 border-line bg-panel py-[0.2rem] ps-[calc(1.5rem+(var(--d)-1)*1.1rem)] pe-4 text-small transition-colors duration-150 not-has-[+li[data-testid=tree]]:rounded-b-menu not-has-[+li[data-testid=tree]]:border-b not-has-[+li[data-testid=tree]]:shadow-sm hover:bg-hover has-[[data-testid=title]:focus-visible]:outline-2 has-[[data-testid=title]:focus-visible]:-outline-offset-2 has-[[data-testid=title]:focus-visible]:outline-faint aria-current:bg-new-soft"
     >
-      <div className={`min-w-[min(100%,calc(2.625rem+10ch))] flex-1 ${item.kind === 'note' ? 'ps-[calc(0.875rem+0.35rem)] text-muted' : ''}`}>
+      <div
+        className={`min-w-[min(100%,calc(2.625rem+10ch))] flex-1 ${item.kind === 'note' ? 'ps-[calc(0.875rem+0.35rem)] text-muted' : ''}`}
+      >
         {item.kind === 'dir' ? (
           <button
             type="button"
