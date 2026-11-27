@@ -31,6 +31,7 @@ documents:
 - `documents` には、文書のディレクトリを、根から `/` で区切り、前に `./`、後ろに `/` を付けずに書きます（`docs/specs`）。その下の `.yaml` と `.yml` は、フォルダの中のものも全部文書です。点で始まる名前の下と、ディレクトリへのリンクの下は見ません（そのディレクトリは `documents` に書きます）。データファイルの無い HTML には何もしないので、手で書いたページも置けます。データファイルを消した後に残ったページも同じで、check は見つけません。
 - floe は、リポジトリの外を読みも書きもしません。リポジトリの外へのリンクのページ・データファイル・`.floe/` のディレクトリは断り、`.floe/` のディレクトリの中の、そのディレクトリの外へのリンクも断ります。
 - 点で始まる名前は、リンクしたフォルダの一覧に出ないので、`.floe/` はページと並びません。
+- ページは、データファイルが `theme:` で名指すテーマ、無ければ `default` で描きます。管理ページで選んだテーマはリポジトリのページに届かず、テンプレートは自分のテーマを持てません。
 
 `.gitattributes` で、ページと比べるものと、ページにそのまま入るものを、どのマシンでも同じバイトにし、GitHub の差分ではページを畳みます。
 
@@ -39,6 +40,8 @@ documents:
 /docs/specs/**/*.svg  text eol=lf
 /.floe/**             text=auto eol=lf
 ```
+
+`docs/specs` に手で書いた HTML を置くときは、これらの後に、それを `-linguist-generated` で名指す行を足します（`/docs/specs/notes.html -linguist-generated`）。
 
 ## 最初のテンプレート
 
@@ -49,7 +52,7 @@ floe repository new docs/specs
 floe repository template new api-spec
 ```
 
-[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き（そこに出るコマンドには、頭に `floe repository` を付けます。`floe repository template check`）、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: design`）も名指せます。
+`floe repository new` は `documents` のディレクトリを作らないので、`docs/specs` も作ります。[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き（そこに出るコマンドには、頭に `floe repository` を付けます。`floe repository template check`）、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: design`）も名指せます。
 
 ## 描く・確かめる
 
@@ -59,7 +62,7 @@ floe repository template new api-spec
 floe repository render
 ```
 
-確かめます（CI がすることです）。リポジトリのテンプレート・部品・テーマを、各テンプレートの `example.yaml` を描いて確かめ、次に全部の文書とそのページを確かめて、誤りと、無いページ・描き直していないページを全部言います。
+確かめます（CI がすることです）。リポジトリのテンプレート・部品・テーマを、各テンプレートの `example.yaml` を描いて確かめ、次に全部の文書を確かめて、誤りを全部言います。文書の誤りが無くなると、無いページ・描き直していないページを言います。
 
 ```sh
 floe repository check
@@ -132,7 +135,7 @@ floe publish --link docs/specs
 リポジトリの AGENTS.md（か CLAUDE.md）に次を書くと、文書を直すエージェントに伝わります。
 
 ```markdown
-The documents in docs/specs are drawn by floe. To change one, run `floe repository guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `floe repository render`, check with `floe repository check`. Their templates are in .floe/, which some searches leave out.
+The documents in docs/specs are drawn by floe. To change one, run `floe repository guide` first, and commit its data file (.yaml or .yml) and its .html together. Do not edit the .html. Draw with `floe repository render`, check with `floe repository check`. Their templates are in .floe/, which some searches leave out.
 ```
 
 ## 気を付けること

@@ -31,6 +31,7 @@ documents:
 - `documents` are the directories of the documents, from the root, `/`-separated, without `./` before or `/` after (`docs/specs`). Every `.yaml` and `.yml` under them is a document, in folders too, but not under a name that starts with a dot, nor under a link to a directory (name that directory in `documents` instead). An HTML file with no data file is left alone, so a page written by hand can be kept there; so is a page whose data file was deleted, which the check does not find.
 - floe reads and writes nothing out of the repository: a page, a data file or a directory of `.floe/` that is a link out of it is refused, and so is a file in a directory of `.floe/` that is a link out of that directory.
 - floe leaves out of a linked folder the names that start with a dot, so that `.floe/` is not listed beside the pages.
+- A page is drawn in the theme its data file names with `theme:`, else `default`: the theme picked on the management page does not reach a repository's pages, and a template has no theme of its own.
 
 `.gitattributes` keeps what a page is compared with, and what goes into it as it is, the same on every machine, and folds the pages in GitHub's diffs:
 
@@ -39,6 +40,8 @@ documents:
 /docs/specs/**/*.svg  text eol=lf
 /.floe/**             text=auto eol=lf
 ```
+
+For an HTML file written by hand in `docs/specs`, add a line after these that names it with `-linguist-generated` (`/docs/specs/notes.html -linguist-generated`).
 
 ## Make the first template
 
@@ -49,7 +52,7 @@ floe repository new docs/specs
 floe repository template new api-spec
 ```
 
-Fill in the three files as [templates.md](agents/templates.md) tells, with `floe repository` before each command it names (`floe repository template check`), then write `docs/specs/orders.yaml` with `template: api-spec`. Write `"additionalProperties": false` in `schema.json`: the one floe makes takes any key. A document can name one of floe's templates too (`template: design`).
+`floe repository new` makes no directory of `documents`: make `docs/specs` too. Fill in the three files as [templates.md](agents/templates.md) tells, with `floe repository` before each command it names (`floe repository template check`), then write `docs/specs/orders.yaml` with `template: api-spec`. Write `"additionalProperties": false` in `schema.json`: the one floe makes takes any key. A document can name one of floe's templates too (`template: design`).
 
 ## Draw and check
 
@@ -59,7 +62,7 @@ Draw the pages:
 floe repository render
 ```
 
-Check them, which is what CI does. It checks the repository's templates, parts and themes, drawing each template's `example.yaml`, then every document and its page, and tells every mistake and each page missing or not drawn again:
+Check them, which is what CI does. It checks the repository's templates, parts and themes, drawing each template's `example.yaml`, then every document, and tells every mistake; once the documents have none, it tells each page missing or not drawn again:
 
 ```sh
 floe repository check
@@ -132,7 +135,7 @@ Publish no data file of `docs/specs` drawn with the repository's templates: the 
 Put this in the repository's AGENTS.md (or CLAUDE.md), so that an agent that edits a document knows:
 
 ```markdown
-The documents in docs/specs are drawn by floe. To change one, run `floe repository guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `floe repository render`, check with `floe repository check`. Their templates are in .floe/, which some searches leave out.
+The documents in docs/specs are drawn by floe. To change one, run `floe repository guide` first, and commit its data file (.yaml or .yml) and its .html together. Do not edit the .html. Draw with `floe repository render`, check with `floe repository check`. Their templates are in .floe/, which some searches leave out.
 ```
 
 ## What to watch

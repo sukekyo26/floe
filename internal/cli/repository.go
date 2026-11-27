@@ -311,7 +311,8 @@ under the repository alone. floe repository guide prints how to keep documents i
 		Short: "Make .floe/repository.yaml here, of this floe's version and the documents' directories",
 		Long: `Make .floe/repository.yaml in the working directory, the repository's root: the version of this floe,
 which the other commands of floe repository refuse another floe of, and the directories of its documents,
-slash-separated from the root (docs/specs), whose data files they draw. Nothing is written over: with a
+slash-separated from the root (docs/specs), whose data files they draw. It makes no directory: make the
+documents' directories, which the check refuses when they are not there. Nothing is written over: with a
 repository here or above, nothing is made. The directories under .floe are made by template new, part new
 and theme new.`,
 		Args: cobra.MinimumNArgs(1),
@@ -337,9 +338,9 @@ only a page that changes is written, and its path is printed. The documents are 
 		Short: "Check the repository's templates, parts and themes and its documents and their pages, writing nothing",
 		Long: `Check the repository's templates, parts and themes, drawing each template's example.yaml, as
 floe repository template check does, then each data file under the documents' directories, or each one
-given, and its page, as floe render --check does: every mistake is printed, and each page missing or not
-what its data file draws. The exit code is 1 when there is one. An HTML file with no data file is left
-alone.`,
+given, and its page, as floe render --check does: every mistake is printed, and, once the documents have
+none, each page missing or not what its data file draws. The exit code is 1 when there is one. An HTML file
+with no data file is left alone.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			own := a.checkTemplates()
