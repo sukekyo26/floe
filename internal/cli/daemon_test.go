@@ -786,14 +786,58 @@ func TestStopSendsNoSignal(t *testing.T) {
 	}
 }
 
-// A port held by a program that never answers is refused, and the command is told to run again. Apart from the
-// others, as the probes and the waits take seconds.
+// A port held by a program that never answers is refused, and the command is told to run again, once the one wait
+// for a server another command started ends (10 s). Apart from the others, as the probes and the waits take seconds.
 func TestSilentPort(t *testing.T) {
 	t.Parallel()
 
 	_, port := holdPort(t)
 	e := newDenvOn(t, port)
+	start := time.Now()
 	wantRun(t, "list", e.run("list"), 1, "", "floe: port "+e.port+" is in use, and nothing answers there: a server"+
 		" another floe command started may still be starting, or another program holds it; run this command again,"+
 		" or set FLOE_PORT to a free port\n")
+	if took := time.Since(start); took > 15*time.Second {
+		t.Errorf("refusing the silent port took %v, want one wait of 10 s", took)
+	}
+}
+
+// A port held by a program that closes each connection without an answer is another program's at once: a server of
+// floe still starting keeps the connection waiting.
+func TestHungUpPort(t *testing.T) {
+	t.Parallel()
+
+	ln, port := holdPort(t)
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = c.Close() //nolint:errcheck // hung up
+		}
+	}()
+	e := newDenvOn(t, port)
+	wantRun(t, "list", e.run("list"), 1, "", "floe: port "+e.port+" is used by another program; set FLOE_PORT to a free port\n")
+}
+
+// A port held by what does not answer, as a server another command started, is taken by the command once it comes
+// free (that server failed): the probe waiting when the port closes is ended without an answer, and is not taken for
+// another program.
+func TestPortFreed(t *testing.T) {
+	t.Parallel()
+
+	ln, port := holdPort(t)
+	e := newDenvOn(t, port)
+	time.AfterFunc(300*time.Millisecond, func() { _ = ln.Close() }) //nolint:errcheck // frees the port
+	start := time.Now()
+	if r := e.run("list"); r.code != 0 {
+		t.Fatalf("list after the port came free = %+v", r)
+	}
+	if took := time.Since(start); took > 5*time.Second {
+		t.Errorf("starting a server once the port came free took %v", took)
+	}
+	if _, up := e.health(t.Context()); !up {
+		t.Error("no server answers on the port the command took")
+	}
 }
