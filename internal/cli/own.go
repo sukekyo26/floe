@@ -404,7 +404,7 @@ func (a *app) newOwn(of ownKind, name string) error {
 		return usererr.CannotWrite(at, err)
 	}
 	a.print("%s", english.Msg("cli_made", at))
-	a.print("%s", english.Msg("cli_new_next", a.command()+" "+of.command, of.model, of.modelFile))
+	a.print("%s", english.Msg("cli_new_next", a.commandHead()+" "+of.command, of.model, of.modelFile))
 	return nil
 }
 

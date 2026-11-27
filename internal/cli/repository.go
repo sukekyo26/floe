@@ -279,8 +279,8 @@ func (a *app) repositoryGiven(paths []string) ([]arg, error) {
 	return a.repo.documentArgs()
 }
 
-// command is the head of the commands of the command running: floe repository's under it.
-func (a *app) command() string {
+// commandHead is the head of the commands of the command running: floe repository's under it.
+func (a *app) commandHead() string {
 	if a.repo != nil {
 		return "floe repository"
 	}
