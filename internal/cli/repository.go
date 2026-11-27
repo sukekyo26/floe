@@ -239,13 +239,10 @@ func (a *app) newRepository(dirs []string) error {
 	if err := r.inside(file, shown); err != nil {
 		return err
 	}
-	// Each string is written as strconv.Quote writes it, in double quotes: its escapes (\a \b \f \n \r \t \v \\ \"
-	// \xNN \uNNNN \UNNNNNNNN) are all YAML 1.2's, \xNN only of a character under 0x80, as UTF-8 gives none other.
-	// Not JSON's: json/v2 writes U+2028, U+2029, U+0085 and a BOM as they are, which YAML takes for line breaks.
 	var b strings.Builder
-	b.WriteString("version: " + strconv.Quote(version.Version) + "\ndocuments:\n")
+	b.WriteString("version: " + yamlString(version.Version) + "\ndocuments:\n")
 	for _, d := range dirs {
-		b.WriteString("  - " + strconv.Quote(d) + "\n")
+		b.WriteString("  - " + yamlString(d) + "\n")
 	}
 	if err := files.MkdirAll(filepath.Dir(file), 0o755); err != nil { //nolint:gosec // G301: a repository's, to share
 		return usererr.CannotWrite(filepath.Dir(shown), err)
@@ -255,6 +252,17 @@ func (a *app) newRepository(dirs []string) error {
 	}
 	a.print("%s", english.Msg("cli_made", shown))
 	return nil
+}
+
+// yamlString is s, valid UTF-8, as a YAML string that reads as s: in '...', as floe's guide writes text, when each
+// of its characters is printable, else as strconv.Quote writes it, in "...": its escapes (\a \b \f \n \r \t \v \\ \"
+// \xNN \uNNNN \UNNNNNNNN) are all YAML 1.2's, \xNN only of a character under 0x80, as UTF-8 gives none other.
+// Not JSON's: json/v2 writes U+2028, U+2029, U+0085 and a BOM as they are, which YAML takes for line breaks.
+func yamlString(s string) string {
+	if strings.IndexFunc(s, func(r rune) bool { return !strconv.IsPrint(r) }) < 0 {
+		return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+	}
+	return strconv.Quote(s)
 }
 
 // repositoryGiven is the data files a command names, else every document of the repository.

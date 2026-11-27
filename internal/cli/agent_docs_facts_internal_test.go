@@ -85,8 +85,6 @@ func TestAgentDocQuotes(t *testing.T) {
 
 	ja := i18n.New(i18n.Tag("ja"))
 	unknown, _, _ := strings.Cut(english.Msg("tmpl_unknown", "api-spec", ""), ";")
-	others, _, _ := strings.Cut(english.Msg("daemon_other_dirs", 7325, "", "", "", "", "", "", "", ""), " the templates")
-	others = strings.Replace(others, "7325", "…", 1)
 	usage := func(text string) string { return english.Msg("cli_usage", text) }
 	states := make([]string, 0, len(store.States))
 	for _, s := range store.States {
@@ -120,7 +118,6 @@ func TestAgentDocQuotes(t *testing.T) {
 		{repositoryAgentDocPath, unknown, 1},
 		{repositoryDocPath, unknown, 1},
 		{repositoryJaDocPath, unknown, 1},
-		{repositoryAgentDocPath, others + " …", 1},
 		{guidePath, "cut to " + strconv.Itoa(files.MaxSlugLen) + " characters", 1},
 		{guidePath, "MUST be 1 to " + strconv.Itoa(files.MaxSlugLen) + " lower case", 1},
 	}

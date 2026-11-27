@@ -19,6 +19,10 @@
 | `floe publish <data.yaml>` | データファイルから描いたページを保存し、またはファイルかフォルダをその場で登録して、URL を出す |
 | `floe check <data.yaml>...` | データファイルを、ページを描くとおりに確かめる。何も書かない |
 | `floe render <data.yaml>...` | 各データファイルのページを、リポジトリに置く HTML のファイルに書く |
+| `floe repository new <dir>...` | `.floe/repository.yaml` を作る（この floe の版と、リポジトリの文書のディレクトリ） |
+| `floe repository render [data.yaml]...` | リポジトリの文書のページを、`.floe/` のテンプレート・部品・テーマで描いて書く |
+| `floe repository check [data.yaml]...` | リポジトリのテンプレート・部品・テーマと、文書とそのページを、何も書かずに確かめる |
+| `floe repository template\|part\|theme …` | `floe template`・`floe part`・`floe theme` の命令を、リポジトリの `.floe/` で動かす（`theme default` は無い） |
 | `floe repository guide` | 文書をリポジトリに置き、自分のテンプレートで描き、CI で確かめる方法を出す |
 | `floe rebuild` | 保存したページを、今のテンプレート・部品・テーマで描き直す |
 | `floe template list` | テンプレートを並べる |
@@ -147,9 +151,15 @@ floe render --check docs/*.yaml            # CI で：書き直していない�
 - ページは、描いた floe・テンプレート・アイコンによります。CI では、ページを書いたときの floe の版とテンプレートを使い、上げたらページを書き直してください。リポジトリの組み方は [repository.ja.md](repository.ja.md) にあります。
 - ページの `script` は、ファイルを開くとサーバーのページのサンドボックス無しで動きます。それでも CSP が `fetch`・XHR・ほかの所の画像・フォームを止めます。ページの間のリンク（`/a/<slug>/`）はファイルでは働かないので、ファイルどうしを相対でつないでください。
 
-## `floe repository guide`
+## `floe repository`
 
-文書をリポジトリに置く方法 [repositories.md](agents/repositories.md) を、そのまま出します。エージェントが文書を直す手順と、CI で確かめるリポジトリの組み立て方です。人向けの説明は [repository.ja.md](repository.ja.md) にあります。引数は取りません。
+リポジトリの文書のコマンドです（[repository.ja.md](repository.ja.md)）。`new` と guide のほかは、作業ディレクトリのリポジトリで動きます。リポジトリは、作業ディレクトリかその上で `.floe/repository.yaml` を持つディレクトリで、`.git` を持つディレクトリより上は探しません。読むテンプレート・部品・テーマは `.floe/` のものだけで、`FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は読まず、サーバーも保存先も使わず、リポジトリの外を読みも書きもしません（外へのリンクは断ります）。`version` がこの floe の版（`floe --version` の `+` の前）でないリポジトリは、ほかを読む前に断ります。
+
+- `floe repository new <dir>...` は、作業ディレクトリに `.floe/repository.yaml` を書きます。`version` はこの floe の版、`documents` は渡したディレクトリで、根から `/` で区切って書きます（`docs/specs`。`./docs`・`docs/`・`..` は断ります）。ここかその上にリポジトリがあれば、何も書きません。
+- `floe repository render [data.yaml]...` は、渡したデータファイル、渡さなければ `documents` の下の `.yaml` と `.yml` を全部（点で始まる名前の下と、ディレクトリへのリンクの下は除く）描き、`floe render` と同じくページを隣に書きます。文書は、どこで走らせても根からの名前で言います。
+- `floe repository check [data.yaml]...` は、`floe repository template check` と同じことをしてから、文書とそのページを `floe render --check` と同じく確かめます。誤りは全部まとめて言い、1 つでもあれば終了コードは 1 です。データファイルの無い HTML には何もしません。
+- `floe repository template …`・`floe repository part …`・`floe repository theme …` は、`floe template`・`floe part`・`floe theme` の命令を、`.floe/templates`・`.floe/parts`・`.floe/themes` で動かします（無いものは「無い」として扱います）。`floe repository theme` には、保存先を読む `default` がありません。
+- `floe repository guide` は [repositories.md](agents/repositories.md) をそのまま出します。エージェントが文書を直す手順と、CI で確かめるリポジトリの組み立て方です。これと、`template`・`part`・`theme` の guide は、リポジトリの外でも、どの版でも出します。
 
 ## `floe rebuild`
 

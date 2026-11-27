@@ -48,11 +48,11 @@ sections:
 
 ## Documents in a repository
 
-A document a repository keeps is a YAML file with `template` and `lang` at its top, in a repository that draws its pages: its AGENTS.md, CLAUDE.md, README, CI or scripts speak of floe, or it has a page committed beside the file. Run `floe repository guide` first, and follow it. Do not edit the `.html` there, and do not publish such a file.
+A document a repository keeps is a YAML file with `template` and `lang` at its top, in a repository that draws its pages: it has `.floe/repository.yaml` at its root, its AGENTS.md, CLAUDE.md, README, CI or scripts speak of floe, or it has a page committed beside the file. Run `floe repository guide` first, and follow it. Do not edit the `.html` there, and do not publish such a file.
 
 ## Publishing
 
-`floe publish db-choice.yaml` serves the page and prints its URL. To have the page as an HTML file instead, without publishing it, `floe render db-choice.yaml` writes `db-choice.html` beside it (a document a repository keeps is drawn with the command `floe repository guide` has you find, which keeps the repository's settings).
+`floe publish db-choice.yaml` serves the page and prints its URL. To have the page as an HTML file instead, without publishing it, `floe render db-choice.yaml` writes `db-choice.html` beside it (a document a repository keeps is drawn with `floe repository render`, which draws with the repository's templates, as `floe repository guide` says).
 
 ### The page's project
 

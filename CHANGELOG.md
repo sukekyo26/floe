@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Add `floe repository new`, `render`, `check`, `template`, `part` and `theme`, which keep a repository's documents with no settings: `.floe/repository.yaml` names floe's version and the documents' directories, and `floe repository check` checks the repository's templates, parts and themes in `.floe/`, every document and its page in one line, from any directory of the repository, in CI too. They read neither `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` nor `FLOE_THEMES_DIR`, use no server, refuse another version of floe than the setting names, and read and write nothing out of the repository.
+
 ### Changed
 
 - Change the theme `retro` from the seventies to the screens of the nineties, in colours of no other theme: a light grey page under white boxes with raised edges, grey buttons for pills, numbers and a table's head, a navy title bar run to blue with a close box over each section and the same bar for a band, a teal accent that marks the place in the contents as a selection, notes signed by a small raised square of their tone, progress bars filled by blocks, folds marked by a plus and a minus box, and code in a window with a grey head; corners are square

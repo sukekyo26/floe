@@ -40,10 +40,11 @@ func TestRepositoryDocsAgree(t *testing.T) {
 		lang, text string
 		docs       []string
 	}{
-		{"sh", "floe template new", []string{repositoryJaDocPath, repositoryAgentDocPath}},
-		{"sh", "  floe render docs/specs", []string{repositoryJaDocPath, repositoryAgentDocPath}},
-		{"sh", "--check docs/specs/*.yaml\n)", []string{repositoryJaDocPath, repositoryAgentDocPath}},
-		{"sh", "no YAML for", []string{repositoryJaDocPath, repositoryAgentDocPath}},
+		{"sh", "floe repository new", []string{repositoryJaDocPath, repositoryAgentDocPath}},
+		{"sh", "floe repository render", []string{repositoryJaDocPath, repositoryAgentDocPath}},
+		{"sh", "floe repository check", []string{repositoryJaDocPath, repositoryAgentDocPath}},
+		{"text", "the setting", []string{repositoryJaDocPath, repositoryAgentDocPath}},
+		{"yaml", "documents:", []string{repositoryJaDocPath}},
 		{"text", "linguist-generated", []string{repositoryJaDocPath, repositoryAgentDocPath}},
 		{"markdown", "drawn by floe", []string{repositoryJaDocPath, repositoryAgentDocPath}},
 		{"yaml", "actions/checkout", []string{repositoryJaDocPath}},
@@ -62,7 +63,7 @@ func TestRepositoryDocsAgree(t *testing.T) {
 func TestRepositoryDocsCI(t *testing.T) {
 	t.Parallel()
 
-	want := strings.TrimSpace(blockWith(t, repositoryAgentDocPath, "sh", "set -e"))
+	want := strings.TrimSpace(blockWith(t, repositoryAgentDocPath, "sh", "floe repository check"))
 	for _, text := range []string{"actions/checkout", "phases:"} {
 		var lines []string
 		for line := range strings.Lines(blockWith(t, repositoryDocPath, "yaml", text)) {
@@ -89,6 +90,12 @@ func TestRepositoryDocsVersion(t *testing.T) {
 			if !slices.Equal(m[1:], []string{version.Version, version.Version}) {
 				t.Errorf("%s: %q is not of the release, %s", path, m[0], version.Version)
 			}
+		}
+	}
+	// The setting the docs for people show is of the release too.
+	for _, path := range []string{repositoryDocPath, repositoryJaDocPath} {
+		if got := blockWith(t, path, "yaml", "documents:"); !strings.HasPrefix(got, "version: '"+version.Version+"'\n") {
+			t.Errorf("%s: the setting is\n%s\nnot of the release, %s", path, got, version.Version)
 		}
 	}
 }
