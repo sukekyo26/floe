@@ -304,8 +304,11 @@ func TestRepositoryNew(t *testing.T) {
 	t.Parallel()
 
 	names := []string{
-		"a\u0085b", "a b", "a b", "\xef\xbb\xbfx", "a\x7fb", "a\u009bb", "a b", "a\x01b",
-		"設計/仕様", "a\U0001F600b", "a #b", `a"b\c`, "2026", "null",
+		"a\u0085b", "a\u2028b", "a\u2029b", "\xef\xbb\xbfx", "a\x7fb", "a\u009bb", "a\u00a0b", "a\x01b",
+		"設計/仕様", "a\U0001F600b", "a #b", `a"b'c`, "2026", "null",
+	}
+	if runtime.GOOS != "windows" {
+		names = append(names, `a\c`) // a Windows path holds no \: files.ValidName refuses it there
 	}
 	dir := write(t, map[string]string{".git/HEAD": ""})
 	if code, stdout, stderr := run(dir, append([]string{"repository", "new"}, names...)...); code != 0 ||
