@@ -71,7 +71,7 @@ func (a *app) renderPages(given []arg, out arg, check bool) error {
 	case err != nil:
 		return err
 	case check:
-		return checkPages(pages, a.renderCommand())
+		return checkPages(pages, a.command()+" render")
 	default:
 		return a.writePages(pages, out)
 	}
