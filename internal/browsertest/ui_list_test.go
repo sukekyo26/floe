@@ -857,6 +857,23 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval(`localStorage.setItem('list.columns', '{"shelf":99999,"list":-5}')`)
 	b.navigate("/")
 	out = append(out, b.until("the bounds", "[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), getComputedStyle(document.documentElement).getPropertyValue('--list-width')].join(' ')"))
+	// A plain press of a link of the bar, the logo and the way between the screens, on the same screen too, opens the
+	// shelf and the list folded where it goes and keeps them so.
+	b.size(1600, 900, false)
+	// A task, as the task list with none lays out its column alone, with no shelf
+	s.floe(t, "task", "--slug", "a1", "--task", "T1")
+	shown := "(id) => getComputedStyle(document.getElementById(id)).display !== 'none'"
+	pressed := make([]string, 0, 3)
+	for _, link := range []string{"#to-list", "[data-testid=brand]", "#to-tasks"} {
+		b.navigate("/api/pages")
+		b.eval("localStorage.setItem('list.columns', JSON.stringify({ ...JSON.parse(localStorage.getItem('list.columns') ?? '{}'), open: false, listOpen: false }))")
+		b.navigate("/")
+		folded := b.until("the columns folded", "document.querySelector('#list li[data-slug=a1]') && ["+shown+"].map((s) => s('shelf') + ' ' + s('listcol'))[0]")
+		b.eval("window.leaving = true; document.querySelector(" + js(link) + ").click()")
+		pressed = append(pressed, link+" "+folded+" → "+b.until("the screen it goes to", "!window.leaving && document.getElementById('shelf')?.childElementCount && ["+shown+"].map((s) => location.pathname + ' ' + s('shelf') + ' ' + s('listcol'))[0] + ' kept ' + ((k) => k.open + ' ' + k.listOpen)(JSON.parse(localStorage.getItem('list.columns')))"))
+	}
+	check(t, "the bar's links", pressed, "#to-list false false → / true true kept true true|"+
+		"[data-testid=brand] false false → / true true kept true true|#to-tasks false false → /tasks true true kept true true")
 	b.unsize()
 	ring := "solid 2px rgb(107, 105, 100) -2px seen"
 	check(t, "columns", out, strings.Join([]string{
