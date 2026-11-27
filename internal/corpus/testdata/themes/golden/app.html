@@ -208,7 +208,7 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* A grey capsule's face: a state, a time, a number's disc */
   --app-chip: #e6eaf1;
   /* Corners of app's own part shapes: a notification, its icon, a message bubble, a sheet pulled up, a bar inside a card */
-  --app-note: 18px; --app-icon: 12px; --app-bubble: 18px 18px 18px 4px; --app-sheet: 30px 30px 8px 8px; --app-bar: 14px;
+  --app-note: 18px; --app-icon: 8px; --app-bubble: 18px 18px 18px 4px; --app-sheet: 30px 30px 8px 8px; --app-bar: 14px;
   --shadow: rgb(26 34 51 / 0.14);
   /* How a card is raised from the ground: a soft wide shadow under it */
   --floe-shadow-y: 4px; --floe-shadow-blur: 12px; --floe-shadow-spread: -4px;
@@ -623,10 +623,10 @@ blockquote { border: 0; padding: 0.7rem 1.1rem; border-radius: var(--app-bubble)
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A note is a notification: a face barely of its tone, a large rounded-square icon of its tone at the left beside both
-   its lines */
-:scope { --floe-shadow-color: var(--shadow); --floe-mark: 2.8rem; --floe-mark-gap: 1rem; border-radius: var(--app-note); background: color-mix(in srgb, var(--tone-soft) 30%, var(--surface)); }
-:scope::before { border-radius: var(--app-icon); font-size: 1.2rem; margin-top: 0.15rem; }
+/* A note is a notification: a face barely of its tone, a rounded-square icon of its tone at the left, no taller than a
+   line, so that a note of a line is no taller than its text */
+:scope { --floe-shadow-color: var(--shadow); --floe-mark: 1.75rem; --floe-mark-gap: 0.85rem; border-radius: var(--app-note); background: color-mix(in srgb, var(--tone-soft) 30%, var(--surface)); }
+:scope::before { border-radius: var(--app-icon); font-size: 0.9rem; }
 /* A line's code takes the ground, which the note's near-white would hide it in */
 :scope code { background: var(--face, var(--bg)); }
 }

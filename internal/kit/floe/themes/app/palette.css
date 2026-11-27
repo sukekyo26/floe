@@ -12,7 +12,7 @@
   /* A grey capsule's face: a state, a time, a number's disc */
   --app-chip: #e6eaf1;
   /* Corners of app's own part shapes: a notification, its icon, a message bubble, a sheet pulled up, a bar inside a card */
-  --app-note: 18px; --app-icon: 12px; --app-bubble: 18px 18px 18px 4px; --app-sheet: 30px 30px 8px 8px; --app-bar: 14px;
+  --app-note: 18px; --app-icon: 8px; --app-bubble: 18px 18px 18px 4px; --app-sheet: 30px 30px 8px 8px; --app-bar: 14px;
   --shadow: rgb(26 34 51 / 0.14);
   /* How a card is raised from the ground: a soft wide shadow under it */
   --floe-shadow-y: 4px; --floe-shadow-blur: 12px; --floe-shadow-spread: -4px;

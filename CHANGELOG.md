@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the theme `app`'s note to a smaller icon, no taller than a line, so that a note of a line is as tall as its text and its padding.
 - Change the part `note` to take the whole width of where it is in every template, as text and the other parts do: it no longer stops at `--text-width` (56rem), short of them on a wide screen or a slide.
 - Change the theme `retro` from the seventies to the screens of the nineties, in colours of no other theme: a light grey page under white boxes with raised edges, grey buttons for pills, numbers and a table's head, a navy title bar run to blue with a close box over each section and the same bar for a band, a teal accent that marks the place in the contents as a selection, notes signed by a small raised square of their tone, progress bars filled by blocks, folds marked by a plus and a minus box, and code in a window with a grey head; corners are square
 - Change the theme `default`'s note and details: a note holds all it says and its sign on a white tile, its colour left as a thin edge around it, and its sign is a filled circle of its colour instead of a white square; an open details holds what it shows on a white tile in its grey tray.
