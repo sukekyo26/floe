@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -27,9 +28,13 @@ func TestNew(t *testing.T) {
 		env := cli.HomeVars(home)
 		for _, kind := range []string{"part", "theme", "template"} {
 			at := filepath.Join(cli.DefaultPlace(home, kind+"s"), name)
-			if code, stdout, stderr := runEnv(home, env, kind, "new", name); code != 0 || stdout != "made "+at+"\n" || stderr != "" {
+			code, stdout, stderr := runEnv(home, env, kind, "new", name)
+			if code != 0 || stderr != "" {
 				t.Errorf("floe %s new %s = %d, %q, %q", kind, name, code, stdout, stderr)
 			}
+			wantMade(t, stdout, at, "floe "+kind, func(args ...string) (int, string, string) {
+				return runEnv(home, env, args...)
+			}, name == "mine")
 			if code, stdout, stderr := runEnv(home, env, kind, "check"); code != 0 || stdout != "" || stderr != "" {
 				t.Errorf("floe %s check after new %s = %d, %q, %q", kind, name, code, stdout, stderr)
 			}
@@ -47,6 +52,36 @@ func TestNew(t *testing.T) {
 		}
 		if leftover, err := filepath.Glob(filepath.Join(filepath.Dir(cli.DefaultPlace(home, "parts")), "*", ".*")); err != nil || leftover != nil {
 			t.Errorf("new left %v, %v", leftover, err)
+		}
+	}
+}
+
+// nextLine is the line after made <path> of a new of one's own: the guide to read, and the command that prints the file
+// of floe's own to start from.
+var nextLine = regexp.MustCompile(`^next: read (.+) guide; (.+) prints floe's own to start from$`)
+
+// wantMade checks stdout of a new of one's own made at, of the commands under head (floe theme): made <path>, then the
+// guide and the file to start from, both of head. When ran, it runs both, which must print something, so that a
+// model renamed or gone is not named on.
+func wantMade(t *testing.T, stdout, at, head string, run func(args ...string) (int, string, string), ran bool) {
+	t.Helper()
+
+	lines := strings.Split(strings.TrimSuffix(stdout, "\n"), "\n")
+	if len(lines) != 2 || lines[0] != "made "+at {
+		t.Errorf("%s new printed %q, want made %s and the next line", head, stdout, at)
+		return
+	}
+	m := nextLine.FindStringSubmatch(lines[1])
+	if m == nil || m[1] != head || !strings.HasPrefix(m[2], head+" show ") {
+		t.Errorf("%s new's next line = %q, want its guide and a show of %s", head, lines[1], head)
+		return
+	}
+	if !ran {
+		return
+	}
+	for _, c := range []string{m[1] + " guide", m[2]} {
+		if code, out, stderr := run(strings.Fields(c)[1:]...); code != 0 || out == "" || stderr != "" {
+			t.Errorf("%s, named by %s new, = %d, %d bytes, %q", c, head, code, len(out), stderr)
 		}
 	}
 }
