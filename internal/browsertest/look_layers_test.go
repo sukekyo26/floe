@@ -85,7 +85,7 @@ const (
 			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`
-	layersNoteWant = "rgb(230, 211, 181) | 28px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true"
+	layersNoteWant = "color(srgb 0.984118 0.959412 0.920588) | 28px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true"
 )
 
 // lookLayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
