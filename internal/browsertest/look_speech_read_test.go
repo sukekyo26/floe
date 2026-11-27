@@ -18,15 +18,14 @@ import (
 // but what a script or style holds; then each hidden word whose parent is a row (li), and each element whose mark
 // means what the HTML must tell in hidden words, which has none, both with the part they are in; and how many such
 // elements it looked at (worded). A numbered row and a numbered card read their number
-// whatever their CSS writes after /; a slide's number and a checklist's count, which no word tells from what is
-// around them, are not read.
+// whatever their CSS writes after /; a checklist's count, which no word tells from what is around it, is not read.
 // LIMIT: worded, numbered and unnumbered list by hand the marks that mean what the HTML must tell, as tokens do not tell a mark
 // that means from one that adorns; add a part's or template's to them when it draws one
 const marked = `(() => {
   ` + partOfJS + `
   document.querySelectorAll('details').forEach((d) => { d.open = true; });
   const numbered = '[data-floe-look~="numbered"] > li:not(.done), .numbered > .card';
-  const unnumbered = '.slides > li, [data-floe-part=checklist]';
+  const unnumbered = '[data-floe-part=checklist]';
   const worded = '[data-floe-part=steps] > li.done > strong, [data-floe-part=checklist] > li > span, .option li > span, ' +
     '[data-floe-part=tree] li:is(.added, .removed, .changed) > .name, [data-floe-part=terminal] .run, [data-floe-part=code] .mark, ' +
     '[data-floe-part=note]:not([class]), [data-floe-part=note].caution > p';

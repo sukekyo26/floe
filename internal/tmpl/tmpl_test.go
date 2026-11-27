@@ -224,18 +224,23 @@ func drawRunbook(t *testing.T, data string) []byte {
 	return page
 }
 
-// slides draws a slide without parts as a divider on the band, the cover on the band too, each slide with the count
-// of them, and the hint in the page's language.
+// slides draws a slide without parts as a divider on the band, the cover on the band too, each slide first with its
+// number from 1 and the count of them as text, the / hidden from a screen reader and the words read for it in the
+// page's language, and the hint in the page's language.
 func TestDrawSlides(t *testing.T) {
 	t.Parallel()
 
-	slide := regexp.MustCompile(`<li class="slide[^"]*"[^>]*>`)
-	for _, tt := range []struct{ lang, direction, html, hint string }{
-		{"en", "", `<html lang="en">`, "Scroll for the next slide"},
-		{"ja", "", `<html lang="ja">`, "スクロールで次へ"},
-		{"en", "down", `<html lang="en" data-direction="down">`, "Scroll for the next slide"},
-		{"en", "across", `<html lang="en" data-direction="across">`, "Click, then → for the next slide; on a phone, swipe"},
-		{"ja", "across", `<html lang="ja" data-direction="across">`, "クリックして → で次へ。スマホはなぞる"},
+	slide := regexp.MustCompile(`<li class="slide[^"]*"[^>]*>\n<p class="number">.*</p>`)
+	number := func(slide, n, total, of string) string {
+		return `<p class="number"><span class="floe-hidden">` + slide + ` </span>` + n +
+			`<span aria-hidden="true"> / </span><span class="floe-hidden"> ` + of + ` </span>` + total + `</p>`
+	}
+	for _, tt := range []struct{ lang, direction, html, hint, slide, of string }{
+		{"en", "", `<html lang="en">`, "Scroll for the next slide", "Slide", "of"},
+		{"ja", "", `<html lang="ja">`, "スクロールで次へ", "スライド", "、全"},
+		{"en", "down", `<html lang="en" data-direction="down">`, "Scroll for the next slide", "Slide", "of"},
+		{"en", "across", `<html lang="en" data-direction="across">`, "Click, then → for the next slide; on a phone, swipe", "Slide", "of"},
+		{"ja", "across", `<html lang="ja" data-direction="across">`, "クリックして → で次へ。スマホはなぞる", "スライド", "、全"},
 	} {
 		src := "template: slides\nlang: " + tt.lang + "\ntitle: x\n"
 		if tt.direction != "" {
@@ -247,7 +252,9 @@ func TestDrawSlides(t *testing.T) {
 			t.Fatal(told(err))
 		}
 		got := strings.Join(slide.FindAllString(string(page), -1), "\n")
-		want := `<li class="slide" data-total="3">` + "\n" + `<li class="slide divider" data-total="3" data-floe-look="band">` + "\n" + `<li class="slide" data-total="3">`
+		want := `<li class="slide">` + "\n" + number(tt.slide, "1", "3", tt.of) + "\n" +
+			`<li class="slide divider" data-floe-look="band">` + "\n" + number(tt.slide, "2", "3", tt.of) + "\n" +
+			`<li class="slide">` + "\n" + number(tt.slide, "3", "3", tt.of)
 		if got != want {
 			t.Errorf("%s %s: slides\n%s\nwant\n%s", tt.lang, tt.direction, got, want)
 		}
@@ -258,7 +265,7 @@ func TestDrawSlides(t *testing.T) {
 		}
 	}
 	page, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte("template: slides\nlang: en\ntitle: x\nslides: [{heading: a}]\n"), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
-	if want := `<li class="slide divider" data-total="1" data-floe-look="band">`; err != nil || !bytes.Contains(page, []byte(want)) {
+	if want := `<li class="slide divider" data-floe-look="band">` + "\n" + number("Slide", "1", "1", "of"); err != nil || !bytes.Contains(page, []byte(want)) {
 		t.Errorf("one slide draws no %s\n%s", want, told(err))
 	}
 }

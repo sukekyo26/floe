@@ -9,9 +9,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Add `floe repository new`, `render`, `check`, `template`, `part` and `theme`, which keep a repository's documents with no settings: `.floe/repository.yaml` names floe's version and the documents' directories, and `floe repository check` checks the repository's templates, parts and themes in `.floe/`, every document and its page in one line, from any directory of the repository, in CI too. They read neither `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` nor `FLOE_THEMES_DIR`, use no server, refuse another version of floe than the setting names, and read and write nothing out of the repository but the icon sets.
+- Add the function `count` to `page.html` and `part.html`: `{{count $i}}` writes the index of a `range` as a number from 1, so that a template numbers its items in the page's text rather than by a CSS counter.
 
 ### Changed
 
+- Change `slides` to write each slide's number and the count of them as the page's text: they can be copied, and a screen reader reads them ("Slide 2 of 5"). They look as before.
 - Change `floe task` to make a task only with `--new`: without `--new` it no longer makes a task, where before `--state`, `--title`, `--url`, `--parent`, `--categories` or `--slug` of a task of no row made it silently; such a write is now refused (`no task S9 in project app: check the ID, name its project with --project, or make it with --new`), so that a mistyped ID or a project mistaken makes no empty task. Make a task first with `floe task --task <ID> --new`, then put pages on it; `--new` of a task there is is refused.
 - Change the theme `aurora`'s note to float on the shadow its other glass boxes cast, without the white edge round it, on a ground one step deeper in every tone, which stands off the violet wash the accent's paler ground all but matched.
 - Change the theme `app`'s note to a smaller icon, no taller than a line, so that a note of a line is as tall as its text and its padding.

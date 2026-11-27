@@ -9,9 +9,11 @@ floe の主要な変更を記録します。フォーマットは
 ### 追加
 
 - 追加：`floe repository new`・`render`・`check`・`template`・`part`・`theme`。設定を付けずにリポジトリの文書を扱います。`.floe/repository.yaml` に floe の版と文書のディレクトリを書き、`floe repository check` の 1 行で、`.floe/` のテンプレート・部品・テーマと、全部の文書とそのページを、リポジトリのどのディレクトリからでも、CI でも確かめます。`FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は読まず、サーバーを使わず、設定と別の版の floe は断り、アイコン集のほかは、リポジトリの外を読みも書きもしません。
+- 追加：`page.html` と `part.html` の関数 `count`。`{{count $i}}` は `range` の添字を 1 から数えた数を書くので、テンプレートが項目の番号を CSS の counter でなくページの文の中に書けます。
 
 ### 変更
 
+- 変更：`slides` が、各枚の番号と枚数をページの文として書くようになった。選んで写せ、読み上げで読まれる（「スライド 2、全 5」）。見た目は変わらない。
 - 変更：`floe task` がタスクを作るのは `--new` を付けたときだけになった。`--new` を付けないと作らなくなった（前は、無いタスクに `--state`・`--title`・`--url`・`--parent`・`--categories` を書くか、`--slug` でページを載せると、黙って作った）。そうした書き込みは、今は断る（`no task S9 in project app: check the ID, name its project with --project, or make it with --new`）。ID やプロジェクトの誤りで空のタスクを作らないため。先に `floe task --task <ID> --new` で作り、後からページを載せる。既にあるタスクの `--new` は断る。
 - 変更：テーマ `aurora` の注意（note）の白い外枠を外し、ほかのガラスの箱と同じ影だけで浮かせた。どの tone の地も一段濃くし、色の無い（accent の）注意がページの紫のにじみに溶けないようにした。
 - 変更：テーマ `app` の注意の印を小さくし、1 行の注意が字の行と余白の高さに収まるようにした。

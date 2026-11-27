@@ -1,6 +1,10 @@
 en:
   hint_down: 'Scroll for the next slide'
   hint_across: 'Click, then → for the next slide; on a phone, swipe'
+  slide: 'Slide'
+  of: 'of'
 ja:
   hint_down: 'スクロールで次へ'
   hint_across: 'クリックして → で次へ。スマホはなぞる'
+  slide: 'スライド'
+  of: '、全'
