@@ -79,6 +79,7 @@ var looks = []look{
 	{name: "layers", fix: lookLayersFix, floe: lookLayers, broken: brokenLayers},
 	{name: "lists-marked", fix: lookListsMarkedFix, floe: lookListsMarked, broken: brokenListsMarked},
 	{name: "lists-off", fix: lookListsOffFix, floe: lookListsOff, broken: brokenListsOff},
+	{name: "markdown-headings", fix: lookMarkdownHeadingsFix, floe: lookMarkdownHeadings, broken: brokenMarkdownHeadings},
 	{name: "marks", fix: lookMarksFix, floe: lookMarks, broken: brokenMarks},
 	{name: "nesting", fix: lookNestingFix, floe: lookNesting, broken: brokenNesting},
 	{name: "paper-ground", fix: lookPaperGroundFix, floe: lookPaperGround, broken: brokenPaperGround},
