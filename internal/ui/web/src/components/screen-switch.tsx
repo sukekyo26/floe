@@ -1,10 +1,10 @@
 import { SWITCH_WIDE } from '@/components/whole-bar';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
+import { barPress } from '@/stores/columns';
 import { listQuery as pageQuery, type ListQuery } from '@/stores/list-query';
 import type { Screen } from '@/types/screen';
 import type { Back } from '@/utils/back';
-import { onPlainPress } from '@/utils/plain-press';
 
 // look is a link's in the switch, the one of the screen shown on the thumb: a white ground and a shadow that lifts it off
 // the track, which the other has not. Both are of one size and one weight, so that a switch moves none, and no frame is
@@ -53,7 +53,7 @@ export function ScreenSwitch({
       <a
         id="to-list"
         href={listUp?.href ?? `/${query.savedList()}`}
-        onClick={onPlainPress(listUp?.onPress)}
+        onClick={barPress(listUp?.onPress)}
         aria-current={pages ? 'page' : undefined}
         className={look(pages)}
       >
@@ -62,7 +62,7 @@ export function ScreenSwitch({
       <a
         id="to-tasks"
         href={taskUp?.href ?? `/tasks${query.savedTasks()}`}
-        onClick={onPlainPress(taskUp?.onPress)}
+        onClick={barPress(taskUp?.onPress)}
         aria-current={pages ? undefined : 'page'}
         className={look(!pages)}
       >
