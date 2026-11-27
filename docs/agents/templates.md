@@ -258,7 +258,7 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--chart-1`, `--chart-2`, `--chart-3`, `--chart-4` | The colours of a chart's series, in order, at 3:1 at the least on a part's background | `#008fa3`, `#c2660a`, `#6157d9`, `#c8366f` |
 | `--page-bg` | The whole page's background, a pattern such as squares too (`--bg` by default) | `var(--bg)` |
 | `--rule` | The `border` of a rule across the page, such as between sections | `1px solid var(--line)` |
-| `--text-width` | The width of a page of one column, and of a note (below the table) | `56rem` |
+| `--text-width` | The width of a page of one column (below the table) | `56rem` |
 | `--page-width`, `--page-pad` | The column a page is centred in (`.floe-column`): its width, unless the template sets `--column-width`, and the pad each side of it, inside the column's box | `96rem`, `16px` |
 
 - `--tone`, `--tone-soft` and `--tone-fill` take the tone from `data-floe-tone` (`floe part guide`, *Tones*). A template marks a tone so too.
