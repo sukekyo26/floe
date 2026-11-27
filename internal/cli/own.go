@@ -19,7 +19,8 @@ import (
 // mistake of no setting names too; whether it does; from, the variable of the home that decides the default
 // (link.HomeKey), which a mistake of none names; and why the default cannot be (under a file, HOME=/dev/null), which
 // a reader takes as none and a writer tells, nil else; seen is what dataDir's Stat of a default told of it, nil for
-// none there or one it could not look at (and for a setting, which dataDir does not look at).
+// none there or one it could not look at (and for a setting, which dataDir does not look at); root, the directory
+// opened to read in a repository's place (repository.place), nil for one read as the system follows its links.
 type dataPlace struct {
 	dir      string
 	key      string
@@ -27,6 +28,7 @@ type dataPlace struct {
 	from     string
 	unusable error
 	seen     fs.FileInfo
+	root     *files.Root
 }
 
 // toRead is the directory to read at p, "" for none: one whose default cannot be is none.
@@ -78,12 +80,12 @@ const (
 func (a *app) dataDir(key string, b base, sub string) (dataPlace, error) {
 	if setting := a.getenv(key); setting != "" {
 		if !filepath.IsAbs(setting) {
-			p := dataPlace{dir: "", key: key, set: true, from: "", unusable: nil, seen: nil}
+			p := dataPlace{dir: "", key: key, set: true, from: "", unusable: nil, seen: nil, root: nil}
 			return p, usererr.NewWhole("dir_relative", key, setting)
 		}
-		return dataPlace{dir: setting, key: key, set: true, from: "", unusable: nil, seen: nil}, nil
+		return dataPlace{dir: setting, key: key, set: true, from: "", unusable: nil, seen: nil, root: nil}, nil
 	}
-	p := dataPlace{dir: "", key: key, set: false, from: link.HomeKey, unusable: nil, seen: nil}
+	p := dataPlace{dir: "", key: key, set: false, from: link.HomeKey, unusable: nil, seen: nil, root: nil}
 	switch base, h := a.getenv(b.key), a.getenv(link.HomeKey); {
 	case b.key != "" && filepath.IsAbs(base):
 		p.dir = filepath.Join(base, sub)
@@ -93,21 +95,30 @@ func (a *app) dataDir(key string, b base, sub string) (dataPlace, error) {
 	if p.dir == "" {
 		return p, nil
 	}
+	return looked(p), nil
+}
+
+// looked is the default place p as its Stat tells it: seen when it is there, unusable when it cannot be (under a
+// file).
+func looked(p dataPlace) dataPlace {
 	fi, err := files.Stat(p.dir)
 	if err != nil {
 		// err is p.dir's Stat, which a file there passes: p.dir is not there, so the look starts above it.
 		if notDir := files.NotDir(filepath.Dir(p.dir), err); notDir != nil {
 			p.unusable = usererr.CannotWrite(p.dir, notDir)
 		}
-		return p, nil
+		return p
 	}
 	p.seen = fi
-	return p, nil
+	return p
 }
 
 // ownPlace is the directory of one's own of the kind (parts, themes, templates) as set: FLOE_<KIND>_DIR, else
-// floe/<kind> under the base of the configuration (configBase).
+// floe/<kind> under the base of the configuration (configBase); under floe repository, the repository's alone.
 func (a *app) ownPlace(kind string) (dataPlace, error) {
+	if a.repo != nil {
+		return a.repo.place(kind)
+	}
 	return a.dataDir("FLOE_"+strings.ToUpper(kind)+"_DIR", configBase, filepath.Join("floe", kind))
 }
 
@@ -150,6 +161,9 @@ func ownDir(p dataPlace) (kit.Dir, error) {
 			return none, nil
 		}
 		return none, usererr.SettingDir(p.setting(), dir, err, usererr.CannotRead(dir, err))
+	}
+	if p.root != nil {
+		return kit.Dir{FS: p.root, Name: dir}, nil
 	}
 	return kit.Dir{FS: files.DirFS(dir), Name: dir}, nil
 }

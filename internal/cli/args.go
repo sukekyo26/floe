@@ -24,6 +24,7 @@ type app struct {
 	guard    *guard.Guard    // the watch of the memory, from the first page drawn; nil without Env.Exit
 	stopCode int             // the exit code past the watch's limit: exitFail, or floe __draw's
 	drawer   *drawproc.Child // what the server draws with, set by serve
+	repo     *repository     // the repository of floe repository's commands, nil for the others
 }
 
 // print writes a line to the command's output.

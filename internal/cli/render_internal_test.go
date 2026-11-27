@@ -22,7 +22,7 @@ func TestPageMadeFIFO(t *testing.T) {
 	want := "a.html: this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here"
 	var out bytes.Buffer
 	a := &app{env: Env{Stdout: &out, Stderr: nil, Dir: "", Getenv: nil}, out: &out}
-	for name, err := range map[string]error{"writePages": a.writePages(pages, arg{name: "", abs: "", err: nil}), "checkPages": checkPages(pages)} {
+	for name, err := range map[string]error{"writePages": a.writePages(pages, arg{name: "", abs: "", err: nil}), "checkPages": checkPages(pages, "floe render")} {
 		if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != want {
 			t.Errorf("%s told %q, want %q", name, got, want)
 		}
