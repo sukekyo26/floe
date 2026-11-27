@@ -72,9 +72,11 @@ export function TreeRow({
       aria-current={picked || undefined}
       data-archived={archived || undefined}
       style={style as CSSProperties}
-      className="group/tree relative flex items-center gap-2 border border-y-0 border-line bg-panel py-[0.2rem] ps-[calc(1.5rem+(var(--d)-1)*1.1rem)] pe-4 text-small transition-colors duration-150 not-has-[+li[data-testid=tree]]:rounded-b-menu not-has-[+li[data-testid=tree]]:border-b not-has-[+li[data-testid=tree]]:shadow-sm hover:bg-hover has-[[data-testid=title]:focus-visible]:outline-2 has-[[data-testid=title]:focus-visible]:-outline-offset-2 has-[[data-testid=title]:focus-visible]:outline-faint aria-current:bg-new-soft"
+      className="group/tree relative flex flex-wrap items-center gap-x-2 border border-y-0 border-line bg-panel py-[0.2rem] ps-[calc(1.5rem+(var(--d)-1)*1.1rem)] pe-4 text-small transition-colors duration-150 not-has-[+li[data-testid=tree]]:rounded-b-menu not-has-[+li[data-testid=tree]]:border-b not-has-[+li[data-testid=tree]]:shadow-sm hover:bg-hover has-[[data-testid=title]:focus-visible]:outline-2 has-[[data-testid=title]:focus-visible]:-outline-offset-2 has-[[data-testid=title]:focus-visible]:outline-faint aria-current:bg-new-soft"
     >
-      <div className={`min-w-0 flex-1 ${item.kind === 'note' ? 'ps-[calc(0.875rem+0.35rem)] text-muted' : ''}`}>
+      <div
+        className={`min-w-[min(100%,calc(2.625rem+10ch))] flex-1 ${item.kind === 'note' ? 'ps-[calc(0.875rem+0.35rem)] text-muted' : ''}`}
+      >
         {item.kind === 'dir' ? (
           <button
             type="button"
@@ -111,43 +113,47 @@ export function TreeRow({
           treeNote(item.listing)
         ) : null}
       </div>
-      <time
-        dateTime={item.kind === 'page' ? item.updatedAt : undefined}
-        className="flex-none font-mono text-label leading-none whitespace-nowrap text-muted"
-      >
-        {item.kind === 'page' ? <Ago iso={item.updatedAt} /> : null}
-      </time>
-      <div
-        data-testid="actions"
-        className="relative z-1 flex flex-none items-center gap-0.5 can-hover:[&>*]:opacity-0 can-hover:[&>*]:transition-opacity can-hover:[&>*]:duration-120 can-hover:group-focus-within/tree:[&>*]:opacity-100 can-hover:group-hover/tree:[&>*]:opacity-100 can-hover:group-aria-current/tree:[&>*]:opacity-100"
-      >
-        {at ? (
-          <>
-            <IconButton
-              testid="open"
-              size="row"
-              href={rawHref(at)}
-              newTab
-              label={t('ui_open_raw_named', name)}
-              title={t('ui_open_raw')}
-            >
-              <OpenIcon />
-            </IconButton>
-            <IconButton
-              testid="copy"
-              size="row"
-              label={t('ui_copy_path_named', name)}
-              title={copied ? t('ui_copied') : t('ui_copy_path')}
-              onClick={() => {
-                void actions.copyPath(`${folder.path}/${at.file}`).then((ok) => {
-                  if (ok) setCopied();
-                });
-              }}
-            >
-              {copied ? <DoneIcon /> : <CopyIcon />}
-            </IconButton>
-          </>
-        ) : null}
+      {/* A name keeps the room of its marks and of 10ch (index.html whole) or the row's width; past it, the time and the
+          buttons go together under it, to the right where the other rows' times are */}
+      <div className="ms-auto flex flex-none items-center gap-2">
+        <time
+          dateTime={item.kind === 'page' ? item.updatedAt : undefined}
+          className="flex-none font-mono text-label leading-none whitespace-nowrap text-muted"
+        >
+          {item.kind === 'page' ? <Ago iso={item.updatedAt} /> : null}
+        </time>
+        <div
+          data-testid="actions"
+          className="relative z-1 flex flex-none items-center gap-0.5 can-hover:[&>*]:opacity-0 can-hover:[&>*]:transition-opacity can-hover:[&>*]:duration-120 can-hover:group-focus-within/tree:[&>*]:opacity-100 can-hover:group-hover/tree:[&>*]:opacity-100 can-hover:group-aria-current/tree:[&>*]:opacity-100"
+        >
+          {at ? (
+            <>
+              <IconButton
+                testid="open"
+                size="row"
+                href={rawHref(at)}
+                newTab
+                label={t('ui_open_raw_named', name)}
+                title={t('ui_open_raw')}
+              >
+                <OpenIcon />
+              </IconButton>
+              <IconButton
+                testid="copy"
+                size="row"
+                label={t('ui_copy_path_named', name)}
+                title={copied ? t('ui_copied') : t('ui_copy_path')}
+                onClick={() => {
+                  void actions.copyPath(`${folder.path}/${at.file}`).then((ok) => {
+                    if (ok) setCopied();
+                  });
+                }}
+              >
+                {copied ? <DoneIcon /> : <CopyIcon />}
+              </IconButton>
+            </>
+          ) : null}
+        </div>
       </div>
     </li>
   );
