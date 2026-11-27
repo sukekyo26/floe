@@ -2,7 +2,7 @@
 
 A template is the page a data file is drawn into: a directory that says what the data file may hold, how the page is laid out and what goes with it. A data file names its template with `template:` (`floe guide` tells how to write a data file). floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). This doc says what each file holds, what `page.html` can use, what `page.css` reaches, how a template uses parts, looks and the palette, and what `floe template check` refuses. For a part of your own, see `floe part guide`; for a theme, `floe theme guide`.
 
-In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc: without it, floe reads and writes your own, not the repository's.
+In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its templates are in `.floe/templates`, and without it floe reads and writes your own.
 
 ## Where templates are
 
@@ -21,7 +21,7 @@ In a repository with `.floe/repository.yaml`, put `floe repository` before every
 
 ### Make one in another directory
 
-`floe repository` uses no server: in a repository, make the template in place.
+`floe repository` uses no server: in a repository, make the template in place with `floe repository template new` and check it with `floe repository template check`.
 
 The server reads your templates again as soon as you save one, so a template half written stops the server's pages for everyone who uses it. Write a new template in another directory, and move it in once it is checked (in sh, where the shell expands `~`):
 

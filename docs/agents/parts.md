@@ -2,7 +2,7 @@
 
 A part draws an item of a data file. It is a directory that says what the item may hold, how it is drawn and how it looks. A look is a directory of CSS alone, which parts and elements borrow. A shared schema is a JSON Schema that parts and templates name. This doc says what each file holds, what `part.html` can call, what a part's CSS reaches and how a change takes effect, and what `floe part check` refuses. A data file writes a part as one key naming it (`- quote: { text: Hello }` among a section's `parts`). A part is used in a template as `floe template guide` tells (*Parts in a template*), and in a data file as `floe guide` tells.
 
-In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc: without it, floe reads and writes your own, not the repository's.
+In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its parts are in `.floe/parts`, and without it floe reads and writes your own.
 
 ## Where parts are
 

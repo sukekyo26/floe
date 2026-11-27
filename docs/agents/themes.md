@@ -2,7 +2,7 @@
 
 A theme is a directory of CSS files that changes a page's colours, typefaces and the look of the parts, by setting variables and writing rules. A data file selects a theme with `theme:`, as it selects one of floe's. This doc says what each file and variable changes, how a change takes effect, and what `floe theme check` refuses.
 
-In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc: without it, floe reads and writes your own, not the repository's.
+In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its themes are in `.floe/themes`, and without it floe reads and writes your own.
 
 ## Where themes are
 
