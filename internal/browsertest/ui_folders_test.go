@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -195,18 +196,30 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.still()
 	}
 	b.size(1280, 900, false)
-	narrow(320)
 	deep := "guide/deep/a/b/c/d/e/y.html"
-	wrapped := make([]string, 0, 4)
-	wrapped = append(wrapped, lines(deep))
-	// Wide enough for the name and the time, not the buttons, with the fonts here: they go under it together. Where
-	// fonts are wider (CI's), the time does not fit either.
-	narrow(380)
-	wrapped = append(wrapped, lines(deep))
-	// Wide, the deep row and a shallow one stay on one line (a shallow row wraps at 320px where fonts are wide).
+	// Wide, the deep row and a shallow one stay on one line.
 	narrow(560)
-	check(t, "a deep row in a narrow column", append(wrapped, lines(deep), lines("index.html")),
-		deep+": name 2 lines|"+deep+": name 2 lines|"+deep+": name 1 line|index.html: name 1 line")
+	wrapped := make([]string, 0, 4)
+	wrapped = append(wrapped, lines(deep), lines("index.html"))
+	// The column where the deep row has room for its name and time, not its buttons too, measured on the row at 560px
+	// so that it is the same scene whatever the fonts: the time goes there with the buttons, under the name.
+	between := b.eval(`(() => { const li = document.querySelector('#list li[data-testid=tree][data-file="` + deep + `"]'), style = getComputedStyle(li);
+		const room = li.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd), gap = parseFloat(style.columnGap);
+		const least = getComputedStyle(li.querySelector('[data-testid=title]').parentElement).minWidth, px = [...least.matchAll(/([\d.]+)px/g)].map((m) => Number(m[1]));
+		const time = li.querySelector('time').getBoundingClientRect(), actions = li.querySelector('[data-testid=actions]').getBoundingClientRect();
+		if (px.length === 0) return 'the name has no least width: ' + least;
+		const timeFits = Math.min(...px) + gap + time.width, allFit = Math.min(...px) + gap + (actions.right - time.left);
+		const column = Math.round(560 - room + (timeFits + allFit) / 2);
+		return allFit - timeFits < 8 || column < 320 ? 'no column between ' + timeFits + ' and ' + allFit + ' (column ' + column + ')' : String(column); })()`)
+	column, err := strconv.Atoi(between)
+	if err != nil {
+		t.Fatalf("a column for the name and the time alone: %s", between)
+	}
+	narrow(column)
+	wrapped = append(wrapped, lines(deep))
+	narrow(320)
+	check(t, "a deep row in a narrow column", append(wrapped, lines(deep)),
+		deep+": name 1 line|index.html: name 1 line|"+deep+": name 2 lines|"+deep+": name 2 lines")
 	b.unsize()
 
 	guide := "dir:docs:guide/deep,page:docs:guide/setup.html,page:docs:guide/start.html"
