@@ -207,7 +207,7 @@ var messagesEN = map[string]string{
 	"cli_render_stale":         "%s is not what %s draws: write it again with %s",
 	"repository_none":          "no .floe/repository.yaml in %s or a directory above it, up to the one that holds .git: run the command in the repository, or make one with floe repository new at its root",
 	"repository_no_cwd":        "the working directory cannot be read, so floe cannot find the repository; run floe repository from a directory that exists",
-	"repository_version":       "%s draws with floe %s, and this is floe %s: install floe %s, or, to upgrade, write version: %s in it and run floe repository render",
+	"repository_version":       "%s draws with floe %s, and this is floe %s: install floe %s, or write version: %s in it and run floe repository render to draw with this one",
 	"repository_path":          "%s is no directory of the repository as floe repository takes one: write it from the root, slash-separated, in UTF-8, without ./ before it, / after it, or .. (docs/specs)",
 	"repository_outside":       "this leads out of the repository at %s, where floe repository reads and writes nothing: make it a file or directory in the repository, or a link to one there",
 	"repository_exists":        "%s is there already: change it rather than making another",

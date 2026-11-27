@@ -29,7 +29,7 @@ documents:
 - `floe repository` finds the repository by this file, from any directory in it, looking up no higher than the directory that holds `.git`. Its commands read the templates, parts and themes in `.floe/` alone, whatever is in `~/.config/floe` or the `FLOE_*_DIR` settings, and they use no server and no store. A directory of `.floe/` that is not there is none: no `.gitkeep` is needed.
 - `version` is the version of floe that draws the pages. Another floe refuses the repository before it reads anything else, telling both versions. A floe built from its source has a `+` and a commit after its version (`0.4.0+67f6e156bc78`), and the part before the `+` is compared: such a floe between two releases may draw a page otherwise, which the check then tells as a page not drawn again.
 - `documents` are the directories of the documents, from the root, `/`-separated, without `./` before or `/` after (`docs/specs`). Every `.yaml` and `.yml` under them is a document, in folders too, but not under a name that starts with a dot, nor under a link to a directory (name that directory in `documents` instead). An HTML file with no data file is left alone, so a page written by hand can be kept there; so is a page whose data file was deleted, which the check does not find.
-- floe reads and writes nothing out of the repository: a page, a data file or a directory of `.floe/` that is a link out of it is refused, and so is a file in a directory of `.floe/` that is a link out of that directory.
+- floe reads and writes nothing out of the repository but the icon sets of `floe icons`: a page, a data file or a directory of `.floe/` that is a link out of it is refused, and so is a file in a directory of `.floe/` that is a link out of that directory.
 - floe leaves out of a linked folder the names that start with a dot, so that `.floe/` is not listed beside the pages.
 - A page is drawn in the theme its data file names with `theme:`, else `default`: the theme picked on the management page does not reach a repository's pages, and a template has no theme of its own.
 
@@ -49,10 +49,11 @@ At the repository's root:
 
 ```sh
 floe repository new docs/specs
+mkdir -p docs/specs
 floe repository template new api-spec
 ```
 
-`floe repository new` makes no directory of `documents`: make `docs/specs` too. Fill in the three files as [templates.md](agents/templates.md) tells, with `floe repository` before each command it names (`floe repository template check`), then write `docs/specs/orders.yaml` with `template: api-spec`. Write `"additionalProperties": false` in `schema.json`: the one floe makes takes any key. A document can name one of floe's templates too (`template: design`).
+`floe repository new` makes no directory of `documents`, so `mkdir` makes it. With floe's templates alone (`template: design`), leave out `template new`. Fill in the three files as [templates.md](agents/templates.md) tells, with `floe repository` before each command it names (`floe repository template check`), then write `docs/specs/orders.yaml` with `template: api-spec`. Write `"additionalProperties": false` in `schema.json`: the one floe makes takes any key. A document can name one of floe's templates too (`template: design`).
 
 ## Draw and check
 
@@ -68,7 +69,8 @@ Check them, which is what CI does. It checks the repository's templates, parts a
 floe repository check
 ```
 
-- Both run from any directory of the repository, and name the documents from its root. Give data files to either to draw or check those alone (`floe repository render docs/specs/orders.yaml`).
+- Both run from any directory of the repository, and name the documents they find from its root. Give data files to either to draw or check those alone, as paths from where you are (`floe repository render docs/specs/orders.yaml` at the root).
+- While any data file has a mistake, `floe repository render` writes no page, and the check tells the mistakes before the pages.
 - Put the two in whatever runs your project's commands.
 
 ## CI

@@ -200,7 +200,7 @@ var messagesJA = map[string]string{
 	"cli_render_stale":         "%s は %s を描いたものと違います。%s で書き直してください",
 	"repository_none":          "%s とその上（.git のあるディレクトリまで）に .floe/repository.yaml がありません。リポジトリの中でコマンドを走らせるか、リポジトリの根で floe repository new を走らせて作ってください",
 	"repository_no_cwd":        "作業ディレクトリを読めないので、リポジトリを探せません。あるディレクトリから floe repository を走らせてください",
-	"repository_version":       "%s は floe %s で描くと書いていますが、これは floe %s です。floe %s を入れるか、版を上げるなら、そこに version: %s と書いて floe repository render を走らせてください",
+	"repository_version":       "%s は floe %s で描くと書いていますが、これは floe %s です。floe %s を入れるか、この floe で描くなら、そこに version: %s と書いて floe repository render を走らせてください",
 	"repository_path":          "%s は floe repository が受けるリポジトリのディレクトリの書き方ではありません。根から / で区切り、UTF-8 の字で、前に ./、後ろに /、途中に .. を付けずに書いてください（docs/specs）",
 	"repository_outside":       "これはリポジトリ %s の外へ出ます。floe repository は外を読みも書きもしません。リポジトリの中のファイルかディレクトリ、またはそこへのリンクにしてください",
 	"repository_exists":        "%s はもうあります。作り直さず、それを直してください",

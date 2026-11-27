@@ -21,6 +21,8 @@ In a repository that has `.floe/repository.yaml`, put `floe repository` before e
 
 ### Make one in another directory
 
+In a repository, `floe repository` uses no server, so this is not needed there: make the template with `floe repository template new` and check it with `floe repository check` before you commit.
+
 The server reads your templates again as soon as you save one, so a template half written stops the server's pages for everyone who uses it. Write a new template in another directory, and move it in once it is checked (in sh, where the shell expands `~`):
 
 ```sh

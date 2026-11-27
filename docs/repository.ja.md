@@ -6,13 +6,13 @@
 
 ```text
 .floe/
-  repository.yaml         the setting: floe's version and where the documents are
-  templates/api-spec/     page.html, schema.json, example.yaml, …
-  parts/                  parts of your own, if any
-  themes/                 themes of your own, if any
+  repository.yaml         設定（floe の版と、文書の置き場所）
+  templates/api-spec/     page.html・schema.json・example.yaml など
+  parts/                  自分の部品（あれば）
+  themes/                 自分のテーマ（あれば）
 docs/specs/
-  orders.yaml             the data file, which is edited
-  orders.html             its page, which floe repository render writes
+  orders.yaml             直すデータファイル
+  orders.html             そのページ（floe repository render が書く）
   invoice.yaml
   invoice.html
 .gitattributes
@@ -29,7 +29,7 @@ documents:
 - `floe repository` は、このファイルでリポジトリを見つけます。リポジトリの中のどのディレクトリからでも上へ探し、`.git` のあるディレクトリより上は探しません。そのコマンドが読むテンプレート・部品・テーマは `.floe/` のものだけで、`~/.config/floe` や `FLOE_*_DIR` の設定にあるものは読まず、サーバーも保存先も使いません。`.floe/` の中の無いディレクトリは「無い」として扱うので、`.gitkeep` は要りません。
 - `version` は、ページを描く floe の版です。別の版の floe は、ほかを読む前に、両方の版を言って断ります。ソースからビルドした floe は、版の後に `+` と commit が付き（`0.4.0+67f6e156bc78`）、`+` の前を比べます。そうした、リリースとリリースの間の floe は違う形に描くことがあり、それは check が「描き直していないページ」として言います。
 - `documents` には、文書のディレクトリを、根から `/` で区切り、前に `./`、後ろに `/` を付けずに書きます（`docs/specs`）。その下の `.yaml` と `.yml` は、フォルダの中のものも全部文書です。点で始まる名前の下と、ディレクトリへのリンクの下は見ません（そのディレクトリは `documents` に書きます）。データファイルの無い HTML には何もしないので、手で書いたページも置けます。データファイルを消した後に残ったページも同じで、check は見つけません。
-- floe は、リポジトリの外を読みも書きもしません。リポジトリの外へのリンクのページ・データファイル・`.floe/` のディレクトリは断り、`.floe/` のディレクトリの中の、そのディレクトリの外へのリンクも断ります。
+- floe は、`floe icons` のアイコン集のほかは、リポジトリの外を読みも書きもしません。リポジトリの外へのリンクのページ・データファイル・`.floe/` のディレクトリは断り、`.floe/` のディレクトリの中の、そのディレクトリの外へのリンクも断ります。
 - 点で始まる名前は、リンクしたフォルダの一覧に出ないので、`.floe/` はページと並びません。
 - ページは、データファイルが `theme:` で名指すテーマ、無ければ `default` で描きます。管理ページで選んだテーマはリポジトリのページに届かず、テンプレートは自分のテーマを持てません。
 
@@ -49,10 +49,11 @@ documents:
 
 ```sh
 floe repository new docs/specs
+mkdir -p docs/specs
 floe repository template new api-spec
 ```
 
-`floe repository new` は `documents` のディレクトリを作らないので、`docs/specs` も作ります。[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き（そこに出るコマンドには、頭に `floe repository` を付けます。`floe repository template check`）、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: design`）も名指せます。
+`floe repository new` は `documents` のディレクトリを作らないので、`mkdir` で作ります。floe のテンプレートだけを使うなら（`template: design`）、`template new` は要りません。[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き（そこに出るコマンドには、頭に `floe repository` を付けます。`floe repository template check`）、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: design`）も名指せます。
 
 ## 描く・確かめる
 
@@ -68,7 +69,8 @@ floe repository render
 floe repository check
 ```
 
-- どちらも、リポジトリのどのディレクトリからでも走らせられ、文書を根からの名前で言います。データファイルを渡すと、それだけを描く・確かめます（`floe repository render docs/specs/orders.yaml`）。
+- どちらも、リポジトリのどのディレクトリからでも走らせられ、見つけた文書を根からの名前で言います。データファイルを渡すと、それだけを描く・確かめます。渡すパスは、今いる所からのパスです（根で `floe repository render docs/specs/orders.yaml`）。
+- データファイルに 1 つでも誤りがある間、`floe repository render` はどのページも書かず、check はページより先に誤りを言います。
 - 2 つを、プロジェクトのコマンドを走らせる仕組みに置きます。
 
 ## CI

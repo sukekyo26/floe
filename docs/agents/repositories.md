@@ -12,7 +12,7 @@ A repository may keep documents as data files with the pages drawn of them, both
 5. Run `floe repository render`, fix every mistake (*Reading mistakes* of `floe guide`), and run it again until none is left.
 6. Run `floe repository check`. When pages of documents you did not change came out different, and you changed no template, part or theme, do not commit those pages, and tell the user (*When the check fails*). Else, when you commit, commit the `.yaml` and its page together (the check fails for a page that its `.yaml` does not draw).
 
-- Run the commands anywhere in the repository: they find its root, and name the documents from it.
+- Run the commands anywhere in the repository: they find its root, and name the documents they find from it. A data file you give them is a path from where you are, as with `floe render` (`floe repository render specs/orders.yaml` in `docs`).
 - To change a template of the repository's (a new required key, say), change its `schema.json`, `page.html` and `example.yaml` as `floe repository template guide` says, then every data file that names it (the check tells those left), draw, and commit it all in one change.
 - In a merge conflict, settle the `.yaml` and draw again, which writes the page whole.
 - To delete a document, delete its `.yaml` and its page; to rename one, delete the old page too (*What the check does not find*).
@@ -39,12 +39,32 @@ docs/specs/
 .gitattributes
 ```
 
+### .floe/repository.yaml
+
+`floe repository new` writes it:
+
+```yaml
+version: '0.4.0'
+documents:
+  - 'docs/specs'
+```
+
+| Key | Required | What it is | How to write it |
+|---|---|---|---|
+| `version` | yes | The version of floe that draws the pages; another floe refuses the repository (*floe's version*) | The number `floe --version` prints before any `+`, as a string |
+| `documents` | yes | The directories of the documents, every data file under them drawn | A list of one or more directories that are there, from the root, `/`-separated, without `./` before, `/` after or `..` (`docs/specs`) |
+
+Any other key is refused.
+
+### Steps
+
 Run these at the repository's root, the directory that holds `.git`: `floe repository new` makes the repository where it runs.
 
-1. Make the setting, naming the directories of the documents from the root (`docs/specs`, without `./` before or `/` after), and the first template. `floe repository new` makes no directory of `documents`: make each (`mkdir -p docs/specs`), or the check fails with `docs/specs: no such file or directory`.
+1. Make the setting, naming the directories of the documents from the root (`docs/specs`, without `./` before or `/` after), and the first template. `floe repository new` makes no directory of `documents`: make each, as `mkdir` does below, or the check fails with `docs/specs: no such file or directory`. With floe's templates alone (`template: design`), leave out `template new`.
 
 ```sh
 floe repository new docs/specs
+mkdir -p docs/specs
 floe repository template new api-spec
 ```
 
@@ -84,7 +104,7 @@ The documents in docs/specs are drawn by floe. To change one, run `floe reposito
 
 - The templates, parts and themes in `.floe/` alone. A directory of them that is not there is none (no `.gitkeep` is needed). `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` are not read: do not set them for this repository.
 - Every `.yaml` and `.yml` under the directories of `documents`, in folders too, but not under a name that starts with a dot, nor under a link to a directory: name such a directory in `documents` instead. An HTML file with no data file is left alone, a page written by hand too.
-- Nothing out of the repository: a page, a data file or a directory of `.floe/` that is a link out of it is refused.
+- Nothing out of the repository but the icon sets of `floe icons` (*Icons*): a page, a data file or a directory of `.floe/` that is a link out of it is refused.
 
 ### What the check does not find
 
@@ -103,7 +123,7 @@ The documents in docs/specs are drawn by floe. To change one, run `floe reposito
 
 ## When the check fails
 
-The check names each mistake of a template, part, theme or document. Once the documents have none, it names each page that its data file does not draw or that is missing: after you fix the mistakes, run the check again.
+The check names each mistake of a template, part, theme or document. Once the documents have none, it names each page that its data file does not draw or that is missing: after you fix the mistakes, run the check again. A directory of `documents` that is not there is told before the documents are checked: make it, and run the check again. `floe repository render` writes no page while any data file has a mistake.
 
 - For a document you changed, added or took away: draw again, and delete the page of one taken away or renamed.
 - For one you did not touch, tell the user what the check printed, with the version of `floe --version` and the one `.floe/repository.yaml` names. The reasons may be:

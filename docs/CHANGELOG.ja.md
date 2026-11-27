@@ -8,7 +8,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
-- 追加：`floe repository new`・`render`・`check`・`template`・`part`・`theme`。設定を付けずにリポジトリの文書を扱います。`.floe/repository.yaml` に floe の版と文書のディレクトリを書き、`floe repository check` の 1 行で、`.floe/` のテンプレート・部品・テーマと、全部の文書とそのページを、リポジトリのどのディレクトリからでも、CI でも確かめます。`FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は読まず、サーバーを使わず、設定と別の版の floe は断り、リポジトリの外を読みも書きもしません。
+- 追加：`floe repository new`・`render`・`check`・`template`・`part`・`theme`。設定を付けずにリポジトリの文書を扱います。`.floe/repository.yaml` に floe の版と文書のディレクトリを書き、`floe repository check` の 1 行で、`.floe/` のテンプレート・部品・テーマと、全部の文書とそのページを、リポジトリのどのディレクトリからでも、CI でも確かめます。`FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は読まず、サーバーを使わず、設定と別の版の floe は断り、アイコン集のほかは、リポジトリの外を読みも書きもしません。
 
 ### 変更
 

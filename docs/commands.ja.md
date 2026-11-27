@@ -153,7 +153,7 @@ floe render --check docs/*.yaml            # CI で：書き直していない�
 
 ## `floe repository`
 
-リポジトリの文書のコマンドです（[repository.ja.md](repository.ja.md)）。`new` と guide のほかは、作業ディレクトリのリポジトリで動きます。リポジトリは、作業ディレクトリかその上で `.floe/repository.yaml` を持つディレクトリで、`.git` を持つディレクトリより上は探しません。読むテンプレート・部品・テーマは `.floe/` のものだけで、`FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は読まず、サーバーも保存先も使わず、リポジトリの外を読みも書きもしません（外へのリンクは断ります）。`version` がこの floe の版（`floe --version` の `+` の前）でないリポジトリは、ほかを読む前に断ります。
+リポジトリの文書のコマンドです（[repository.ja.md](repository.ja.md)）。`new` と guide のほかは、作業ディレクトリのリポジトリで動きます。リポジトリは、作業ディレクトリかその上で `.floe/repository.yaml` を持つディレクトリで、`.git` を持つディレクトリより上は探しません。読むテンプレート・部品・テーマは `.floe/` のものだけで、`FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は読まず、サーバーも保存先も使わず、`floe icons` のアイコン集のほかは、リポジトリの外を読みも書きもしません（外へのリンクは断ります）。`version` がこの floe の版（`floe --version` の `+` の前）でないリポジトリは、ほかを読む前に断ります。
 
 - `floe repository new <dir>...` は、作業ディレクトリに `.floe/repository.yaml` を書きます。`version` はこの floe の版、`documents` は渡したディレクトリで、根から `/` で区切って書きます（`docs/specs`。`./docs`・`docs/`・`..` は断ります）。ディレクトリは作らないので、文書のディレクトリは作ってください。ここかその上にリポジトリがあれば、何も書きません。
 - `floe repository render [data.yaml]...` は、渡したデータファイル、渡さなければ `documents` の下の `.yaml` と `.yml` を全部（点で始まる名前の下と、ディレクトリへのリンクの下は除く）描き、`floe render` と同じくページを隣に書きます。文書は、どこで走らせても根からの名前で言います。

@@ -40,6 +40,8 @@ type repository struct {
 
 // findRoot is the directory at dir or above it that holds .floe/repository.yaml, looking no higher than one that
 // holds .git (a directory, or a file in a worktree or a submodule): false when there is none.
+// LIMIT: dir is gone up by its names, not its real path: from a link out of the repository into it
+// (~/shortcut -> repo/docs), none is found, which refuses rather than reads. Go up the real path if that is asked.
 func findRoot(dir string) (string, bool) {
 	for {
 		if _, err := files.Lstat(filepath.Join(dir, floeDir, repositoryFile)); err == nil {
@@ -181,6 +183,8 @@ func (r *repository) documentArgs() ([]arg, error) {
 			switch {
 			case err != nil:
 				return err
+			case p == d && !e.IsDir():
+				return &fs.PathError{Op: "open", Path: p, Err: files.ErrNotDir}
 			case p != d && strings.HasPrefix(e.Name(), "."):
 				if e.IsDir() {
 					return fs.SkipDir
@@ -295,7 +299,8 @@ func (a *app) repositoryCmd() *cobra.Command {
 The repository is the directory at or above the working directory that holds .floe/repository.yaml
 (looked for up to the one that holds .git), which floe repository new makes. Its commands use neither
 FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR, FLOE_THEMES_DIR, the store nor the server: they read and write files
-under the repository alone. floe repository guide prints how to keep documents in a repository.`,
+under the repository alone, but the icon sets of floe icons. floe repository guide prints how to keep
+documents in a repository.`,
 		Args: cobra.NoArgs,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			r, err := a.openRepository()
@@ -324,7 +329,10 @@ and theme new.`,
 		Short: "Write the page of each document, or of each data file given, beside it",
 		Long: `Draw each data file under the documents' directories of .floe/repository.yaml, or each one given,
 with the repository's templates, parts and themes, and write its page beside it, as floe render does:
-only a page that changes is written, and its path is printed. The documents are named from the root.`,
+only a page that changes is written, and its path is printed. A data file given is a path from the
+working directory, as floe render takes it; the documents found are named from the root, wherever it
+runs. With a mistake in any data file, or a directory of documents that is not there, no page is written:
+every mistake is printed.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			given, err := a.repositoryGiven(args)
@@ -339,8 +347,9 @@ only a page that changes is written, and its path is printed. The documents are 
 		Long: `Check the repository's templates, parts and themes, drawing each template's example.yaml, as
 floe repository template check does, then each data file under the documents' directories, or each one
 given, and its page, as floe render --check does: every mistake is printed, and, once the documents have
-none, each page missing or not what its data file draws. The exit code is 1 when there is one. An HTML file
-with no data file is left alone.`,
+none, each page missing or not what its data file draws. A directory of documents that is not there is told,
+and the documents are checked once it is there. A data file given is a path from the working directory; the documents found
+are named from the root. The exit code is 1 when there is one. An HTML file with no data file is left alone.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			own := a.checkTemplates()

@@ -4,10 +4,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
+	"floe/internal/files"
 	"floe/internal/testfs"
 	"floe/internal/version"
 	"floe/internal/yamlpos"
@@ -215,6 +217,7 @@ func TestRepositoryOutside(t *testing.T) {
 			if code != 1 || !strings.HasPrefix(stderr, c.told+": this leads out of the repository") || strings.Contains(stderr, "secret") {
 				t.Errorf("floe repository %v = %d, %q", c.args, code, stderr)
 			}
+			untouched(t, out)
 		})
 	}
 	t.Run("new under a link out", func(t *testing.T) {
@@ -257,6 +260,18 @@ func TestRepositoryOutside(t *testing.T) {
 	})
 }
 
+// untouched fails t unless out holds what TestRepositoryOutside wrote there, as it wrote it.
+func untouched(t *testing.T, out string) {
+	t.Helper()
+	names, err := os.ReadDir(out)
+	if err != nil || len(names) != 3 {
+		t.Errorf("out of the repository there are %v, %v", names, err)
+	}
+	if page, err := os.ReadFile(filepath.Join(out, "x.html")); err != nil || string(page) != "theirs" {
+		t.Errorf("out of the repository x.html holds %q, %v", page, err)
+	}
+}
+
 // The documents' directories are written from the root, slash-separated, and the setting by its schema.
 func TestRepositoryPaths(t *testing.T) {
 	t.Parallel()
@@ -264,12 +279,15 @@ func TestRepositoryPaths(t *testing.T) {
 	for _, c := range []struct{ setting, told string }{
 		{"documents: [../x]", "../x is no directory"},
 		{"documents: [/etc]", "/etc is no directory"},
+		{"documents: [docs/../..]", "docs/../.. is no directory"},
+		{"documents: [README.md]", "README.md: not a directory"},
+		{`documents: ['docs\specs']`, map[bool]string{true: "no such file", false: `docs\specs is no directory`}[files.ValidName(`docs\specs`)]},
 		{"documents: [docs/]", "docs/ is no directory"},
 		{"documents: [./docs]", "./docs is no directory"},
 		{"documents: []", "minItems"},
 		{"documents: [docs]\nmore: 1", "more"},
 	} {
-		dir := repo(t, map[string]string{}, "docs")
+		dir := repo(t, map[string]string{"README.md": "# r\n"}, "docs")
 		src := "version: " + strconv.Quote(version.Version) + "\n" + c.setting + "\n"
 		if err := os.WriteFile(filepath.Join(dir, ".floe", "repository.yaml"), []byte(src), 0o600); err != nil {
 			t.Fatal(err)
@@ -345,8 +363,8 @@ func TestRepositoryNew(t *testing.T) {
 	})
 }
 
-// floeCommand is a command of floe's that floe repository has one of its own for.
-var floeCommand = regexp.MustCompile(`\bfloe (part|template|theme|check|render)\b`)
+// named is what follows floe repository in a help: a command and its subcommand.
+var named = regexp.MustCompile(`floe repository (\w+)(?: (\w+))?`)
 
 // The commands of one's own under floe repository have no theme default, which reads the store, and their help
 // names neither the settings of one's own nor floe's commands for them.
@@ -359,15 +377,31 @@ func TestRepositoryCommands(t *testing.T) {
 	}
 	for _, kind := range []string{"part", "template", "theme"} {
 		for _, sub := range []string{"", "list", "show", "new", "check"} {
-			args := []string{"repository", kind}
+			args := []string{kind}
 			if sub != "" {
 				args = append(args, sub)
 			}
-			_, help, _ := run(dir, append(args, "--help")...)
-			for _, line := range strings.Split(help, "\n") {
-				if strings.Contains(line, "FLOE_") || floeCommand.MatchString(strings.ReplaceAll(line, "floe repository ", "")) {
-					t.Errorf("floe %v --help names %q", args, line)
+			_, want, _ := run(dir, append(args, "--help")...)
+			_, help, _ := run(dir, append([]string{"repository"}, append(args, "--help")...)...)
+			if strings.Contains(help, "FLOE_") {
+				t.Errorf("floe repository %v --help names a setting:\n%s", args, help)
+			}
+			for _, m := range named.FindAllStringSubmatch(help, -1) {
+				if !slices.Contains([]string{"check", "render"}, m[1]) && !slices.Contains([]string{"", "list", "show", "new", "check", "guide"}, m[2]) {
+					t.Errorf("floe repository %v --help names no command: %q", args, m[0])
 				}
+			}
+			// Of the same words as floe's own but the commands it names and the places, which floe's names by setting.
+			got := strings.ReplaceAll(help, "floe repository ", "floe ")
+			for _, k := range []string{"parts", "templates", "themes"} {
+				got = strings.ReplaceAll(got, ".floe/"+k+" at the repository's root",
+					"FLOE_"+strings.ToUpper(k)+"_DIR (else floe/"+k+" under XDG_CONFIG_HOME, or ~/.config; ~ is %USERPROFILE% on Windows)")
+			}
+			if kind == "theme" && sub == "" {
+				want = regexp.MustCompile(`(?m)^  default .*\n`).ReplaceAllString(want, "")
+			}
+			if got != want {
+				t.Errorf("floe repository %v --help is not floe's of the repository's commands:\n%s\nfloe's:\n%s", args, help, want)
 			}
 		}
 	}

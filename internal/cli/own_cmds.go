@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"regexp"
 	"slices"
 	"strings"
 
@@ -263,17 +264,14 @@ type ownHelp struct {
 	repository bool
 }
 
-// repositoryCommands names floe repository's commands for floe's, in the help of its commands of one's own.
-var repositoryCommands = strings.NewReplacer(
-	"floe part ", "floe repository part ", "floe template ", "floe repository template ",
-	"floe theme ", "floe repository theme ", "floe check ", "floe repository check ",
-	"floe render ", "floe repository render ",
-)
+// repositoryCommand is a command of floe's that floe repository has one of its own for, as a help names it: not
+// a word after floe that names no command (the floe part it is).
+var repositoryCommand = regexp.MustCompile(`\bfloe ((?:part|template|theme) (?:list|show|new|check|guide)|check|render)\b`)
 
 // text is s, a help that names commands of floe's, with floe repository's in their place under it.
 func (h ownHelp) text(s string) string {
 	if h.repository {
-		return repositoryCommands.Replace(s)
+		return repositoryCommand.ReplaceAllString(s, "floe repository $1")
 	}
 	return s
 }
