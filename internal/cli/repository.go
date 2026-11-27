@@ -331,8 +331,8 @@ and theme new.`,
 with the repository's templates, parts and themes, and write its page beside it, as floe render does:
 only a page that changes is written, and its path is printed. A data file given is a path from the
 working directory, as floe render takes it; the documents found are named from the root, wherever it
-runs. With a mistake in any data file, or a directory of documents that is not there, no page is written:
-every mistake is printed.`,
+runs. A directory of documents that is not there is told, and the documents are drawn once it is there;
+with a mistake in any data file, no page is written, and every mistake is printed.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			given, err := a.repositoryGiven(args)

@@ -4,12 +4,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
-	"floe/internal/files"
 	"floe/internal/testfs"
 	"floe/internal/version"
 	"floe/internal/yamlpos"
@@ -281,7 +281,7 @@ func TestRepositoryPaths(t *testing.T) {
 		{"documents: [/etc]", "/etc is no directory"},
 		{"documents: [docs/../..]", "docs/../.. is no directory"},
 		{"documents: [README.md]", "README.md: not a directory"},
-		{`documents: ['docs\specs']`, map[bool]string{true: "no such file", false: `docs\specs is no directory`}[files.ValidName(`docs\specs`)]},
+		{`documents: ['docs\specs']`, map[bool]string{false: "no such file", true: `docs\specs is no directory`}[runtime.GOOS == "windows"]},
 		{"documents: [docs/]", "docs/ is no directory"},
 		{"documents: [./docs]", "./docs is no directory"},
 		{"documents: []", "minItems"},
@@ -363,6 +363,9 @@ func TestRepositoryNew(t *testing.T) {
 	})
 }
 
+// unnamed is a command of floe's that floe repository has one of its own for, which its help names alone.
+var unnamed = regexp.MustCompile(`\bfloe ((part|template|theme) (list|show|new|check|guide)|check|render)\b`)
+
 // named is what follows floe repository in a help: a command and its subcommand.
 var named = regexp.MustCompile(`floe repository (\w+)(?: (\w+))?`)
 
@@ -385,6 +388,9 @@ func TestRepositoryCommands(t *testing.T) {
 			_, help, _ := run(dir, append([]string{"repository"}, append(args, "--help")...)...)
 			if strings.Contains(help, "FLOE_") {
 				t.Errorf("floe repository %v --help names a setting:\n%s", args, help)
+			}
+			if m := unnamed.FindString(help); m != "" {
+				t.Errorf("floe repository %v --help names %q, not floe repository's", args, m)
 			}
 			for _, m := range named.FindAllStringSubmatch(help, -1) {
 				if !slices.Contains([]string{"check", "render"}, m[1]) && !slices.Contains([]string{"", "list", "show", "new", "check", "guide"}, m[2]) {

@@ -136,7 +136,7 @@ func TestRepositoryGuideRuns(t *testing.T) {
 					}
 				}
 				continue
-			case words[0] != "floe":
+			case words[0] != "floe" || len(words) < 3:
 				t.Fatalf("%s: the setup runs %q, which this test does not", repositoryAgentDocPath, line)
 			case words[2] == "render":
 				// The guide's step 2: write the documents, here of the template's example, before they are drawn.
