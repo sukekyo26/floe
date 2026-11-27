@@ -67,15 +67,15 @@ func (a *app) openRepository() (*repository, error) {
 	if !ok {
 		return nil, usererr.NewWhole("repository_none", cwd)
 	}
-	real, err := files.Real(dir)
+	resolved, err := files.Real(dir)
 	if err != nil {
 		return nil, usererr.CannotRead(dir, err)
 	}
-	r := &repository{dir: dir, real: real, documents: nil, roots: map[string]*files.Root{}}
+	r := &repository{dir: dir, real: resolved, documents: nil, roots: map[string]*files.Root{}}
 	shown := filepath.Join(floeDir, repositoryFile)
 	file := filepath.Join(dir, shown)
-	if err := r.inside(file, shown); err != nil {
-		return nil, err
+	if outside := r.inside(file, shown); outside != nil {
+		return nil, outside
 	}
 	src, _, err := files.Read(file)
 	if err != nil {
@@ -92,12 +92,13 @@ func (a *app) openRepository() (*repository, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // floe's own, which its tests check
 	}
-	if err := c.ValidateAt(values); err != nil {
-		return nil, yamlpos.Place(err, shown, root, nil) //nolint:wrapcheck // the library's mistakes, placed
+	if mistakes := c.ValidateAt(values); mistakes != nil {
+		return nil, yamlpos.Place(mistakes, shown, root, nil) //nolint:wrapcheck // the library's mistakes, placed
 	}
 	var found usererr.List
-	for i, d := range values["documents"].([]any) {
-		name := d.(string) //nolint:forcetypeassert // the schema takes strings alone
+	documents, _ := values["documents"].([]any) //nolint:errcheck // the schema takes a list of strings alone
+	for i, d := range documents {
+		name, _ := d.(string) //nolint:errcheck // the schema takes strings alone
 		if !documentPath(name) {
 			pos, _ := yamlpos.Locate(root, []string{"documents", strconv.Itoa(i)})
 			found = append(found, usererr.NewAt(shown, pos.Line, pos.Column, "repository_path", name))
@@ -119,22 +120,23 @@ func (r *repository) inside(abs, shown string) error {
 	if r == nil {
 		return nil
 	}
-	real, err := files.Real(abs)
+	resolved, err := files.Real(abs)
 	if err != nil {
 		var ok bool
-		if real, ok = files.RealAbove(abs); !ok {
+		if resolved, ok = files.RealAbove(abs); !ok {
 			return usererr.NewAt(shown, 0, 0, "repository_outside", r.dir)
 		}
 	}
-	if !within(newTower(real, files.Stat), newTower(r.real, files.Stat)) {
+	if !within(newTower(resolved, files.Stat), newTower(r.real, files.Stat)) {
 		return usererr.NewAt(shown, 0, 0, "repository_outside", r.dir)
 	}
 	return nil
 }
 
-// insideArg is inside of the data file f, which is told where it is (an arg that is nowhere is told by its read).
+// insideArg is inside of the data file f, which is told where it is (an arg that is nowhere, of no abs, is told by
+// its read).
 func (r *repository) insideArg(f arg) error {
-	if r == nil || f.err != nil || f.abs == "" {
+	if r == nil || f.abs == "" {
 		return nil
 	}
 	return r.inside(f.abs, f.name)
@@ -229,11 +231,11 @@ func (a *app) newRepository(dirs []string) error {
 	if found != nil {
 		return found.Err()
 	}
-	real, err := files.Real(cwd)
+	resolved, err := files.Real(cwd)
 	if err != nil {
 		return usererr.CannotRead(cwd, err)
 	}
-	r := &repository{dir: cwd, real: real, documents: nil, roots: nil}
+	r := &repository{dir: cwd, real: resolved, documents: nil, roots: nil}
 	shown := filepath.Join(floeDir, repositoryFile)
 	file := filepath.Join(cwd, shown)
 	if err := r.inside(file, shown); err != nil {

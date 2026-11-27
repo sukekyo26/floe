@@ -283,7 +283,8 @@ func (h ownHelp) place(kind string) string {
 	if h.repository {
 		return ".floe/" + kind + " at the repository's root"
 	}
-	return "FLOE_" + strings.ToUpper(kind) + "_DIR (else floe/" + kind + " under XDG_CONFIG_HOME, or ~/.config; ~ is %USERPROFILE% on Windows)"
+	return "FLOE_" + strings.ToUpper(kind) + "_DIR (else floe/" + kind +
+		" under XDG_CONFIG_HOME, or ~/.config; ~ is %USERPROFILE% on Windows)"
 }
 
 // checkPartsThemes is floe part check and floe theme check: the parts and themes of one's own, read together, and

@@ -131,8 +131,8 @@ func TestRepositoryCheck(t *testing.T) {
 			if code != 0 || stdout != strings.Join(want, "\n")+"\n" || stderr != "" {
 				t.Fatalf("floe repository render = %d, %q, %q", code, stdout, stderr)
 			}
-			if code, _, stderr := run(dir, "repository", "check"); code != 0 || stderr != "" {
-				t.Errorf("floe repository check = %d, %q", code, stderr)
+			if got, _, errs := run(dir, "repository", "check"); got != 0 || errs != "" {
+				t.Errorf("floe repository check = %d, %q", got, errs)
 			}
 			if err := os.Remove(filepath.Join(dir, want[0])); err != nil {
 				t.Fatal(err)
@@ -225,7 +225,7 @@ func TestRepositoryOutside(t *testing.T) {
 		if code, _, stderr := run(dir, "repository", "new", "docs"); code != 1 || !strings.Contains(stderr, "leads out of the repository") {
 			t.Errorf("floe repository new = %d, %q", code, stderr)
 		}
-		if names, _ := os.ReadDir(elsewhere); len(names) != 0 {
+		if names, err := os.ReadDir(elsewhere); err != nil || len(names) != 0 {
 			t.Errorf("floe repository new wrote %v out of the repository", names)
 		}
 	})
@@ -245,9 +245,11 @@ func TestRepositoryOutside(t *testing.T) {
 	})
 	t.Run("a place in it through a link", func(t *testing.T) {
 		t.Parallel()
-		dir := repo(t, map[string]string{"shared/templates/memo/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+		dir := repo(t, map[string]string{
+			"shared/templates/memo/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
 			"shared/templates/memo/page.html":    "<!doctype html><html><head><title>t</title></head><body></body></html>",
-			"shared/templates/memo/example.yaml": "lang: en\ntemplate: memo\n"}, "docs")
+			"shared/templates/memo/example.yaml": "lang: en\ntemplate: memo\n",
+		}, "docs")
 		testfs.Symlink(t, filepath.Join("..", "shared", "templates"), filepath.Join(dir, ".floe", "templates"))
 		if code, _, stderr := run(dir, "repository", "template", "check"); code != 0 || stderr != "" {
 			t.Errorf("floe repository template check = %d, %q", code, stderr)
@@ -283,8 +285,10 @@ func TestRepositoryPaths(t *testing.T) {
 func TestRepositoryNew(t *testing.T) {
 	t.Parallel()
 
-	names := []string{"a\u0085b", "a b", "a b", "\xef\xbb\xbfx", "a\x7fb", "a\u009bb", "a b", "a\x01b",
-		"設計/仕様", "a\U0001F600b", "a #b", `a"b\c`, "2026", "null"}
+	names := []string{
+		"a\u0085b", "a b", "a b", "\xef\xbb\xbfx", "a\x7fb", "a\u009bb", "a b", "a\x01b",
+		"設計/仕様", "a\U0001F600b", "a #b", `a"b\c`, "2026", "null",
+	}
 	dir := write(t, map[string]string{".git/HEAD": ""})
 	if code, stdout, stderr := run(dir, append([]string{"repository", "new"}, names...)...); code != 0 ||
 		stdout != "made "+filepath.Join(".floe", "repository.yaml")+"\n" || stderr != "" {
@@ -298,7 +302,10 @@ func TestRepositoryNew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v", src, err)
 	}
-	got, _ := values["documents"].([]any)
+	got, ok := values["documents"].([]any)
+	if !ok {
+		t.Fatalf("floe repository new wrote %v", values)
+	}
 	if values["version"] != version.Version || len(got) != len(names) {
 		t.Fatalf("floe repository new wrote %v", values)
 	}

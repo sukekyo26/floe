@@ -111,10 +111,7 @@ func (a *app) drawPages(k *kit.Kit, store diagram.Icons, given []arg, out arg) (
 			// Nowhere to write to, or to read from, or no data file to write the page of: told above.
 			continue
 		}
-		t, bad := targetAt(p, at, first)
-		if bad == nil {
-			bad = a.repo.inside(t.page.real, t.page.to)
-		}
+		t, bad := a.targetAt(p, at, first)
 		if failed := found.Add(bad); failed != nil {
 			return nil, failed
 		}
@@ -142,6 +139,15 @@ func pageOf(f, out arg) (rendered, string) {
 	}
 	name := baseName(f.name) + ".html"
 	return rendered{from: f.name, to: dirs.Join(dir, name), real: "", page: nil}, dirs.Join(at, name)
+}
+
+// targetAt is targetAt of the page p, refused out of the repository of floe repository's commands too.
+func (a *app) targetAt(p rendered, at string, first []target) (target, error) {
+	t, err := targetAt(p, at, first)
+	if err != nil {
+		return t, err
+	}
+	return t, a.repo.inside(t.page.real, t.page.to)
 }
 
 // targetAt is the page p, at where it is, and the file it goes to, or why it is not written: it leads nowhere, it
