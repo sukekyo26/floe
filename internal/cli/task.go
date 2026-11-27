@@ -57,7 +57,7 @@ it among its pages, which the user decides.
   floe task --task "#130" --new --title "Fix login"
     task #130 in project floe: made; title "Fix login"
   floe task --slug design-notes --task "#130"
-    task #130 in project floe: unchanged
+    task #130 in project floe: changed
     page design-notes: task #130 in project floe
   floe task --task "#130" --state doing
     task #130 in project floe: changed; state doing
