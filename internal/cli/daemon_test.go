@@ -823,18 +823,18 @@ func TestHungUpPort(t *testing.T) {
 
 // A port held by what does not answer, as a server another command started, is taken by the command once it comes
 // free (that server failed): the probe waiting when the port closes is ended without an answer, and is not taken for
-// another program.
+// another program. It closes after the first probe of the command (1 s), while one of its wait is under way.
 func TestPortFreed(t *testing.T) {
 	t.Parallel()
 
 	ln, port := holdPort(t)
 	e := newDenvOn(t, port)
-	time.AfterFunc(300*time.Millisecond, func() { _ = ln.Close() }) //nolint:errcheck // frees the port
+	time.AfterFunc(2500*time.Millisecond, func() { _ = ln.Close() }) //nolint:errcheck // frees the port
 	start := time.Now()
 	if r := e.run("list"); r.code != 0 {
 		t.Fatalf("list after the port came free = %+v", r)
 	}
-	if took := time.Since(start); took > 5*time.Second {
+	if took := time.Since(start); took > 6*time.Second {
 		t.Errorf("starting a server once the port came free took %v", took)
 	}
 	if _, up := e.health(t.Context()); !up {
