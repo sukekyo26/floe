@@ -198,13 +198,15 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	narrow(320)
 	deep := "guide/deep/a/b/c/d/e/y.html"
 	wrapped := make([]string, 0, 4)
-	wrapped = append(wrapped, lines(deep), lines("index.html"))
-	// Wide enough for the name and the time, not the buttons: they go under it together.
+	wrapped = append(wrapped, lines(deep))
+	// Wide enough for the name and the time, not the buttons, with the fonts here: they go under it together. Where
+	// fonts are wider (CI's), the time does not fit either.
 	narrow(380)
 	wrapped = append(wrapped, lines(deep))
+	// Wide, the deep row and a shallow one stay on one line (a shallow row wraps at 320px where fonts are wide).
 	narrow(560)
-	check(t, "a deep row in a narrow column", append(wrapped, lines(deep)),
-		deep+": name 2 lines|index.html: name 1 line|"+deep+": name 2 lines|"+deep+": name 1 line")
+	check(t, "a deep row in a narrow column", append(wrapped, lines(deep), lines("index.html")),
+		deep+": name 2 lines|"+deep+": name 2 lines|"+deep+": name 1 line|index.html: name 1 line")
 	b.unsize()
 
 	guide := "dir:docs:guide/deep,page:docs:guide/setup.html,page:docs:guide/start.html"
