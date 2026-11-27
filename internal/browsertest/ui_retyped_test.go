@@ -22,7 +22,7 @@ func TestUIRetyped(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "task", "--slug", "plan", "--task", "S1", "--category", "c")
+	s.floe(t, "task", "--slug", "plan", "--task", "S1", "--category", "c", "--new")
 	b.navigate("/tasks?project=proj&task=S1")
 	b.until("the task's rows", "document.querySelector('#list li[data-slug=plan]')")
 	// Every write fails, as when the server is not reached

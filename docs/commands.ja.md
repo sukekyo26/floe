@@ -310,6 +310,7 @@ floe tag design-notes --remove 下書き                    # 1 つ外す
 
 ```sh
 floe task                                                           # プロジェクトの着手前・作業中のタスク。何も書かない
+floe task --task "#130" --new --title "Fix login"                  # 新しいタスク
 floe task --slug design-notes --task "#130"                         # ページをタスクに載せる
 floe task --task "#130" --state doing                               # タスクの状態
 floe task --task "#130" --url https://example.com/issues/482        # タスクにリンクを足す
@@ -329,8 +330,10 @@ floe task --slug design-notes                                       # ページ�
 ```text
 $ floe task
 task #130 in project floe: state doing, title "Fix login"
+$ floe task --task "#130" --new --title "Fix login"
+task #130 in project floe: made; title "Fix login"
 $ floe task --slug design-notes --task "#130"
-task #130 in project floe: made
+task #130 in project floe: changed
 page design-notes: task #130 in project floe
 $ floe task --task "#130" --state doing
 task #130 in project floe: changed; state doing
@@ -354,11 +357,12 @@ task #130 in project floe: forgotten
 | `--category <カテゴリ>` | ページ | `--slug` があるときだけで、タスクに付いたページに。タスクのカテゴリの並びに無ければ、同じ書き込みで末尾に足す。`""` で外す |
 | `--state <状態>` | タスク | `todo`（未着手）・`doing`（作業中）・`done`（完了）・`archived`（アーカイブ） |
 | `--url <URL>` | タスク | 外のリンクを足す（今のものの後ろに）。`http` か `https`。何度も書ける。1 つのタスクに 10 個まで：超える書き込みは断る。手で 10 個を超えたタスクも、ほかの書き込みは通る |
-| `--remove-url <URL>` | タスク | リンクを外す。何度も書ける。無いリンクを外しても誤りにならない。`--url` と両方に書いたリンクは残る。行の無いタスクには作らず、そのタスクが無いと言う |
+| `--remove-url <URL>` | タスク | リンクを外す。何度も書ける。無いリンクを外しても誤りにならない。`--url` と両方に書いたリンクは残る |
 | `--parent <タスク ID>` | タスク | `--slug` と一緒なら `--task` も書き、ページを付ける 1 つのタスクの親になる。同じプロジェクトに行があり、親を持たないタスク。子を持つタスクには付けられない（親子は 1 段だけ）。`""` で外す |
 | `--title <タイトル>` | タスク | `""` で外す |
 | `--categories <名前>` | タスク | タスクのカテゴリ。1 つごとに繰り返し、カテゴリの順（書いたとおり）にする。並びに無いページのカテゴリは末尾に足し、ページのあるカテゴリを落とすと断る。`""` で全部外す |
 | `--pin`・`--unpin` | ページ | `--slug` があるときだけ |
+| `--new` | タスク | 名指したタスクを、状態 `todo` と書いた欄で作る。もうあるタスクと、`--slug` で 2 つ以上のプロジェクトのページは断る。タスクを作るのは `--new` だけで、行の無いタスクへのほかの書き込みは、そのタスクが無いと言って断る |
 | `--clear` | ページ | タスクから外し、ピン止めも外す。タスクは残す |
 | `--forget` | タスク | `--slug` が無いときだけ。ページが載っている間（アーカイブしたページも）と、子のタスクが残っている間は断る |
 

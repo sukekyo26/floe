@@ -104,7 +104,7 @@ func TestAgentDocQuotes(t *testing.T) {
 		{taskGuidePath, english.Msg("store_parent_none", "#42", store.Project("floe")), 1},
 		{taskGuidePath, english.Msg("store_parent_nested", "#130", "#120"), 1},
 		{taskGuidePath, english.Msg("store_parent_kids", "#42", "#41"), 1},
-		{taskGuidePath, usage(english.Msg("cli_task_parent_task")), 1},
+		{taskGuidePath, usage(english.Msg("cli_task_parent_task", "parent")), 1},
 		{taskGuidePath, usage(english.Msg("cli_task_no_task")), 1},
 		{taskGuidePath, english.Msg("store_no_page", "design-notes"), 1},
 		{taskGuidePath, english.Msg("cli_task_none_open", store.Project("floe")), 1},

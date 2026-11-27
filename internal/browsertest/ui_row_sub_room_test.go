@@ -22,8 +22,8 @@ func TestUIRowSubRoom(t *testing.T) { //nolint:paralleltest // the browser tests
 		}
 	}
 	s.floe(t, "tag", "tagged", "--add", "a-tag-with-a-rather-long-name-too")
-	s.floe(t, "task", "--slug", "tagged", "--task", "#1", "--category", "one")
-	s.floe(t, "task", "--slug", "long-task", "--task", "a-task-of-a-very-long-name-for-the-badge-on-its-row", "--category", "one")
+	s.floe(t, "task", "--slug", "tagged", "--task", "#1", "--category", "one", "--new")
+	s.floe(t, "task", "--slug", "long-task", "--task", "a-task-of-a-very-long-name-for-the-badge-on-its-row", "--category", "one", "--new")
 	defer b.unsize()
 	for _, width := range []int64{1400, 400, 280} {
 		b.size(width, 800, width != 1400)

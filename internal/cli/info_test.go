@@ -67,7 +67,7 @@ func TestInfo(t *testing.T) {
 		return out + errs
 	}
 	run(repo, 0, "publish", "docs/d.yaml", "--slug", "a")
-	run(repo, 0, "task", "--slug", "a", "--task", "#1", "--category", "設計　見本")
+	run(repo, 0, "task", "--slug", "a", "--task", "#1", "--category", "設計　見本", "--new")
 	run(repo, 0, "tag", "a", "--add", "plans", "--add", "a, b", "--add", "見本　案")
 	run(home, 0, "publish", "--link", "h.html", "--slug", "l")
 	run(home, 0, "task", "--slug", "l", "--pin")

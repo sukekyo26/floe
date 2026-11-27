@@ -861,7 +861,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// shelf and the list folded where it goes and keeps them so.
 	b.size(1600, 900, false)
 	// A task, as the task list with none lays out its column alone, with no shelf
-	s.floe(t, "task", "--slug", "a1", "--task", "T1")
+	s.floe(t, "task", "--slug", "a1", "--task", "T1", "--new")
 	shown := "(id) => getComputedStyle(document.getElementById(id)).display !== 'none'"
 	pressed := make([]string, 0, 3)
 	for _, link := range []string{"#to-list", "[data-testid=brand]", "#to-tasks"} {

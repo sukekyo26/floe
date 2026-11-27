@@ -51,15 +51,15 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		}
 		s.floe(t, append([]string{"task", "--slug", slug}, args...)...)
 	}
-	page("c1", "--task", "#128", "--state", "doing")
-	page("n1", "--task", "#130", "--state", "doing")
+	page("c1", "--task", "#128", "--state", "doing", "--new")
+	page("n1", "--task", "#130", "--state", "doing", "--new")
 	page("d1", "--task", "#130", "--category", "design")
 	page("r1", "--task", "#130", "--category", "review")
 	page("i1", "--task", "#130", "--category", "build")
 	// Before #142's page: the list goes by the last write, and j j below stops on #130
 	s.floe(t, "task", "--task", "#130", "--project", "proj", "--categories", "design", "--categories", "build", "--categories", "review", "--categories", "nothing")
-	page("y1", "--task", "#142", "--state", "doing")
-	page("x1", "--task", "#120", "--state", "done")
+	page("y1", "--task", "#142", "--state", "doing", "--new")
+	page("x1", "--task", "#120", "--state", "done", "--new")
 	page("p1", "--pin")
 	page("p2", "--pin")
 	page("loose", "--pin")
@@ -69,11 +69,11 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if _, err := st.Edit("fold", store.Edit{Project: new("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: new("#1")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{New: new(true), Slugs: []string{"fold"}, Task: new("#1")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "done")
-	s.floe(t, "task", "--task", "#99", "--project", "proj", "--state", "todo")
+	s.floe(t, "task", "--task", "#99", "--project", "proj", "--state", "todo", "--new")
 
 	var out []string
 	say := func(what, expr string) {
@@ -244,7 +244,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// A task of no pages is removed by two presses, its name and project whatever they hold.
 	const odd = "it's `touch made` $HOME; a|b"
-	s.floe(t, "task", "--task", odd, "--project", "", "--state", "todo")
+	s.floe(t, "task", "--task", odd, "--project", "", "--state", "todo", "--new")
 	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape(odd))
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	for range 2 {
@@ -385,8 +385,8 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "task", "--slug", "a", "--slug", "b", "--task", "#1", "--state", "todo")
-	s.floe(t, "task", "--slug", "c", "--task", "#2", "--state", "done")
+	s.floe(t, "task", "--slug", "a", "--slug", "b", "--task", "#1", "--state", "todo", "--new")
+	s.floe(t, "task", "--slug", "c", "--task", "#2", "--state", "done", "--new")
 	b.size(1400, 800, false)
 	defer b.unsize()
 
@@ -512,7 +512,7 @@ func TestUITaskHeadLines(t *testing.T) { //nolint:paralleltest // the browser te
 	s := newSite(t)
 	b := s.b
 	title := strings.TrimSpace(strings.Repeat("a title long enough to wrap ", 4))
-	s.floe(t, "task", "--task", "S422-P6", "--project", "proj", "--title", title, "--state", "doing")
+	s.floe(t, "task", "--task", "S422-P6", "--project", "proj", "--title", title, "--state", "doing", "--new")
 	b.size(480, 800, false)
 	defer b.unsize()
 	b.navigate("/tasks?project=proj&task=S422-P6")
