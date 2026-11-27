@@ -104,6 +104,12 @@ func TestGuideDocs(t *testing.T) {
 		if code, _, errs := runIn(guideEnv(t, t.TempDir()), tt.kind, "guide", "x"); code == 0 || errs == "" {
 			t.Errorf("floe %s guide x = %d, %q: it takes no argument", tt.kind, code, errs)
 		}
+		// floe repository's commands of one's own print the same guides, out of a repository too.
+		if tt.kind == "part" || tt.kind == "template" || tt.kind == "theme" {
+			if code, got, errs := runIn(guideEnv(t, t.TempDir()), "repository", tt.kind, "guide"); code != 0 || errs != "" || got != out {
+				t.Errorf("floe repository %s guide = %d, stderr %q, the same as floe %s guide: %t", tt.kind, code, errs, tt.kind, got == out)
+			}
+		}
 	}
 }
 
@@ -178,7 +184,7 @@ func TestGuide(t *testing.T) {
 var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<project>": "app", "<name>": "default", "<file>": "palette.css", "<look>": "rows", "<set>": "aws", "<zip>": "icons.zip"}
 
 // readOnly are the commands a test runs as the guide writes them: they read, write nothing and ask no server.
-var readOnly = [][]string{{"guide"}, {"task", "guide"}, {"template"}, {"part", "guide"}, {"part", "list"}, {"part", "show"}, {"part", "check"}, {"diagram", "example"}, {"diagram", "guide"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}
+var readOnly = [][]string{{"guide"}, {"task", "guide"}, {"template"}, {"part", "guide"}, {"part", "list"}, {"part", "show"}, {"part", "check"}, {"diagram", "example"}, {"diagram", "guide"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}, {"repository", "guide"}, {"repository", "template", "guide"}, {"repository", "part", "guide"}, {"repository", "theme", "guide"}}
 
 // Each floe command the docs of commandDocs name, in code or as a line of an sh block, is one floe reads, its flags too;
 // those that only read run and end well (themes.md names floe's themes' files, which this keeps real).

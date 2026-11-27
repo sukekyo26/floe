@@ -26,7 +26,7 @@ func TestComparedUsesSeen(t *testing.T) {
 	}
 	gone := filepath.Join(dir, "gone")
 	place := func(at string, set bool, seen fs.FileInfo) dataPlace {
-		return dataPlace{dir: at, key: "FLOE_PARTS_DIR", set: set, from: "", unusable: nil, seen: seen}
+		return dataPlace{dir: at, key: "FLOE_PARTS_DIR", set: set, from: "", unusable: nil, seen: seen, root: nil}
 	}
 	for _, tt := range []struct {
 		name string
@@ -58,7 +58,7 @@ func TestOwnPlacesTakesMade(t *testing.T) {
 		warnings: nil,
 		told:     nil,
 	}
-	made := ownAt{kind: ownThemes, p: dataPlace{dir: "made", key: "", set: false, from: "", unusable: nil, seen: nil}, err: nil}
+	made := ownAt{kind: ownThemes, p: dataPlace{dir: "made", key: "", set: false, from: "", unusable: nil, seen: nil, root: nil}, err: nil}
 	places := a.ownPlaces(true, &made)
 	kinds := make([]string, 0, len(places))
 	for _, o := range places {
@@ -100,7 +100,7 @@ func TestCompareLooks(t *testing.T) {
 		spots := make([]spot, len(names))
 		towers := make([]*tower, len(names))
 		for i, n := range names {
-			p := dataPlace{dir: n, key: "K" + n, set: true, from: "", unusable: nil, seen: nil}
+			p := dataPlace{dir: n, key: "K" + n, set: true, from: "", unusable: nil, seen: nil, root: nil}
 			spots[i] = spot{p: p, at: n, kind: "kind" + string(rune('0'+i))}
 			towers[i] = newTower(resolved(n), stat)
 		}

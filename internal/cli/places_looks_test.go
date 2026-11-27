@@ -66,7 +66,7 @@ func TestPlaceLooks(t *testing.T) {
 	byFile := uses(t)
 	own := byFile["own.go"]
 	looks := map[string][]string{
-		"dataDir":       {"files.NotDir", "files.Stat"},
+		"looked":        {"files.NotDir", "files.Stat"},
 		"compared":      {"files.Stat"},
 		"overlapping":   {"files.RealAbove", "files.Stat"},
 		"ownDir":        {"files.DirFS", "files.ReadDir"},
@@ -111,8 +111,8 @@ func TestPlaceLooks(t *testing.T) {
 		t.Errorf("newOwn names a.kit %d times, want 0", n)
 	}
 	newOwnRefusesFirst(t)
-	dataDirLooksAbove(t)
-	for _, fn := range []string{"dataDir", "compared", "overlapping", "compare", "newTower", "info", "within", "newOwn"} {
+	lookedLooksAbove(t)
+	for _, fn := range []string{"dataDir", "looked", "compared", "overlapping", "compare", "newTower", "info", "within", "newOwn"} {
 		if _, ok := own[fn]; !ok {
 			t.Errorf("own.go has no %s, which the table names: %v", fn, slices.Sorted(maps.Keys(own)))
 		}
@@ -150,9 +150,9 @@ func newOwnRefusesFirst(t *testing.T) {
 	}
 }
 
-// dataDirLooksAbove checks that dataDir hands files.NotDir the directory above the place its Stat failed on
+// lookedLooksAbove checks that looked hands files.NotDir the directory above the place its Stat failed on
 // (filepath.Dir): the place itself was just looked at.
-func dataDirLooksAbove(t *testing.T) {
+func lookedLooksAbove(t *testing.T) {
 	t.Helper()
 	f, err := parser.ParseFile(token.NewFileSet(), "own.go", nil, parser.SkipObjectResolution)
 	if err != nil {
@@ -161,7 +161,7 @@ func dataDirLooksAbove(t *testing.T) {
 	found := false
 	for _, d := range f.Decls {
 		fn, ok := d.(*ast.FuncDecl)
-		if !ok || fn.Name.Name != "dataDir" {
+		if !ok || fn.Name.Name != "looked" {
 			continue
 		}
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
@@ -175,7 +175,7 @@ func dataDirLooksAbove(t *testing.T) {
 		})
 	}
 	if !found {
-		t.Error("dataDir does not hand files.NotDir filepath.Dir of the place")
+		t.Error("looked does not hand files.NotDir filepath.Dir of the place")
 	}
 }
 

@@ -2,13 +2,15 @@
 
 A theme is a directory of CSS files that changes a page's colours, typefaces and the look of the parts, by setting variables and writing rules. A data file selects a theme with `theme:`, as it selects one of floe's. This doc says what each file and variable changes, how a change takes effect, and what `floe theme check` refuses.
 
+In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its themes are in `.floe/themes`, and without it floe reads and writes your own.
+
 ## Where themes are
 
-- A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`) (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path), holding the theme's files. `floe theme new <name>` makes the smallest one: an empty `palette.css` to fill in. A file directly in `FLOE_THEMES_DIR` is ignored without a message.
+- A theme is a directory in your themes' directory, `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), or `.floe/themes` under `floe repository` (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path), holding the theme's files. `floe theme new <name>` makes the smallest one: an empty `palette.css` to fill in. A file directly in your themes' directory is ignored without a message.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes.
 - A theme directory, and anything in it, MUST NOT be a link to a directory (a link to a file is read).
-- `FLOE_THEMES_DIR` MUST NOT be the directory of your parts or templates (`FLOE_PARTS_DIR`, `FLOE_TEMPLATES_DIR`), contain it, or be in it: floe would read the files of one as those of the other.
-- A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*).
+- Your themes' directory MUST NOT be the directory of your parts or templates, contain it, or be in it: floe would read the files of one as those of the other.
+- A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*). `floe repository` uses no server: in a repository, make the theme in place with `floe repository theme new` and check it with `floe repository theme check`.
 
 ## Files
 
@@ -188,7 +190,7 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 
 `floe theme check` checks every theme of yours and the parts, looks and shared schemas of yours, as `floe part check` does (a theme's `<name>.css` needs its part). It prints every mistake and exits with code 1 when there is one. For a theme it refuses:
 
-- a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or `FLOE_THEMES_DIR` equal to, containing or inside the directory of your parts or templates;
+- a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or your themes' directory equal to, containing or inside the directory of your parts or templates;
 - a file or a directory of a name floe does not read (*Files*; a name beginning with `.` is skipped), and a file floe cannot read (a link with no target, a file without permission, a FIFO or a device);
 - a `theme.yaml` that is not keys and values, a key other than `description:`, or a `description:` that is not text;
 - in a CSS file: CSS floe cannot read (a block, string, comment or `url()` left open at the end of the file, a `}` that closes no block, a string that runs past its line), an `@import`, an escape (`\`) outside a string, a `url()` or a comment, or a `url()` that is not one address or one quoted string alone (`url("a.png" x)`, `url(a b)`);

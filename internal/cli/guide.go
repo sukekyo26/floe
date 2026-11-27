@@ -119,18 +119,6 @@ func (a *app) settings() (store.Settings, error) {
 	return store.New(root.dir).ReadSettings() //nolint:wrapcheck // mistakes for the user as they are
 }
 
-// repositoryCmd holds the guide to a repository's documents alone.
-func (a *app) repositoryCmd() *cobra.Command {
-	short := "Print how to keep documents in a repository and check them in CI"
-	cmd := &cobra.Command{
-		Use:   "repository",
-		Short: short,
-		Args:  cobra.NoArgs,
-	}
-	cmd.AddCommand(a.docGuideCmd(short, docs.RepositoryGuide))
-	return cmd
-}
-
 // docGuideCmd is a command guide that prints doc, a doc of floe's as it is.
 func (a *app) docGuideCmd(short string, doc []byte) *cobra.Command {
 	return &cobra.Command{

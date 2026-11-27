@@ -63,6 +63,7 @@ func Run(args []string, env Env) int {
 	if err == nil {
 		err = root.Execute()
 	}
+	a.repo.close()
 	if err == nil && out.err != nil {
 		err = out.err
 	}
@@ -161,13 +162,13 @@ that points your agent to it (floe skill install --help lists the agents).`,
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
-	a := &app{env: env, out: out, warnings: nil, told: nil, guard: nil, stopCode: 0, drawer: nil}
+	a := &app{env: env, out: out, warnings: nil, told: nil, guard: nil, stopCode: 0, drawer: nil, repo: nil}
 	root.AddCommand(
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(), a.drawChildCmd(),
 		a.guideCmd(),
-		a.iconsCmd(), a.infoCmd(), a.listCmd(), a.partCmd(), a.publishCmd(),
+		a.iconsCmd(), a.infoCmd(), a.listCmd(), a.partCmd(ownHelp{repository: false}), a.publishCmd(),
 		a.rebuildCmd(), a.renderCmd(), a.repositoryCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(),
-		a.tagCmd(), a.taskCmd(), a.templateCmd(), a.themeCmd(),
+		a.tagCmd(), a.taskCmd(), a.templateCmd(ownHelp{repository: false}), a.themeCmd(ownHelp{repository: false}),
 	)
 	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
 	root.InitDefaultHelpCmd()

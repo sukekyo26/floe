@@ -19,6 +19,10 @@ Flags are in each command's section below.
 | `floe publish <data.yaml>` | Store the page drawn from a data file, or link a file or a folder in place, and print its URL |
 | `floe check <data.yaml>...` | Check data files as their pages are drawn, without writing them |
 | `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
+| `floe repository new <dir>...` | Make `.floe/repository.yaml`: this floe's version and the directories of a repository's documents |
+| `floe repository render [data.yaml]...` | Write the page of each of the repository's documents, with its templates, parts and themes in `.floe/` |
+| `floe repository check [data.yaml]...` | Check the repository's templates, parts and themes, its documents and their pages, writing nothing |
+| `floe repository template\|part\|theme …` | The commands of `floe template`, `floe part` and `floe theme`, on the repository's `.floe/` (no `theme default`) |
 | `floe repository guide` | Print how to keep documents in a repository, drawn by templates of its own and checked in CI |
 | `floe rebuild` | Draw every stored page again with the templates, parts and themes of now |
 | `floe template list` | List the templates |
@@ -147,9 +151,15 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 - A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade. [repository.md](repository.md) tells how to set a repository up.
 - A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
 
-## `floe repository guide`
+## `floe repository`
 
-Print how to keep documents in a repository, [repositories.md](agents/repositories.md), whole: how an agent changes one, and how to set a repository up so that CI checks them. [repository.md](repository.md) tells people the same. It takes no arguments.
+The commands of a repository's documents ([repository.md](repository.md)). Each but `new` and the guides works in the repository of the working directory: the directory at or above it that holds `.floe/repository.yaml`, looked for no higher than the one that holds `.git`. They read the templates, parts and themes in `.floe/` alone, not `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` nor `FLOE_THEMES_DIR`, use no server and no store, and read and write nothing out of the repository but the icon sets of `floe icons` (a link out of it is refused). They refuse a repository whose `version` is not this floe's (the part of `floe --version` before a `+`), before they read anything else.
+
+- `floe repository new <dir>...` writes `.floe/repository.yaml` in the working directory: `version`, this floe's, and `documents`, the directories given, from the root and `/`-separated (`docs/specs`; `./docs`, `docs/` and `..` are refused). It makes no directory: make the documents' directories. With a repository here or above, nothing is written.
+- `floe repository render [data.yaml]...` draws each data file given, else every `.yaml` and `.yml` under `documents` (not under a name that starts with a dot, nor under a link to a directory), and writes its page beside it, as `floe render` does. The documents are named from the root, wherever it runs.
+- `floe repository check [data.yaml]...` does what `floe repository template check` does, then checks the documents and their pages as `floe render --check` does: every mistake together, and, once the documents have none, each page missing or not drawn again; exit code 1 when there is one. An HTML file with no data file is left alone.
+- `floe repository template …`, `floe repository part …` and `floe repository theme …` are the commands of `floe template`, `floe part` and `floe theme`, on `.floe/templates`, `.floe/parts` and `.floe/themes` (one not there is none). `floe repository theme` has no `default`, which reads the store.
+- `floe repository guide` prints [repositories.md](agents/repositories.md) whole: how an agent changes a document, and how to set a repository up so that CI checks them. It and the `guide` of `template`, `part` and `theme` print out of a repository too, of any version.
 
 ## `floe rebuild`
 

@@ -196,8 +196,14 @@ var messagesJA = map[string]string{
 	"cli_data_no_name":         "%s は拡張子の前に名前がありません。名前でページの名前が決まるので、plan.yaml のように名前を付けてください",
 	"cli_render_same_file":     "%s と %s が、どちらも %s を書きます。どちらかの名前を変えてください",
 	"cli_render_link_not_page": "このページは %s へのリンクで、それは .html のファイルではありません。floe がページを書くのは .html のファイルだけです。リンクを .html のファイルに向けるか、リンクを消してください",
-	"cli_render_missing":       "%s がありません。%s から floe render で書いてください",
-	"cli_render_stale":         "%s は %s を描いたものと違います。floe render で書き直してください",
+	"cli_render_missing":       "%s がありません。%s から %s で書いてください",
+	"cli_render_stale":         "%s は %s を描いたものと違います。%s で書き直してください",
+	"repository_none":          "%s とその上（.git のあるディレクトリまで）に .floe/repository.yaml がありません。リポジトリの中でコマンドを走らせるか、リポジトリの根で floe repository new を走らせて作ってください",
+	"repository_no_cwd":        "作業ディレクトリを読めないので、リポジトリを探せません。あるディレクトリから floe repository を走らせてください",
+	"repository_version":       "%s は floe %s で描くと書いていますが、これは floe %s です。floe %s を入れるか、この floe で描くなら、そこに version: %s と書いて floe repository render を走らせてください",
+	"repository_path":          "%s は floe repository が受けるリポジトリのディレクトリの書き方ではありません。根から / で区切り、UTF-8 の字で、前に ./、後ろに /、途中に .. を付けずに書いてください（docs/specs）",
+	"repository_outside":       "これはリポジトリ %s の外へ出ます。floe repository は外を読みも書きもしません。リポジトリの中のファイルかディレクトリ、またはそこへのリンクにしてください",
+	"repository_exists":        "%s はもうあります。作り直さず、それを直してください",
 	"cli_wants_icons":          "アイコンの zip ファイルか URL",
 
 	// files

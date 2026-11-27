@@ -2,22 +2,26 @@
 
 A template is the page a data file is drawn into: a directory that says what the data file may hold, how the page is laid out and what goes with it. A data file names its template with `template:` (`floe guide` tells how to write a data file). floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). This doc says what each file holds, what `page.html` can use, what `page.css` reaches, how a template uses parts, looks and the palette, and what `floe template check` refuses. For a part of your own, see `floe part guide`; for a theme, `floe theme guide`.
 
+In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its templates are in `.floe/templates`, and without it floe reads and writes your own.
+
 ## Where templates are
 
-- A template is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template.
+- A template is a directory in your templates' directory, named after the template: `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), or `.floe/templates` under `floe repository`.
 - `~` is your home (`%USERPROFILE%` on Windows), and floe does not expand it: set the variable to a whole path.
 - `floe template new memo` makes the smallest one, `memo`: a `page.html`, a `schema.json` and an `example.yaml` to fill in.
-- A file directly in `FLOE_TEMPLATES_DIR` is ignored without a message: put a template's files in its directory.
+- A file directly in your templates' directory is ignored without a message: put a template's files in its directory.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Do not give a template the name of one of floe's, unless it is to replace it (a template of yours hides floe's of that name for every page that names it, and nothing says so).
-- A directory in `FLOE_TEMPLATES_DIR`, and anything in a template's directory, MUST NOT be a link to a directory. A link to a file is not refused: floe reads the file it leads to.
+- A directory in your templates' directory, and anything in a template's directory, MUST NOT be a link to a directory. A link to a file is not refused: floe reads the file it leads to.
 - Every file there MUST be a regular file: floe refuses a FIFO or a device without reading it.
-- `FLOE_TEMPLATES_DIR` MUST NOT be the directory of your parts or of your themes (`FLOE_PARTS_DIR`, `FLOE_THEMES_DIR`), a directory above either, or a directory under either: floe would read the files of one as those of the other.
+- Your templates' directory MUST NOT be the directory of your parts or of your themes, a directory above either, or a directory under either: floe would read the files of one as those of the other.
 - A mistake in any template, part, look, shared schema or theme of yours stops every page, whether or not the page uses it (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike.
 - `floe template check` and `floe part check` (`floe theme check` the same) list those mistakes, all of them.
 - A published page is drawn with the server's templates (`floe serve --help`). After you change one, `floe rebuild` draws the stored pages again with it.
 
 ### Make one in another directory
+
+`floe repository` uses no server: in a repository, make the template in place with `floe repository template new` and check it with `floe repository template check`.
 
 The server reads your templates again as soon as you save one, so a template half written stops the server's pages for everyone who uses it. Write a new template in another directory, and move it in once it is checked (in sh, where the shell expands `~`):
 
