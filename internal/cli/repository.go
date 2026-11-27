@@ -293,10 +293,9 @@ func (a *app) repositoryCmd() *cobra.Command {
 		Long: short + `.
 
 The repository is the directory at or above the working directory that holds .floe/repository.yaml
-(looked for up to the one that holds .git), which floe repository new makes. Its commands read
-FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR and FLOE_THEMES_DIR not, nor the store, nor the server: they read
-and write files under the repository alone. floe repository guide prints how to keep documents in a
-repository.`,
+(looked for up to the one that holds .git), which floe repository new makes. Its commands use neither
+FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR, FLOE_THEMES_DIR, the store nor the server: they read and write files
+under the repository alone. floe repository guide prints how to keep documents in a repository.`,
 		Args: cobra.NoArgs,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			r, err := a.openRepository()
