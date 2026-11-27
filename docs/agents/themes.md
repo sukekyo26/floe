@@ -54,7 +54,7 @@ Set in `palette.css`. A palette may set properties of the root too (`default` se
 | `--code-bg`, `--code-fg`, `--code-prompt` | The background of code and a terminal (always dark), their text, and a terminal's prompt | `#1b2120`, `#e2e9e7`, `#b5e05a` |
 | `--code-add`, `--code-del` | A diff's lines added and removed | `#6fcf97`, `#f2b8b5` |
 | `--chart-1`, `--chart-2`, `--chart-3`, `--chart-4` | The colours of a chart's series, in order | `#008fa3`, `#c2660a`, `#6157d9`, `#c8366f` |
-| `--text-width` | The width a page of one column grows to (a template sets its column to it by `--column-width: var(--text-width)`), and a note's maximum width in every template | `56rem` |
+| `--text-width` | The width a page of one column grows to (a template sets its column to it by `--column-width: var(--text-width)`) | `56rem` |
 | `--page-width`, `--page-pad` | The width of the column a page is centred in, and the pad each side of it | `96rem`, `16px` |
 
 ### floe's own variables
