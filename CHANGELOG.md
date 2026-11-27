@@ -30,6 +30,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Fix the pills on the line under a row's title in the management page running past that line when their names are long: a tag, a project, a task or a kind wider than the line ran under the row's buttons or out of the row (a task's even on a wide screen), and is now cut at its end with "…".
 - Fix the head of a task's page in the management page growing wider than its column when the project's name is long, putting Edit and the family card's Add out of the window: the project's pill is cut at its end with "…" instead.
 - Fix a page's name going missing in a folder's tree in the management page (the list and a task's page) when the column is narrow and the page deep: the name shrank to nothing beside its time and buttons. The name now keeps room for about ten characters, and a row where the time and buttons do not fit beside it puts them on a line under the name, at the right; a row that fits stays on one line.
+- Fix the logo, Pages and Tasks in the management page's bar leaving the shelf and the list folded: a plain press of any of them now opens both on the screen it goes to, the one shown too, and keeps them open across a reload.
 
 ## [0.4.0] - 2026-11-26
 
