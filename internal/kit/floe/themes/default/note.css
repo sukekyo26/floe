@@ -1,7 +1,10 @@
-/* A tray of its tone holding all it says on one tile of the surface, its tone left as a thin edge around it: the tile is
-   the note's ::after, over its padding to --default-pad from its edges and under all the note holds (the note is a
-   stacking context), so that what it holds stays where floe places it */
-:scope { background: var(--tone-soft); --floe-mark: 1.75rem; isolation: isolate; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
-:scope::after { content: ""; position: absolute; z-index: -1; inset: var(--default-pad); background: var(--surface); border-radius: var(--default-inner); }
-/* A line's code on the tile takes its quiet ground, as the surface would melt into it */
+/* A tile paler than its tone's soft colour, holding all it says, in a thin edge of its tone a little deeper than that
+   colour, drawn within the note to --default-pad. The colours are mixed here, not in base.css, as --tone-soft is each
+   note's own and the root's would take the root's tone */
+:scope {
+  background: color-mix(in srgb, var(--tone-soft) 45%, var(--surface)); --floe-mark: 1.75rem;
+  --floe-inset: inset 0 0 0 var(--default-pad) color-mix(in srgb, var(--tone) 15%, var(--tone-soft));
+  --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface);
+}
+/* A line's code on the tile takes its quiet ground, as the tile would melt into it */
 :scope code { background: var(--quiet); }
