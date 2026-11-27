@@ -197,7 +197,8 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.size(1280, 900, false)
 	narrow(320)
 	deep := "guide/deep/a/b/c/d/e/y.html"
-	wrapped := []string{lines(deep), lines("index.html")}
+	wrapped := make([]string, 0, 4)
+	wrapped = append(wrapped, lines(deep), lines("index.html"))
 	// Wide enough for the name and the time, not the buttons: they go under it together.
 	narrow(380)
 	wrapped = append(wrapped, lines(deep))
