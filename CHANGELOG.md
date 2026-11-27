@@ -13,6 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the headings of Markdown (a `text` part, a field of Markdown, Markdown in a part) to be smaller than every heading of a template: `#` is 1.05em, `##` 1em and `###` to `######` 0.95em, so that a `#` no longer stands out over its section's heading in `adr`, `postmortem` and `runbook`, nor a `##` looks like `adr`'s section heading.
 - Change `slides` to write each slide's number and the count of them as the page's text: they can be copied, and a screen reader reads them ("Slide 2 of 5"). They look as before.
 - Change `floe task` to make a task only with `--new`: without `--new` it no longer makes a task, where before `--state`, `--title`, `--url`, `--parent`, `--categories` or `--slug` of a task of no row made it silently; such a write is now refused (`no task S9 in project app: check the ID, name its project with --project, or make it with --new`), so that a mistyped ID or a project mistaken makes no empty task. Make a task first with `floe task --task <ID> --new`, then put pages on it; `--new` of a task there is is refused.
 - Change the theme `aurora`'s note to float on the shadow its other glass boxes cast, without the white edge round it, on a ground one step deeper in every tone, which stands off the violet wash the accent's paler ground all but matched.
