@@ -10,7 +10,7 @@ In a repository with `.floe/repository.yaml`, put `floe repository` before every
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes.
 - A theme directory, and anything in it, MUST NOT be a link to a directory (a link to a file is read).
 - Your themes' directory MUST NOT be the directory of your parts or templates, contain it, or be in it: floe would read the files of one as those of the other.
-- A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*).
+- A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*). `floe repository` uses no server: in a repository, make the theme in place with `floe repository theme new` and check it with `floe repository theme check`.
 
 ## Files
 

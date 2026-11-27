@@ -11,7 +11,7 @@ In a repository with `.floe/repository.yaml`, put `floe repository` before every
 - A part's or look's name MUST NOT be `base`, `palette` or `markdown` (the names of a theme's files for every page), and MUST NOT be the name of a shared schema of yours too (a directory and a `<name>.json` of one name).
 - A directory in your parts' directory, and anything in a part's or look's directory, MUST NOT be a link to a directory (a link to a file is read), and a file MUST be a regular file (a FIFO or a device is refused unread).
 - Your parts' directory MUST NOT be the directory of your themes or templates, contain it, or be in it: floe would read the files of one as those of the other (`floe part check` compares it with the themes' directory; the commands that draw a page compare all three).
-- A mistake in any part of yours stops every page, whether or not the page uses that part, until it is fixed (`floe template guide`, *Where templates are*). A new part made in another directory and moved in once `floe part check` is clean stops none: set `FLOE_PARTS_DIR` to that directory for `floe part new quote` and `floe part check` (`floe template guide`, *Make one in another directory*).
+- A mistake in any part of yours stops every page, whether or not the page uses that part, until it is fixed (`floe template guide`, *Where templates are*). A new part made in another directory and moved in once `floe part check` is clean stops none: set `FLOE_PARTS_DIR` to that directory for `floe part new quote` and `floe part check` (`floe template guide`, *Make one in another directory*). `floe repository` uses no server: in a repository, make the part in place with `floe repository part new` and check it with `floe repository part check`.
 
 ## Files
 
