@@ -110,8 +110,11 @@ func TestRepositoryGuideRuns(t *testing.T) {
 	t.Parallel()
 
 	guide := readGuide(t, repositoryAgentDocPath)
-	setUp := guide[strings.Index(guide, "## Set up a repository"):]
-	setUp = setUp[:strings.Index(setUp[1:], "\n## ")+1]
+	_, setUp, ok := strings.Cut(guide, "## Set up a repository")
+	if !ok {
+		t.Fatalf("%s has no section Set up a repository", repositoryAgentDocPath)
+	}
+	setUp, _, _ = strings.Cut(setUp, "\n## ")
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, ".git"), 0o755); err != nil {
 		t.Fatal(err)
@@ -141,7 +144,7 @@ func TestRepositoryGuideRuns(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := os.WriteFile(filepath.Join(dir, "docs", "specs", "orders.yaml"), example, 0o600); err != nil {
+				if err := os.WriteFile(filepath.Join(dir, "docs", "specs", "orders.yaml"), example, 0o600); err != nil { //nolint:gosec // G703: the test's own temporary file
 					t.Fatal(err)
 				}
 			}
@@ -163,7 +166,7 @@ func TestRepositoryGuideRuns(t *testing.T) {
 	if bytes.Equal(changed, src) {
 		t.Fatalf("the example of the template holds no title: %s", src)
 	}
-	if err := os.WriteFile(file, changed, 0o600); err != nil {
+	if err := os.WriteFile(file, changed, 0o600); err != nil { //nolint:gosec // G703: the test's own temporary file
 		t.Fatal(err)
 	}
 	var stderr strings.Builder

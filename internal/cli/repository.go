@@ -347,9 +347,10 @@ every mistake is printed.`,
 		Long: `Check the repository's templates, parts and themes, drawing each template's example.yaml, as
 floe repository template check does, then each data file under the documents' directories, or each one
 given, and its page, as floe render --check does: every mistake is printed, and, once the documents have
-none, each page missing or not what its data file draws. A directory of documents that is not there is told,
-and the documents are checked once it is there. A data file given is a path from the working directory; the documents found
-are named from the root. The exit code is 1 when there is one. An HTML file with no data file is left alone.`,
+none, each page missing or not what its data file draws. A directory of documents that is not there is
+told, and the documents are checked once it is there. A data file given is a path from the working
+directory; the documents found are named from the root. The exit code is 1 when there is one. An HTML file
+with no data file is left alone.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			own := a.checkTemplates()

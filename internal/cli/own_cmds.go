@@ -266,7 +266,9 @@ type ownHelp struct {
 
 // repositoryCommand is a command of floe's that floe repository has one of its own for, as a help names it: not
 // a word after floe that names no command (the floe part it is).
-var repositoryCommand = regexp.MustCompile(`\bfloe ((?:part|template|theme) (?:list|show|new|check|guide)|check|render)\b`)
+var repositoryCommand = regexp.MustCompile(
+	`\bfloe ((?:part|template|theme) (?:list|show|new|check|guide)|check|render)\b`,
+)
 
 // text is s, a help that names commands of floe's, with floe repository's in their place under it.
 func (h ownHelp) text(s string) string {
