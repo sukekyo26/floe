@@ -134,7 +134,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 - Do not write a list's display, marks, padding or gap, or a rule for its items (`li`, `::marker`), for a list that is a part's box: floe sets them there, and `page.css` does not reach the items in a part's box (`floe part guide`, *The CSS layers and @scope*).
 - `page.css` reaches the display, the padding and the items of an element that takes the look `rows`, `table`, `cards` or `tags`. It does not reach them in a list that is a part's box.
 - Do not write `display`, `gap` or `grid-template` on the items of `numbered` or `marked`, nor on the box of a `note` or of a part of yours whose `part.yaml` has `marks: box`, however it is placed.
-  - Such a box is a row with a mark itself: `.caution { display: flex; gap: 0.5rem; }` puts a note's title and text in one row. The rows of `links`, `timeline` and `checklist` stand in the part's box, which `page.css` does not reach.
+  - Such a box is a row with a mark itself: `.caution { display: flex; gap: 0.5rem; }` puts a note's title and text in one row. The rows of `timeline` and `checklist` stand in the part's box, which `page.css` does not reach.
   - `page.css` is over `floe.marks`, so such a rule wins over the layout of the marks, and `floe template check` passes it: `grid-template-columns: 1fr` on a `numbered` item puts the ring and the line on the text.
 - Size the marks with `--floe-mark` and `--floe-mark-gap` on the list (`.steps { --floe-mark: 3rem; --floe-mark-gap: 2rem; }`).
 - Do not pad the rows of a box that takes the look `rows` (`rows` pads its rows by `--floe-row-pad` above and below, and `--floe-pad-inline` at the sides: a padding of yours replaces the look's).

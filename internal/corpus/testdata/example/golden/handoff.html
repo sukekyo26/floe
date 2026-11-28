@@ -332,11 +332,34 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
-   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
-   box's ring staying in the face around it */
-:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+/* Each link a small frame on a line, wrapping: where it goes, its title, and ↗ for one that leaves floe; a few words
+   beside the frame. The frame is the link, so that its reach and ring are the whole of it.
+   LIMIT: the URL itself is not shown, so a printed page tells only the host or docs. Print it under the frame if pages
+   come to be read on paper */
+:scope { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline; }
+:scope > li { display: flex; flex-wrap: wrap; gap: 0 0.5rem; align-items: baseline; min-width: 0; }
+:scope a {
+  display: inline-flex; gap: 0.45rem; align-items: baseline; min-width: 0; max-width: 100%;
+  border: 1px solid var(--line); border-radius: var(--radius-small); padding: 0.05rem 0.55rem;
+  text-decoration: none; color: var(--on-face, var(--fg));
+}
+:scope a:hover { border-color: var(--on-face, var(--accent)); }
+:scope a:hover .title { text-decoration: underline; }
+:scope .to { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--on-face, var(--accent)); white-space: nowrap; }
+:scope .title { font-weight: 700; min-width: 0; }
+:scope .out { font-size: var(--floe-text-small); color: var(--on-face, var(--accent)); }
+:scope .text { font-size: var(--floe-text-aside); color: var(--on-face, var(--muted)); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="marked"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
+   --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
+   code flows as one */
+:scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
+:scope > li::before { line-height: 1; font-weight: 800; }
 }
 }
 </style>
@@ -359,51 +382,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
 :scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
-   marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
-   looks' for an element that takes the look). Each row is padded above
-   and below by --floe-row-pad and at the sides by --floe-pad-inline (defaults.css), and so is a row the box draws last as
-   ::after (checklist's count); what takes it writes no padding of its rows. A rule parts each row from the next */
-:scope > *, :scope::after { padding: var(--floe-row-pad) var(--floe-pad-inline); }
-:scope > * + * { border-top: 1px solid var(--line); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A row to each link: its sign, its title and a few words on the line, the words under the title where they don't fit.
-   One element holds the title and the words, as floe lays out each child of a row (marks: items) on a line of its own.
-   The title holds the link, as a flex item is a block: inline, the link's reach and ring are its words */
-:scope { --floe-mark: 1lh; --floe-mark-gap: 0.25rem; }
-:scope > li::before {
-  content: "\200b"; content: "\200b" / "";
-  background: var(--on-face, var(--accent)); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / min(1rem, var(--floe-mark)) no-repeat;
-}
-:scope > li > * + * { margin-top: 0.1rem; }
-:scope .line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.7rem; }
-:scope a { font-weight: 700; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
-:scope a:hover { text-decoration-thickness: 2px; }
-:scope .text { font-size: var(--floe-text-aside); color: var(--on-face, var(--muted)); }
-/* Under the title and whole, however long, to read, select and print */
-:scope .url { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); }
-}
-}
-</style>
-<style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="marked"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
-   --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
-   code flows as one */
-:scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
-:scope > li::before { line-height: 1; font-weight: 800; }
 }
 }
 </style>
@@ -441,14 +419,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
-}
-}
-</style>
-<style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
@@ -465,27 +435,13 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { padding: var(--default-pad); }
-:scope > * {
-  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
-  --default-quote-quiet: var(--surface);
-}
-:scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
-:scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }
-:scope > :only-child { border-radius: var(--default-inner); }
-}
-}
-</style>
-<style>
 @layer floe.marks {
-:where([data-floe-part="links"] > li, [data-floe-look~="marked"] > li) {
+:where([data-floe-look~="marked"] > li) {
   position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
 }
-:where([data-floe-part="links"] > li, [data-floe-look~="marked"] > li) > * { grid-column: text; align-self: first baseline; }
-:where([data-floe-part="links"] > li, [data-floe-look~="marked"] > li)::before {
+:where([data-floe-look~="marked"] > li) > * { grid-column: text; align-self: first baseline; }
+:where([data-floe-look~="marked"] > li)::before {
   anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
   box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
@@ -575,8 +531,8 @@ main > section { display: grid; gap: var(--floe-room); }
 <section class="notes"><h2 id="notes">Watch out for</h2><ul><li>Staging uses the <strong>test</strong> card provider: real cards are refused there</li><li>The design for the address form changed on Monday; use the newest file</li></ul></section>
 <section><h2 id="links">Links</h2>
 <ul data-floe-part="links">
-<li><div class="line"><span class="title"><a href="docs/checkout-designs.html">Checkout designs</a></span><span class="text">The newest screens</span></div><span class="url">docs/checkout-designs.html</span></li>
-<li><div class="line"><span class="title"><a href="docs/release-checklist.html">Release checklist</a></span><span class="text">What to check before shipping</span></div><span class="url">docs/release-checklist.html</span></li>
+<li><a href="docs/checkout-designs.html"><span class="to">docs</span><span class="title">Checkout designs</span></a><span class="text">The newest screens</span></li>
+<li><a href="docs/release-checklist.html"><span class="to">docs</span><span class="title">Release checklist</span></a><span class="text">What to check before shipping</span></li>
 </ul>
 </section>
 </main>

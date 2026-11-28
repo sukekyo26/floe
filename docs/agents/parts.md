@@ -102,6 +102,7 @@ The functions floe adds to html/template's own (`printf`, `index`, `eq` and the 
 | `chart` | `{{$c := chart}}` | The places of the part `chart`, from the part's value |
 | `written` | `{{written}}` | The part's value as written |
 | `tree` | `{{range tree .}}` | A list of paths nested |
+| `linkTo` | `{{$to := linkTo .url}}` | Where a URL goes: `.Kind` is `web` when it names a scheme or a host (`//host/x` too), `mail` for `mailto:`, else `here`; `.Name` names a `web` one, by its host without the port, `PR #412` for a pull request of github.com, its scheme when it has no host |
 
 `script`, `code`, `bars`, `stats` and `chart` take nothing and read the part's whole value (`.`), as `diagram` does, so that a mistake in it is told at its line and column. The value MUST have the shape each reads (refused when a page is drawn, at the value or its key, saying which `"type"` to give it in your schema):
 
@@ -226,7 +227,7 @@ A look draws nothing and lends its style to parts and elements that take it. A l
 
 A theme's rules for a look draw every part that takes it. A card in an element that takes `cards` may take `panel` itself (`<div data-floe-look="cards"><div class="card" data-floe-look="panel">`): the cards, the outer, draw it as they draw the cards of a part.
 
-- Do not take two looks that write `marks:` on one element in HTML (`data-floe-look="numbered marked"`, or a box of `links` that takes `marked`): both rules reach its rows, and floe does not refuse it.
+- Do not take two looks that write `marks:` on one element in HTML (`data-floe-look="numbered marked"`, or a box of `timeline` that takes `marked`): both rules reach its rows, and floe does not refuse it.
 
 ### Names floe gives
 

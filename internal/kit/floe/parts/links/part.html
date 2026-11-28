@@ -1,5 +1,5 @@
 <ul data-floe-part="links">
-{{- range .}}
-<li><div class="line"><span class="title"><a href="{{.url}}">{{.title}}</a></span>{{with .text}}<span class="text">{{.}}</span>{{end}}</div><span class="url">{{.url}}</span></li>
+{{- range .}}{{$to := linkTo .url}}
+<li><a href="{{.url}}"><span class="to">{{if eq $to.Kind "web"}}{{$to.Name}}{{else}}{{word $to.Kind}}{{end}}</span><span class="title">{{.title}}</span>{{if ne $to.Kind "here"}}<span class="out" aria-hidden="true">↗</span><span class="floe-hidden">{{word "out"}}</span>{{end}}</a>{{with .text}}<span class="text">{{.}}</span>{{end}}</li>
 {{- end}}
 </ul>

@@ -24,8 +24,6 @@ title: Marks
 sections:
   - heading: Marks
     parts:
-      - links:
-          - { title: Docs, url: "https://example.com/docs", text: read }
       - note: { tone: good, title: Heads up, text: a note }
       - note: { tone: warn, text: "A note of Markdown alone.\n\nA second paragraph." }
       - steps:
@@ -59,7 +57,6 @@ var markRows = []struct {
 	name, at, row, line string
 	bare                bool
 }{
-	{"links", "links", "[data-floe-part=links] > li", "[data-floe-part=links] > li > .line > .title > a", false},
 	{"note", "note", "[data-floe-part=note]", "[data-floe-part=note] > .title", true},
 	{"note without a title", "note", "#plainnote", "#plainnote > p", true},
 	{
@@ -281,7 +278,6 @@ func mustJSON(v any) string {
 // bigger than the mark's letters and moves the note's text off its mark; bareTheme leaves the look numbered's rings
 // out, and so their lines.
 var tallTheme = map[string]string{
-	"themes/tall/links.css":    ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope a { font-size: 1.6rem; }\n",
 	"themes/tall/note.css":     ":scope { padding-top: 2rem; line-height: 2.5; --floe-mark-gap: 2rem; }\n.title { font-size: 1.6rem; }\n",
 	"themes/tall/steps.css":    ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope strong { font-size: 1.6rem; }\n",
 	"themes/tall/timeline.css": ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope strong { font-size: 1.6rem; }\n",

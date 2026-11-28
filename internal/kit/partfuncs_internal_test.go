@@ -364,10 +364,10 @@ func TestLinkTo(t *testing.T) {
 	t.Parallel()
 
 	for url, want := range map[string]linkPlace{
-		"/a/tspec-reset/":                                {Kind: "here", Name: ""},
-		"docs/release-checklist.html":                    {Kind: "here", Name: ""},
-		"%zz":                                            {Kind: "here", Name: ""},
-		"https://github.com/acme/web/pull/412":           {Kind: "web", Name: "PR #412"},
+		"/a/tspec-reset/":                      {Kind: "here", Name: ""},
+		"docs/release-checklist.html":          {Kind: "here", Name: ""},
+		"%zz":                                  {Kind: "here", Name: ""},
+		"https://github.com/acme/web/pull/412": {Kind: "web", Name: "PR #412"},
 		"https://GitHub.com/acme/web/pull/412/files":     {Kind: "web", Name: "PR #412"},
 		"https://github.com/acme/web/pull/new":           {Kind: "web", Name: "github.com"},
 		"https://github.com/acme/web/issues/77":          {Kind: "web", Name: "github.com"},
