@@ -85,7 +85,7 @@ window.fetch = (input: string | URL | Request, init?: RequestInit) => {
     return answer(json({ floe: { S1: { title: 'Task screens', state: 'doing', at: ago(3), rev: 1 } } }));
   if (url.pathname === '/api/themes') return answer(json({ themes: THEMES, default: '', taskMode: false }));
   if (url.pathname === '/api/settings' || url.pathname.endsWith('/read')) return answer(new Response(''));
-  if (url.pathname.endsWith('/theme')) return answer(method === 'GET' ? json({ own: '' }) : new Response(''));
+  if (url.pathname.endsWith('/theme')) return answer(new Response(''));
   if (url.pathname.endsWith('/files')) {
     const dir = (url.searchParams.get('dir') ?? '') as keyof typeof FILES;
     return answer(dir in FILES ? json(FILES[dir]) : new Response('', { status: 404 }));

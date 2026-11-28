@@ -48,18 +48,6 @@ export async function readThemes(client: Client): Promise<ThemesRead> {
   return (await res.json()) as ThemesRead;
 }
 
-// readPageTheme is the theme a page shows in without one of its own; '' when it cannot be read
-export async function readPageTheme(client: Client, slug: string): Promise<string> {
-  try {
-    const res = await client.api(`${PAGES_API}/${encodeURIComponent(slug)}/theme`);
-    if (!res.ok) return '';
-    const got = (await res.json()) as { own?: string };
-    return got.own ?? '';
-  } catch {
-    return '';
-  }
-}
-
 // putSettings writes the default theme or the task mode alone: '' or the reason
 export async function putSettings(client: Client, body: { theme: string } | { taskMode: boolean }): Promise<string> {
   try {
@@ -69,7 +57,7 @@ export async function putSettings(client: Client, body: { theme: string } | { ta
   }
 }
 
-// putPageTheme writes a page's theme ('' takes it off): '' or the reason, a page changed meanwhile (409) or not drawn
+// putPageTheme writes a page's theme: '' or the reason, a page changed meanwhile (409) or not drawn
 // in it (400) said as such, as the server's words are of the command line
 export async function putPageTheme(client: Client, slug: string, theme: string): Promise<string> {
   try {

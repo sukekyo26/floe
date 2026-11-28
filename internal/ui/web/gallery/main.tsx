@@ -284,7 +284,6 @@ const gallerySettings = createSettings({
           });
       }, 300);
     }),
-  readPageTheme: () => Promise.resolve('default'),
 });
 // A write of the settings takes 0.8 s, to see the modal held
 const later = <T,>(value: () => T) =>
@@ -304,7 +303,7 @@ const galleryThemeWrites = createThemeWrites({
   putPageTheme: (slug, theme) =>
     later(() => {
       if (refuse) return 'refused (409)';
-      edit(slug, { pickedTheme: theme });
+      edit(slug, { theme });
       return '';
     }),
   pages: galleryPages,

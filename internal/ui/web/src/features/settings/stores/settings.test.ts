@@ -8,9 +8,10 @@ import type { Pages } from '@/stores/pages';
 import { createToasts } from '@/stores/toasts';
 import type { Page } from '@/types/page';
 
+const page = { slug: 'a', title: 'A' } as Page;
+
 const messages = new Proxy({}, { get: (_, key) => `${String(key)}:%s` });
 const read: ThemesRead = { themes: [], default: 'mine', taskMode: false, settings: { errors: [] } };
-const page = { slug: 'a', title: 'A' } as Page;
 
 describe(createSettings, () => {
   it('drops a refusal of an opening gone since', async () => {
@@ -21,9 +22,9 @@ describe(createSettings, () => {
       yield late;
       for (;;) yield Promise.resolve(read);
     })();
-    const s = createSettings({ readThemes: () => answers.next().value, readPageTheme: () => Promise.resolve('') });
-    const opening = s.open(null);
-    await s.open(null);
+    const s = createSettings({ readThemes: () => answers.next().value });
+    const opening = s.open();
+    await s.open();
     reject(new Error('lost'));
     await opening;
     expect([s.state.get().failed, s.state.get().read]).toStrictEqual(['', read]);
@@ -39,12 +40,9 @@ describe(createSettings, () => {
       yield Promise.reject(new Error('lost'));
       for (;;) yield Promise.resolve(read);
     })();
-    const s = createSettings({
-      readThemes: () => answers.next().value,
-      readPageTheme: () => Promise.resolve('own'),
-    });
-    const opening = s.open(page);
-    await s.open(null);
+    const s = createSettings({ readThemes: () => answers.next().value });
+    const opening = s.open();
+    await s.open();
     answer(read);
     await opening;
     expect([s.state.get().opened, s.state.get().read, s.state.get().failed]).toStrictEqual([
@@ -52,8 +50,8 @@ describe(createSettings, () => {
       null,
       'ui_theme_load_failed:lost',
     ]);
-    await s.open(page);
-    expect([s.state.get().read, s.state.get().own]).toStrictEqual([read, 'own']);
+    await s.open();
+    expect(s.state.get().read).toStrictEqual(read);
     s.saved({ taskMode: true });
     // Written, settings.json is readable again
     expect(s.state.get().read).toStrictEqual({ themes: [], default: 'mine', taskMode: true });

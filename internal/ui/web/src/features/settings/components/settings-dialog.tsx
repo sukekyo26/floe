@@ -84,7 +84,7 @@ export function SettingsDialog({
   writes = pageWrites,
 }: SettingsDialogProps) {
   const hold = useHold();
-  const { read, own, failed } = useStore(settings.state);
+  const { read, failed } = useStore(settings.state);
   const [panel, setPanel] = useState<Panel>('list');
   const [seen, setSeen] = useState<SettingsTarget | null>(null);
   const [kept, setKept] = useState<Page | null>(null);
@@ -110,13 +110,12 @@ export function SettingsDialog({
   // Read anew each opening, before it is drawn (a layout effect: the last opening's page and cards never show), once
   // (StrictMode's second run is the same opening, asking again harmlessly)
   useLayoutEffect(() => {
-    if (target) void settings.open(target.page);
+    if (target) void settings.open();
   }, [target, settings]);
   const open = target !== null;
   useMovedOverlay(open, { toasts: toastBox });
   const view = settingsView(panel, page !== null, read, failed, t('ui_settings_broken'));
-  const unset = own ? t('ui_theme_unset_named', own) : t('ui_theme_unset_about');
-  const cards = themeCards(read, failed, page ? (page.pickedTheme ?? '') : null, unset);
+  const cards = themeCards(read, failed, page ? (page.theme ?? '') : null);
   if (choice.of !== read) setChoice({ of: read, name: cards.checked });
   if (modeOn.of !== read) setModeOn({ of: read, on: Boolean(read?.taskMode) });
   useShrink(grid, read);
