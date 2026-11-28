@@ -1,0 +1,61 @@
+/* A redline: each screen large on a canvas of its own beside its number, purpose, numbered notes in red and its
+   states; the flow as a chain of screens, and the design rules as tiles of colour and samples of type */
+body { line-height: 1.75; padding-block: 0 4rem; }
+/* The head without a fill: the kind, the title, the summary and the related documents, the fields at the right, a
+   rule under it */
+.head { padding-block: 2rem 1.6rem; border-bottom: 1px solid var(--fg); }
+.head .floe-column { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1.5rem 3rem; align-items: end; }
+.titles { display: grid; gap: 0.4rem; max-width: 46rem; }
+.kind { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.2em; color: var(--muted); }
+.head h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; line-height: 1.2; }
+.related { display: flex; flex-wrap: wrap; gap: var(--floe-room); align-items: baseline; }
+.props { display: grid; grid-template-columns: repeat(2, auto); gap: 0.3rem 1.4rem; font-size: 0.85rem; }
+.props dt { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--muted); }
+.props dd { margin: 0; font-weight: 700; }
+main { display: grid; gap: 3rem; padding-top: 2.4rem; }
+main section { display: grid; gap: var(--floe-room); align-content: start; }
+main section > h2 { font-size: 1.3rem; }
+.label { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; color: var(--muted); }
+.users { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: var(--floe-room); }
+.users li { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.2rem; }
+.users span, .what, .use, .states figcaption span { color: var(--muted); }
+.users span { font-size: 0.9rem; }
+.flow { list-style: none; padding: 0; display: grid; gap: 0.6rem; }
+.flow li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); align-items: center; gap: 0.8rem; }
+.node { border: 2px solid var(--fg); border-radius: var(--radius-small); padding: 0.3rem 0.8rem; font-weight: 700; text-align: center; }
+.edge { position: relative; text-align: center; font-size: 0.85rem; color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 0.2rem; }
+.edge::after { content: "▶"; content: "▶" / ""; position: absolute; right: -0.3rem; bottom: -0.7rem; font-size: 0.8rem; }
+/* A screen: its images on a dotted canvas, each its own width and no taller than 38rem; a phone's beside the side,
+   a screen with a computer's image over the side, and every screen over its side under 860px */
+.spec { display: grid; grid-template-columns: auto minmax(22rem, 1fr); gap: 2.5rem; align-items: start; }
+.spec.wide { grid-template-columns: minmax(0, 1fr); }
+.canvas { display: flex; gap: 1.5rem; align-items: end; justify-self: start; max-width: 100%; box-sizing: border-box; padding: 1.5rem; border-radius: var(--radius); background: var(--quiet) radial-gradient(var(--line) 1px, transparent 1px) 0 0 / 16px 16px; }
+.canvas img { display: block; min-width: 0; max-width: 100%; max-height: 38rem; width: auto; height: auto; }
+.canvas .pc { flex: 1 1 auto; }
+.canvas .phone { flex: 0 1 auto; }
+.side { display: grid; gap: 0.8rem; align-content: start; }
+.side .no { font-family: var(--mono); font-size: 0.85rem; color: var(--bad); font-weight: 800; }
+.spec h2 { font-size: 1.6rem; }
+.states { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr)); gap: var(--floe-room); }
+.states figure { margin: 0; padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.4rem; align-content: start; }
+.states img { width: 100%; height: auto; }
+.states figcaption { display: grid; font-size: 0.85rem; }
+/* The design rules: a tile of each colour, a sample of each size of type */
+.palette { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 1rem; }
+.palette li { display: grid; gap: 0.1rem; }
+.tile { height: 4.5rem; border-radius: var(--radius-small); border: 1px solid var(--line); margin-bottom: 0.3rem; }
+.palette code, .type code { display: block; font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.use { display: block; font-size: 0.82rem; }
+.type { list-style: none; padding: 0; display: grid; gap: 0.8rem; }
+.type li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 16rem); gap: 1rem; align-items: baseline; }
+.sample { line-height: 1.3; }
+.foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr)); gap: 2rem 3rem; }
+.defs { display: grid; gap: 0.5rem; }
+.defs dt { font-weight: 700; }
+.defs dd { margin: 0; }
+/* The words on the screens in the quotes of the page's language, which are not read */
+.defs q::before { content: open-quote / ""; }
+.defs q::after { content: close-quote / ""; }
+@media (max-width: 860px) {
+  .flow li, .spec { grid-template-columns: minmax(0, 1fr); }
+}

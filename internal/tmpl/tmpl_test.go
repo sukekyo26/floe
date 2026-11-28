@@ -2,10 +2,12 @@ package tmpl_test
 
 import (
 	"bytes"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
+	"floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/kit"
 	"floe/internal/tmpl"
@@ -20,6 +22,19 @@ func floeKit(t *testing.T) *kit.Kit {
 		t.Fatal(err)
 	}
 	return k
+}
+
+// exampleImages is the directory of floe's template name, where its example.yaml finds its images, as floe
+// template check finds a template's of one's own.
+func exampleImages(t *testing.T, name string) *files.Root {
+	t.Helper()
+	images := files.NewRoot(filepath.Join("..", "kit", "floe", "templates", name))
+	t.Cleanup(func() {
+		if err := images.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	return images
 }
 
 // told words err as the command line does.
@@ -341,7 +356,7 @@ func TestDrawExamples(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, theme := range themes {
-			if _, _, err := tmpl.Draw(k, name+".yaml", tpl.Example(), tmpl.Options{Theme: theme, Untitled: "", ImagesDir: ""}); err != nil {
+			if _, _, err := tmpl.Draw(k, name+".yaml", tpl.Example(), tmpl.Options{Theme: theme, Untitled: "", Images: exampleImages(t, name), ImagesDir: ""}); err != nil {
 				t.Errorf("%s in %s: %s", name, theme, told(err))
 			}
 		}
