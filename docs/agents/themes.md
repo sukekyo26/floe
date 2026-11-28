@@ -83,13 +83,11 @@ floe sets these on `:root` in its lowest layer, under every palette. Set them on
 
 ### Section headings
 
-The templates `report` and `tech-spec` read these on a section's heading, for the sides their `page.css` sets, which win over a theme's `base.css`; floe sets none. Set them on `:scope` in `base.css`, and the other sides on `section > h2` there.
+The template `report` reads this on a section's heading, for the side its `page.css` sets, which wins over a theme's `base.css`; floe sets none. Set it on `:scope` in `base.css`, and the other sides on `section > h2` there.
 
 | Variable | Read in | What it changes | Without it |
 |---|---|---|---|
 | `--floe-heading-top` | `report` | The padding above the heading | `1.3rem` |
-| `--floe-heading-start` | `tech-spec` | The padding between the heading's left line and its words | `0.7rem` |
-| `--floe-heading-edge` | `tech-spec` | The heading's left line, a border | `4px solid var(--accent)` |
 
 ### Part variables
 

@@ -52,7 +52,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | テンプレート | 何のため | 必須 |
 |---|---|---|
 | `report` | 報告。部品の節を並べ、節は 1 段だけ小節を持てる | — |
-| `tech-spec` | 結論を先に出す設計書 | `background`・`goals` |
+| `tech-spec` | 結論を先に出す基本設計書。解決策と、任意のデータ・API・セキュリティ・テスト・リリース・監視・リスク・未決事項の段 | `background`・`goals`・`solution` |
 | `handoff` | 引き継ぎと状況の知らせ。決めてほしいことが先 | `date` |
 | `adr` | 決めたことの記録。1 枚に 1 つ | `status`・`context`・`decision` |
 | `postmortem` | 誰も責めない障害の振り返り | `summary`・`timeline`・`cause` |
@@ -62,7 +62,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 `floe template list` が各テンプレートの説明と、データファイルの鍵（形。`-` なら `floe template show <テンプレート> schema.json` を読みます）を出し、`floe template show <テンプレート> schema.json` が取る鍵とその説明を、`floe template show <テンプレート> example.yaml` が書き始めの見本を出します。`"format": "markdown"` の項目と、説明が Markdown と言う項目が Markdown です。鍵のほかにページが見せるもの:
 
 - `report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。`eyebrow` と `lead` はどちらも Markdown の 1 行で、`*` や `_` などの記号は読むので、字として書くならバッククォートで囲みます（取り消し線は[文の書き方](#文の書き方)）。裸の URL とメールのアドレスはリンクになります（IP や localhost の URL（`http://127.0.0.1:7325`）はなりません）。中で名指した画像のファイルは出ません（出るのは png・gif・jpeg・webp の data URI だけ）。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。見出しは `lead` と同じく Markdown の 1 行です。id は描いた字から作ります。読んだ記号（`__init__`）、バックスラッシュ、文字参照（`&copy;`）、リンクの URL の分だけ、書いた字から作る id と変わります。`toc` は、ページに目次（見出しのある節とその小節）を置くかを決めます。幅 1000px 以上の画面では節の横に置き（ページは窓の幅いっぱいになる）、狭い画面では節の前に節だけを置きます。省くと、見出しのある節が 4 つ以上のページに置きます。紙には出ません。目次のリンク先は節の順の `#section.0`・`#section.0.1` などです。ほかから節へリンクするときは、今までどおりの見出しの id（`#1-what-happens`）を使います。CSS でこの id を指すときは、`#section.0` だと `.0` を class と読むので、`[id="section.0"]` と書きます。
-- Markdown でない鍵は、書いたとおりの字で描きます。tech-spec の `status`・`owner`・`date`、handoff の `date`・`from`・`to`・`ref`・`who`、部品 `asks` の `by`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
+- Markdown でない鍵は、書いたとおりの字で描きます。tech-spec の `status`・`owner`・`reviewers`・`date`、handoff の `date`・`from`・`to`・`ref`・`who`、部品 `asks` の `by`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
 - `handoff` は、済んだもの・進行中・決めること（`decided` の無い問い）・次の数をページの頭に出し、`asks` を部品 `asks` で描きます。
 - `runbook` は、手順の `who` を題の横の札に、`run` を `terminal` のコピーのボタン付きで描き、`rollback` を別の枠に入れます。
 - `slides` は、1 枚ずつを画面の高さか幅いっぱいにし、番号と枚数を隅に出し、印刷では 1 枚ずつ横向きのページにします。部品は `report` と同じ大きさなので、大きくするにはブラウザで拡大します。`direction: across` では、マウスのホイールは下へしか動かず、管理ページの枠の中では枠をクリックしてから ← → のキーが効きます。
@@ -155,7 +155,7 @@ plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 plan.yaml:8:36: write the command without its prompt, which floe draws from the shell ("$ ls")
 ```
 
-- `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。行の無い `file:` だけの誤りは、ファイル全体の誤りです。根に足りない鍵（`tech-spec.yaml: missing properties 'background', 'goals'`）や、テンプレートのデータファイル全体にかける検査がこう出ます。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
+- `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。行の無い `file:` だけの誤りは、ファイル全体の誤りです。根に足りない鍵（`tech-spec.yaml: missing properties 'background', 'goals', 'solution'`）や、テンプレートのデータファイル全体にかける検査がこう出ます。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
 - YAML そのものの誤り（`mapping values are not allowed in this context`）は、floe の YAML ライブラリの言葉で、ライブラリが名指す場所に出ます。引用符の無い値の中の `: ` なら、場所はその `: ` です。制御の字（`control characters are not allowed`）、10000 段より深い入れ子（`exceeded max depth of 10000`）、閉じていない `{ }`・`[ ]`、二重引用符の中のサロゲートのエスケープ（対のものも。`"\ud83d\ude00"` は `found invalid Unicode character escape code`）も同じです。字はそのまま書きます。場所が `|` や `>` の文の後の行なら、その文の最初の行が深すぎるかもしれません。文の最初の行の深さを確かめます（[文の書き方](#文の書き方)）。
 - 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート> schema.json` と `floe part show <部品> schema.json` が、取るものを出します。
 - 自分の部品・見た目・共有の schema・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check`（か、同じことをする `floe theme check`）と `floe template check` が並べます。

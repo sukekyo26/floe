@@ -1,13 +1,17 @@
-# A design: the background and goals are what it needs; options weighed go in decisions, each option taken marked
-# with pick, which heads the page, and what is decided without weighing options in decided. Sections of your own,
-# each a heading over parts, go in more.
+# A technical specification: the background, goals and solution are what it needs. Options weighed go in decisions,
+# each option taken marked with pick, which heads the page, and what is decided without weighing options in decided.
+# The other sections are drawn only when written; sections of your own, each a heading over parts, go in more.
 template: tech-spec
 lang: en
 title: 'Send notifications through a queue'
 status: 'In review'
 owner: 'Platform team'
+reviewers: ['Security team', 'Operations']
 date: 2030-05-14
 summary: 'Notifications leave the web request and go out from a queue, so that a slow mail server never slows a page.'
+related:
+  - { title: 'Requirements: notifications that never slow a page', url: 'docs/notifications-prd.html', text: 'What this meets' }
+  - { title: 'Outage report of March', url: 'https://status.example.com/incidents/42', text: 'Saves failed for 20 minutes' }
 background: |
   Today a notification is sent **inside the web request** that causes it: saving a comment sends its email before the
   page answers. When the mail provider is slow, so is the page, and a provider outage turns into failed saves.
@@ -20,6 +24,26 @@ goals:
 non_goals:
   - 'Changing what the notifications say'
   - 'A user''s settings of which notifications they get'
+solution: |
+  The web app writes each notification to a table `notifications` in the same transaction as what causes it, and
+  answers at once. Two worker processes poll the table, send what is due and mark it sent, trying a failed one again
+  with a growing delay. Email, push and chat are three senders behind one interface.
+diagram:
+  title: 'The web app writes each notification to a table, and workers send it from there'
+  parts:
+    - graph:
+        x: 20
+        y: 20
+        direction: right
+        nodes:
+          - box: { name: web, rows: ['Web app'] }
+          - box: { name: db, rows: ['Database', 'notifications'] }
+          - box: { name: workers, rows: ['Workers'] }
+          - box: { name: out, rows: ['Mail, push, chat'] }
+        edges:
+          - { from: web, to: db, label: 'write' }
+          - { from: db, to: workers, label: 'poll' }
+          - { from: workers, to: out, label: 'send' }
 decisions:
   - question: 'Which queue'
     why: 'It needs no new service to run, and the load is well within what the database takes'
@@ -41,14 +65,40 @@ decided:
   - 'A notification is written to the queue in the same transaction as what causes it'
   - 'Workers take at most `20` notifications at a time'
   - 'A notification still failing after a day is kept, marked **dead**, for a person to look at'
+data:
+  - table:
+      columns: [Column, Type, Meaning]
+      rows:
+        - ['`id`', 'bigint', 'The notification']
+        - ['`channel`', 'text', '`email`, `push` or `chat`']
+        - ['`due_at`', 'timestamp', 'When to try it next']
+        - ['`state`', 'text', '`waiting`, `sent` or `dead`']
+interfaces:
+  - code:
+      lang: go
+      text: |
+        type Sender interface {
+        	Send(ctx context.Context, n Notification) error
+        }
 impact:
   - { what: 'Web app', text: 'Writes to the queue instead of sending; answers faster' }
   - { what: Database, text: 'A new table `notifications`, polled by the workers' }
   - { what: Operations, text: 'Two worker processes to deploy and watch' }
-more:
-  - heading: Rollout
-    parts:
-      - steps:
-          - { title: 'Write to the queue and send in the request', text: 'Both ways for a week, comparing what goes out.' }
-          - { title: 'Send from the workers only' }
-          - { title: 'Remove the sending from the web app' }
+security:
+  - 'A notification holds no password or token: the link in it is made when it is sent'
+  - 'Rows older than 30 days are deleted'
+testing:
+  - 'A worker stopped mid-send sends the notification once more, never twice to a person'
+  - 'A load test of 10 times last month''s peak'
+rollout:
+  - { title: 'Write to the queue and send in the request', text: 'Both ways for a week, comparing what goes out.' }
+  - { title: 'Send from the workers only', text: 'Turning the flag off goes back to sending in the request.' }
+  - { title: 'Remove the sending from the web app' }
+monitoring:
+  - 'The oldest waiting notification: someone is told past 10 minutes'
+  - 'Notifications marked **dead** in a day: someone is told past 5'
+risks:
+  - { risk: 'Polling slows the database at peak', mitigation: 'An index on `due_at`, and workers that wait longer when nothing is due' }
+  - { risk: 'A provider takes the same mail twice' }
+open:
+  - { question: 'Do chat notifications need their own rate limit?', by: 'Operations' }
