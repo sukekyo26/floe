@@ -22,7 +22,7 @@ const measureRowsLook = `(() => {
   const html = document.querySelector('div[data-floe-look="rows"]'), box = (e) => getComputedStyle(e).padding;
   if (!html) out.add('no element of html\'s rows drawn');
   else {
-    for (const e of document.querySelectorAll('[data-floe-look~="rows"], :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="links"])')) {
+    for (const e of document.querySelectorAll('[data-floe-look~="rows"], :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"])')) {
       if (box(e) !== box(html)) out.add((e.dataset.floePart || 'look rows') + ': its box padded ' + box(e) + ', html\'s rows ' + box(html));
     }
   }

@@ -51,7 +51,7 @@ var bandParts = bandText + bandHeld + "chart: { kind: line, title: T, x: [a, b],
 
 // bandColours is parts in a band that draw some of their text in colours of their own (muted, a tone, the page's
 // text colour): bars' label, value and unit, a tree's note and change, a timeline's date; tabs, whose titles have no
-// ground, and links, whose title, words and URL draw in colours of their own.
+// ground, and links, whose title, words, destination and frame draw in colours of their own.
 var bandColours = "bars: [{ label: Copied, value: 40, of: 100, unit: pages }]\n" +
 	"tree: [{ path: pages/, note: what export writes }, { path: pages/home.md, change: changed }]\n" +
 	"timeline: [{ date: '03-01', title: Started, text: The copy began. }]\n" +
