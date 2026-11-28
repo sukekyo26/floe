@@ -11,8 +11,7 @@
 <div class="info">
 <p class="when"><span class="kind" data-floe-part="cell">{{word "kind"}}</span>{{with .Data.place}}<span>{{.}}</span>{{end}}</p>
 <h1>{{.Title}}</h1>
-<p class="people"><span class="label">{{word "attendees"}}</span>{{range .Data.attendees}}<span class="who">{{.}}</span>{{end}}
-{{- with .Data.absent}}<span class="label">{{word "absent"}}</span>{{range .}}<span class="who off">{{.}}</span>{{end}}{{end}}</p>
+<div class="people"><p><b>{{word "attendees"}}</b>{{range .Data.attendees}}<span class="who">{{.}}</span>{{end}}</p>{{with .Data.absent}}<p><b>{{word "absent"}}</b>{{range .}}<span class="who off">{{.}}</span>{{end}}</p>{{end}}</div>
 </div>
 </header>
 <main class="floe-column">
