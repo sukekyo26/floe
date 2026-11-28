@@ -165,7 +165,7 @@ The commands of a repository's documents ([repository.md](repository.md)). Each 
 
 Have the server draw every stored page again from the copy of its data file and images, with its templates, parts and themes of now, and keep the page where it changed, or where its stored page is gone. Run it after you change a template, part or theme of your own, or upgrade floe.
 
-- A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, or fix the template. One past the memory or the time of a page (see `floe publish`) is told so, and the other pages are drawn on.
+- A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, fix the template, or choose the page another theme (Theme in its menu on the management page). One past the memory or the time of a page (see `floe publish`) is told so, and the other pages are drawn on.
 - Stopping the command (Ctrl+C) stops the drawing: the pages not drawn again yet keep the page they had. Run it again to draw them.
 - Linked files are drawn each time they are opened, and are left alone.
 - The server is started when it is not running.

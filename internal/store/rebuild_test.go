@@ -11,6 +11,7 @@ import (
 
 	"floe/internal/drawhere"
 	"floe/internal/drawproc"
+	"floe/internal/i18n"
 	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
@@ -79,7 +80,7 @@ func TestRebuildKept(t *testing.T) {
 	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
 	want := lines(
 		filepath.Join(copyA, "data.yaml")+": missing property 'need'",
-		filepath.Join(copyA, "data.yaml")+`: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+		filepath.Join(copyA, "data.yaml")+": "+kept("a"),
 	)
 	if got := told(err, root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -100,7 +101,9 @@ func TestRebuildKept(t *testing.T) {
 	}
 	err = s.Rebuild(t.Context(), dw)
 	got := told(err, root)
-	if strings.Count(got, `there is no theme "gone"`) != 1 || strings.Count(got, "keeps the page it had") != 2 {
+	// Kept for a theme that is none, it names the page's theme among what to fix
+	if strings.Count(got, `there is no theme "gone"`) != 1 || strings.Count(got, "keeps the page it had") != 2 ||
+		strings.Count(got, "the page another theme (Theme in its menu") != 2 {
 		t.Errorf("told\n%s", got)
 	}
 }
@@ -118,7 +121,7 @@ func TestRebuildTooDeep(t *testing.T) {
 	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
 	want := lines(
 		filepath.Join(copyA, "data.yaml")+": html: open stack of elements exceeds 512 nodes",
-		filepath.Join(copyA, "data.yaml")+`: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+		filepath.Join(copyA, "data.yaml")+": "+kept("a"),
 	)
 	if got := told(s.Rebuild(t.Context(), deep), root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -136,7 +139,7 @@ func TestRebuildTooDeep(t *testing.T) {
 func TestRebuildUnreadable(t *testing.T) {
 	t.Parallel()
 
-	keeps := `: page "%s" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`
+	keeps := ": " + kept("%s")
 	t.Run("no page.html", func(t *testing.T) {
 		t.Parallel()
 
@@ -430,7 +433,7 @@ func TestRebuildImageUnreadable(t *testing.T) {
 	copyD := strings.Replace(copyOf(t, s, root, "d"), root, "S", 1)
 	want := lines(
 		copyD+"/images/old.png: permission denied",
-		copyD+`/data.yaml: page "d" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+		copyD+"/data.yaml: "+kept("d"),
 	)
 	if got := told(s.Rebuild(t.Context(), picKit(t, "v2", "")), root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -485,4 +488,9 @@ func TestRebuildStopped(t *testing.T) {
 			t.Errorf("%s drawn again by a rebuild stopped before it", slug)
 		}
 	}
+}
+
+// kept is store_rebuild_kept of slug in English, as Rebuild tells it.
+func kept(slug string) string {
+	return i18n.EnglishCatalog().Msg("store_rebuild_kept", slug)
 }
