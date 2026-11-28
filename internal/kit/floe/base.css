@@ -16,7 +16,7 @@ h3 { font-size: 1.05rem; }
 /* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
    its own outside the box of its Markdown: smaller than every heading of a template it stands under, the least of which
    is 1.1rem (adr's sections, runbook's steps), and smaller by level, h4 to h6 as h3.
-   LIMIT: h1 is as large as a question of design (1.05rem) over it, in an option's card, which the card tells apart */
+   LIMIT: h1 is as large as a question of tech-spec (1.05rem) over it, in an option's card, which the card tells apart */
 :where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.05em; }
 :where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1em; }
 :where([data-floe-part], [data-floe-text], [data-floe-markdown]) :is(h3, h4, h5, h6) { font-size: 0.95em; }

@@ -53,7 +53,7 @@ mkdir -p docs/specs
 floe repository template new api-spec
 ```
 
-`floe repository new` makes no directory of `documents`, so `mkdir` makes it. With floe's templates alone (`template: design`), leave out `template new`. Fill in the three files as [templates.md](agents/templates.md) tells, with `floe repository` before each command it names (`floe repository template check`), then write `docs/specs/orders.yaml` with `template: api-spec`. Write `"additionalProperties": false` in `schema.json`: the one floe makes takes any key. A document can name one of floe's templates too (`template: design`).
+`floe repository new` makes no directory of `documents`, so `mkdir` makes it. With floe's templates alone (`template: tech-spec`), leave out `template new`. Fill in the three files as [templates.md](agents/templates.md) tells, with `floe repository` before each command it names (`floe repository template check`), then write `docs/specs/orders.yaml` with `template: api-spec`. Write `"additionalProperties": false` in `schema.json`: the one floe makes takes any key. A document can name one of floe's templates too (`template: tech-spec`).
 
 ## Draw and check
 
