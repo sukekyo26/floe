@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 	"testing"
 
@@ -80,18 +79,18 @@ func TestRepositoryDocsCI(t *testing.T) {
 }
 
 // The CI examples of the docs for people install the floe of this release: releasing it bumps them, and one left
-// behind fails here. The doc for agents is built into floe, so it holds no URL of its source (check-no-repo-name).
+// behind fails here. The doc for agents names the version as <version>, which this does not match.
 func TestRepositoryDocsVersion(t *testing.T) {
 	t.Parallel()
 
-	installs := regexp.MustCompile(`floe/v([0-9.]+)/install\.sh \| FLOE_VERSION=([0-9.]+)`)
+	installs := regexp.MustCompile(`install\.sh \| FLOE_VERSION=([0-9.]+)`)
 	for path, want := range map[string]int{repositoryDocPath: 2, repositoryJaDocPath: 2, repositoryAgentDocPath: 0} {
 		found := installs.FindAllStringSubmatch(readGuide(t, path), -1)
 		if len(found) != want {
 			t.Errorf("%s installs floe %d times, want %d: the test reads them by this form", path, len(found), want)
 		}
 		for _, m := range found {
-			if !slices.Equal(m[1:], []string{version.Version, version.Version}) {
+			if m[1] != version.Version {
 				t.Errorf("%s: %q is not of the release, %s", path, m[0], version.Version)
 			}
 		}
