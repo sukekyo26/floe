@@ -3,5 +3,4 @@
 :scope.numbered { --floe-mark: auto; }
 :scope.numbered > .option::before { position: absolute; right: 1.1rem; top: 0.55rem; width: auto; height: auto; background: none; color: var(--pebble-mark); font-size: 3rem; font-weight: 800; line-height: 1; }
 .option .title { padding-right: 4.2rem; min-height: 2.6rem; }
-.option.pick { background: var(--accent-soft); }
 :scope.numbered > .option.pick::before { color: var(--accent); }

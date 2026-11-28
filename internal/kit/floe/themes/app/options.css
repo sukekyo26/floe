@@ -1,4 +1,5 @@
-/* Options are plans to pick from: each number a grey disc, the advised one ringed in raspberry with its number filled */
+/* Options are plans to pick from: each number a grey disc, the advised one's number filled in raspberry */
 :scope.numbered > .option::before { border-radius: 50%; background: var(--app-chip); color: var(--fg); font-weight: 800; }
-.option.pick { outline: 2.5px solid var(--on-face, var(--accent)); outline-offset: -2.5px; }
 :scope.numbered > .option.pick::before { background: var(--accent); color: var(--on-fill); }
+/* The one to take on a pink a little lighter than the accent's soft colour, for its green + to read 4.5:1 (AA) */
+.option.pick { background-color: #fde9f1; }

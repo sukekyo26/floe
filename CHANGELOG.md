@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Change the install commands to `curl -fsSL https://floe-3cf.pages.dev/install.sh | sh` and, on Windows, `irm https://floe-3cf.pages.dev/install.ps1 | iex`; the former `raw.githubusercontent.com` URLs keep working. The CI examples in docs/repository.md take the installer from this URL too, and pin the release with `FLOE_VERSION` alone.
+- The part `options` shows the advised option by its tile's ground instead of a ring: the accent's soft colour (`--accent-soft`), a light blue green in `default`, a light red in `swiss` (its red and green text a little darker there), a lighter pink in `app` and a lighter green in `cyber`, beside its `pick` badge and the theme's own mark of it. The ring melted into a band in most themes and lay over `washi`'s vermilion stroke.
 
 ## [0.5.0] - 2026-11-28
 

@@ -9,6 +9,7 @@ floe の主要な変更を記録します。フォーマットは
 ### 変更
 
 - 変更：floe を入れるコマンドを `curl -fsSL https://floe-3cf.pages.dev/install.sh | sh`、Windows は `irm https://floe-3cf.pages.dev/install.ps1 | iex` にした。前の `raw.githubusercontent.com` の URL もそのまま使える。docs/repository.ja.md の CI の例も、この URL からインストーラーを取り、入れるリリースは `FLOE_VERSION` だけで決める。
+- 部品 `options` の勧めの案の輪をやめ、タイルの地の色で示すようにしました。地は accent の淡い色（`--accent-soft`）で、`default` では淡い青緑、`swiss` では薄い赤（その上の赤と緑の字は少し濃くなります）、`app` では淡い桃色、`cyber` では少し明るい緑です。`pick` の札と、各テーマの印はそのまま残ります。輪は多くのテーマで帯の色に溶けて見えず、`washi` では朱の線と重なっていました。
 
 ## [0.5.0] - 2026-11-28
 
