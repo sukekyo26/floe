@@ -141,7 +141,7 @@ var messagesJA = map[string]string{
 	// tmpl: データファイルが指すテンプレートとテーマ
 	"tmpl_no_template":   "最上位に template: report のようにテンプレートを指定してください（テンプレート: %s）",
 	"tmpl_unknown":       "知らないテンプレート「%s」です。使えるのは %s です",
-	"tmpl_unknown_theme": "テーマ「%s」はありません（ページの theme:、--theme、管理ページでページに選んだテーマ、管理ページの設定の既定のテーマのどれかから来ています）。使えるのは %s です",
+	"tmpl_unknown_theme": "テーマ「%s」はありません（ページの theme:、--theme、ページのテーマ、管理ページの設定の新しいページのテーマのどれかから来ています）。使えるのは %s です",
 
 	// draw: 描いたページ
 	"draw_select_text":  "このファイルを描いたページの <select> の中に <%s> があります。<select> の中には、中身を字として読む要素も svg・math も置けません。<select> の外へ出してください",
@@ -521,14 +521,10 @@ var messagesJA = map[string]string{
 	"ui_theme_item":            "テーマ",
 	"ui_theme_item_named":      "%s のテーマを変更",
 	"ui_theme_page":            "このページのテーマ",
-	"ui_theme_page_more":       "選択すると、このページだけを描き直します。ページが更新されても、選んだテーマが続きます。",
+	"ui_theme_page_more":       "選択すると、このページの最新の版をそのテーマで描き直します。データの theme: を変えて publish するまで、このテーマが続きます。",
 	"ui_theme_picked_label":    "選んだテーマ：",
 	"ui_theme_picked_more":     "。ほかのテーマを選択してください。",
-	"ui_theme_unset":           "このページのテーマを外す",
-	"ui_theme_unset_named":     "外すと %s で表示します",
-	"ui_theme_unset_about":     "外すと、ページを保存したときのテーマで表示します",
 	"ui_theme_page_set":        "このページのテーマを %s に変更しました",
-	"ui_theme_page_unset":      "このページのテーマを外しました",
 	"ui_theme_page_failed":     "このページのテーマの変更に失敗しました：%s",
 	"ui_theme_page_changed":    "その間にページが変わりました。もう一度選択してください",
 	"ui_theme_page_undrawn":    "描けなかったため、前の見た目のままです",

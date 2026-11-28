@@ -18,7 +18,7 @@ func TestSaveVersionRace(t *testing.T) {
 	// as its data (and so its contentMark) is.
 	prepare := func(n int) *Entry {
 		src := "lang: en\ntemplate: report\ntitle: T" + strconv.Itoa(n) + "\nsections:\n  - heading: H\n    parts:\n      - text: x\n"
-		e, err := s.NewEntry(Seed{Slug: slug, Named: "", File: "d.yaml", Owner: Owner{Path: "", Repo: "p", Place: "d.yaml"}, Folder: false, FolderTitle: "", Data: []byte(src), Options: Options{Slug: &slug}, Project: "p", Created: ""})
+		e, err := s.NewEntry(Seed{Slug: slug, Named: "", File: "d.yaml", Owner: Owner{Path: "", Repo: "p", Place: "d.yaml"}, Folder: false, FolderTitle: "", Data: []byte(src), Options: Options{Slug: &slug}, Project: "p", Theme: "", Default: ""})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -66,7 +66,7 @@ func knownTheme(drawing store.Drawing, name string) error {
 	return usererr.New("tmpl_unknown_theme", name, strings.Join(themes, ", "))
 }
 
-// ThemePick is the theme picked for a page, as the management page sends it: "" takes the pick off.
+// ThemePick is the theme picked for a page, as the management page sends it.
 type ThemePick struct {
 	Theme string `json:"theme"`
 }
@@ -86,7 +86,7 @@ func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
 	}
 	drawing := s.latest()
 	err := drawing.Err
-	if err == nil && in.Theme != "" {
+	if err == nil {
 		err = knownTheme(drawing, in.Theme)
 	}
 	if err == nil {
@@ -155,21 +155,4 @@ func (s *Server) themeSample(w http.ResponseWriter, r *http.Request) {
 	}
 	pageHeaders(w, r, true)
 	sendBytes(w, http.StatusOK, htmlType, drew.Page)
-}
-
-// OwnTheme is the theme a page is drawn in without the theme picked for it, which the management page names on the card
-// that removes the pick.
-type OwnTheme struct {
-	Own string `json:"own"`
-}
-
-// ownTheme answers OwnTheme of the page slug drawn from a data file (store.OwnTheme): 404 for a page that takes no
-// theme.
-func (s *Server) ownTheme(w http.ResponseWriter, r *http.Request) {
-	own, err := s.cfg.Store.OwnTheme(r.PathValue("slug"))
-	if err != nil {
-		refuse(w, r, err)
-		return
-	}
-	sendJSON(w, http.StatusOK, OwnTheme{Own: own})
 }

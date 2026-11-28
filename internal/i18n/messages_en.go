@@ -147,7 +147,7 @@ var messagesEN = map[string]string{
 	// tmpl: the template and the theme a data file names
 	"tmpl_no_template":   "name the template at the top level, like template: report (templates: %s)",
 	"tmpl_unknown":       `unknown template "%s"; use %s`,
-	"tmpl_unknown_theme": `there is no theme "%s" (from the page's theme:, --theme, the theme picked for the page or the default theme set on the management page); use %s`,
+	"tmpl_unknown_theme": `there is no theme "%s" (from the page's theme:, --theme, the page's theme or the theme for new pages set on the management page); use %s`,
 
 	// draw: the page drawn
 	"draw_select_text":  "the page drawn from this file has <%s> inside a <select>, which may hold no element whose content is read as text, nor svg or math: move it out of the <select>",
@@ -532,14 +532,10 @@ var messagesEN = map[string]string{
 	"ui_theme_item":            "Theme",
 	"ui_theme_item_named":      "Change the theme of %s",
 	"ui_theme_page":            "This page's theme",
-	"ui_theme_page_more":       "Choosing draws this page alone again. The theme chosen stays when the page is updated.",
+	"ui_theme_page_more":       "Choosing draws the latest version of this page again in it. It stays until the data's theme: changes and the page is published.",
 	"ui_theme_picked_label":    "Chosen: ",
 	"ui_theme_picked_more":     ". Choose another theme.",
-	"ui_theme_unset":           "Remove this page's theme",
-	"ui_theme_unset_named":     "The page then shows in %s",
-	"ui_theme_unset_about":     "The page then shows in the theme it was stored with",
 	"ui_theme_page_set":        "Changed this page's theme to %s",
-	"ui_theme_page_unset":      "Removed this page's theme",
 	"ui_theme_page_failed":     "Failed to change this page's theme: %s",
 	"ui_theme_page_changed":    "the page changed meanwhile. Choose again",
 	"ui_theme_page_undrawn":    "it was not drawn, and the page keeps its look",

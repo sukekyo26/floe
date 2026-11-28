@@ -305,6 +305,25 @@ func TestDiffPage(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, page, ""), http.StatusNotFound, "not found")
 }
 
+// A diff against the last version is drawn in the theme the page has, picked after both were published; the version
+// before stays as it was drawn.
+func TestDiffInPageTheme(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one two three"), nil)
+	e.publish(t, "d", noted("one two four"), nil)
+	want(t, e.write(t, http.MethodPut, "/api/pages/d/theme", server.ThemePick{Theme: "ink"}), http.StatusOK, `{"theme":"ink"}`)
+	var a struct{ Key string }
+	if err := json.Unmarshal(e.do(t, http.MethodGet, "/api/pages/d/diff?from=1&to=2", "").Body.Bytes(), &a); err != nil {
+		t.Fatal(err)
+	}
+	want(t, e.do(t, http.MethodGet, "/a/d/?raw&v=2&from=1&key="+a.Key, ""), http.StatusOK, inkAccent)
+	if body := e.do(t, http.MethodGet, "/a/d/?raw&v=1", "").Body.String(); strings.Contains(body, inkAccent) {
+		t.Error("the version before was drawn again in ink")
+	}
+}
+
 // What the script floe adds to a page it serves tells its frame is told by the page's names, whatever the page is: a stored page's own
 // messages (open, keys, the version served, where it is), a diff's (its versions changed), and the diff of a key no longer the pair's,
 // which is not found. Each is looked for as the key it sends (pageKey: key, not pageKey, which pageKeysWanted holds too). None says

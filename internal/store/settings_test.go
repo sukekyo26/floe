@@ -182,17 +182,18 @@ func TestSettingsUnreadable(t *testing.T) {
 	}
 }
 
-// A page drawn from a data file takes the default theme chosen when it is first stored, under the data's theme:,
-// and keeps it: the default changed, published again, or changed between its drawing and its Save. A page replacing
-// another file's (--force) is new; a default gone refuses only a new page that would be drawn in it.
-func TestPublishCreatedTheme(t *testing.T) {
+// A page drawn from a data file takes as its theme the data's theme:, else the theme for new pages chosen when it is
+// first stored, and keeps it: the theme for new pages changed, published again, or changed between its drawing and its
+// Save. A page replacing another file's (--force) is new; a theme for new pages gone refuses only a new page that would
+// be drawn in it.
+func TestPublishNewPageTheme(t *testing.T) {
 	t.Parallel()
 
 	s, root := newStore(t)
 	dw := floeDrawing(t)
 	publish(t, s, dw, "none.yaml", report(""), nil, store.Options{})
-	if m := s.ReadMeta("none"); m.CreatedTheme != "" || drawnIn(t, s, root, "none") != "" {
-		t.Errorf("none chosen: created %q, drawn in %q", m.CreatedTheme, drawnIn(t, s, root, "none"))
+	if m := s.ReadMeta("none"); m.Theme != "default" || drawnIn(t, s, root, "none") != "" {
+		t.Errorf("none chosen: theme %q, drawn in %q", m.Theme, drawnIn(t, s, root, "none"))
 	}
 	if err := setTheme(s, "ink"); err != nil {
 		t.Fatal(err)
@@ -225,18 +226,18 @@ func TestPublishCreatedTheme(t *testing.T) {
 		t.Fatal(err)
 	}
 	for slug, want := range map[string][2]string{
-		"none": {"", ""}, "a": {"ink", "ink"}, "own": {"ink", "app"}, "c": {"washi", "washi"}, "b": {"ink", "ink"},
+		"none": {"default", ""}, "a": {"ink", "ink"}, "own": {"app", "app"}, "c": {"washi", "washi"}, "b": {"ink", "ink"},
 	} {
-		if m := s.ReadMeta(slug); m.CreatedTheme != want[0] || drawnIn(t, s, root, slug) != want[1] {
-			t.Errorf("%s: created %q, drawn in %q; want %q, %q", slug, m.CreatedTheme, drawnIn(t, s, root, slug), want[0], want[1])
+		if m := s.ReadMeta(slug); m.Theme != want[0] || drawnIn(t, s, root, slug) != want[1] {
+			t.Errorf("%s: theme %q, drawn in %q; want %q, %q", slug, m.Theme, drawnIn(t, s, root, slug), want[0], want[1])
 		}
 	}
 	if err = setTheme(s, "gone"); err != nil {
 		t.Fatal(err)
 	}
 	_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
-	// The mistake names where a page's theme comes from, the default set on the management page among them
-	if got := told(err, root); keyOf(err) != "tmpl_unknown_theme" || !strings.Contains(got, "default theme set on the management page") {
+	// The mistake names where a page's theme comes from, the theme for new pages set on the management page among them
+	if got := told(err, root); keyOf(err) != "tmpl_unknown_theme" || !strings.Contains(got, "theme for new pages set on the management page") {
 		t.Errorf("a new page in a default gone: told %s", got)
 	}
 	publish(t, s, dw, "d.yaml", report("washi"), nil, store.Options{})
@@ -279,8 +280,8 @@ func TestSettingsBrokenLinks(t *testing.T) {
 		if err = s.Save(linked); err != nil {
 			t.Fatal(err)
 		}
-		if linked.Meta.CreatedTheme != "" {
-			t.Errorf("link %s took %q", path, linked.Meta.CreatedTheme)
+		if linked.Meta.Theme != "" {
+			t.Errorf("link %s took %q", path, linked.Meta.Theme)
 		}
 	}
 	// A data file linked is drawn from a data file: it reads the default as a stored page does.
@@ -298,8 +299,8 @@ func TestSettingsBrokenLinks(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err, root))
 	}
-	if e.Meta.CreatedTheme != "ink" {
-		t.Errorf("a data file linked took %q", e.Meta.CreatedTheme)
+	if e.Meta.Theme != "ink" {
+		t.Errorf("a data file linked took %q", e.Meta.Theme)
 	}
 }
 

@@ -327,8 +327,8 @@ func TestRebuildMeanwhile(t *testing.T) {
 			}
 		}, func(t *testing.T, s *store.Store, root, _ string) {
 			t.Helper()
-			if m := s.ReadMeta("d"); m.PickedTheme != "ink" || drawnIn(t, s, root, "d") != "ink" {
-				t.Errorf("the pick was written over: %q, drawn in %q", m.PickedTheme, drawnIn(t, s, root, "d"))
+			if m := s.ReadMeta("d"); m.Theme != "ink" || drawnIn(t, s, root, "d") != "ink" {
+				t.Errorf("the theme was written over: %q, drawn in %q", m.Theme, drawnIn(t, s, root, "d"))
 			}
 		}},
 		{"removed", func(t *testing.T, s *store.Store, _ store.Drawing) {

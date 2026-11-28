@@ -162,12 +162,11 @@ func TestNotThere(t *testing.T) {
 	e := newEnv(t)
 	for _, c := range []struct{ method, path, body string }{
 		{http.MethodGet, "/api/pages/none/files", ""},
-		{http.MethodGet, "/api/pages/none/theme", ""},
 		{http.MethodPatch, "/api/pages/none", "{}"},
 		{http.MethodDelete, "/api/pages/none", ""},
 		{http.MethodPost, "/api/pages/none/read", `{"n":1,"at":"x"}`},
 		{http.MethodDelete, "/api/pages/none/read", ""},
-		{http.MethodPut, "/api/pages/none/theme", `{"theme":""}`},
+		{http.MethodPut, "/api/pages/none/theme", `{"theme":"ink"}`},
 		{http.MethodPatch, "/api/tasks", `{"taskProject":"p","task":"#9","parent":""}`},
 		{http.MethodDelete, "/api/tasks?taskProject=p&task=none", ""},
 	} {
