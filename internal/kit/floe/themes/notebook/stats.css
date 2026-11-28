@@ -1,0 +1,2 @@
+/* A figure is underlined in orange marker */
+.stat .value { width: fit-content; background: linear-gradient(transparent 60%, var(--nb-marker) 60%); }

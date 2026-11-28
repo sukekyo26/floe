@@ -54,7 +54,7 @@ var shadowsKit = map[string]string{
 var shadowsQuote = strings.NewReplacer("text: 'Name it with today''s date", "text: '> Name it with today''s date")
 
 // markProbed gives each box drawn with a transform (floe's themes move one by translate), or with a ::before or ::after
-// placed out of the flow (notebook's tape), an
+// placed out of the flow (washi's seal), an
 // index, so that those, which a script cannot measure, are measured by pseudoBoxes, and returns how many there are.
 const markProbed = `(() => { const probed = [...document.querySelectorAll('[data-floe-part], [data-floe-look]')]
   .filter((e) => e.getClientRects().length && (getComputedStyle(e).transform !== 'none' ||

@@ -496,7 +496,7 @@ var messagesEN = map[string]string{
 	"theme_about_default":      "floe's own, which every theme starts from: a warm grey ground, white surfaces in thin frames, a teal accent",
 	"theme_about_editorial":    "A magazine in ink and yellow: sections open on yellow bands, a short yellow bar over cards and figures, large heavy figures",
 	"theme_about_ink":          "Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink",
-	"theme_about_notebook":     "Pen on ruled paper in a rounded face",
+	"theme_about_notebook":     "A ruled notebook gone over in highlighter: a calm red margin line, an orange marker under the headings, notes on their pale colours marked down the side",
 	"theme_about_pebble":       "Pebbles on a warm ground: rows as round stones on a tray, each part in a form of its own, a brown accent",
 	"theme_about_retro":        "The nineties' screens: a light grey page, white boxes with raised edges, grey buttons, a navy title bar over each section, a teal accent, square corners",
 	"theme_about_soft":         "Peach and plum, soft: faces float without frames on a pale peach ground, sections open on round peach bands, the titles of figures and a decision's state and date on round pills",

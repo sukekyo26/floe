@@ -35,7 +35,7 @@ func (b *browser) rollbackIn(where string) []string {
 
 // numbersIn measures the page open and returns what is amiss in it: a card's number (options' card, #sizedcards' card)
 // not as big as --floe-mark, frame within, set on the part's root, unless a theme draws it as text (auto), hides it or
-// draws another thing there (notebook's tape).
+// draws another thing there (washi's seal).
 func (b *browser) numbersIn(where string) []string {
 	b.t.Helper()
 

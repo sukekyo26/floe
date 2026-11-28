@@ -196,40 +196,33 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.palette {
 :scope {
-  --chart-1: #2f5fa8; --chart-2: #c23a3a; --chart-3: #008f7c; --chart-4: #a0600a;
- 
-  --bg: #fffcf0; --surface: #fffef9; --fg: #2e2c27; --muted: #6b665b; --line: #e9e3cf;
-  --accent: #2f5fa8; --accent-soft: #dfe8f6;
-  --good: #2c7730; --good-soft: #def0df; --warn: #995b00; --warn-soft: #fbebd0; --bad: #c22727; --bad-soft: #fbe0e0;
+  --chart-1: #a8460a; --chart-2: #3d6b5a; --chart-3: #7a54b0; --chart-4: #b83a5a;
+  --bg: #f9f6ed; --surface: #ffffff; --fg: #2b2a27; --muted: #67635a; --line: #e0d9c8;
+  --accent: #a8460a; --accent-soft: #ffe8d2;
+  --good: #2c7140; --good-soft: #e1f2e3; --warn: #8f5a08; --warn-soft: #fcedcd; --bad: #b02a2a; --bad-soft: #fbe2df;
   --font: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --code-bg: #2e2c27; --code-fg: #f4f0e4; --code-prompt: #f6e27a;
-  /* The rules of its paper, in the pen: mixed with white, not seen through, as the yellow of the ground would turn
-     them grey-green */
-  --nb-rule: color-mix(in srgb, var(--accent) 18%, white);
-  --page-bg: repeating-linear-gradient(transparent 0 29px, var(--nb-rule) 29px 30px), var(--bg);
-  --rule: 2px dashed var(--muted);
-  --shadow: rgb(0 0 0 / 0.5);
-  /* Its markers, the tape and the sticky notes, with the ink on them and their shadow, and the corners of
-     a frame drawn round by hand */
-  --nb-tape: rgb(220 205 160 / 0.75);
-  /* The yellow highlighter strokes over text (a quote, the tab chosen), the paper showing through */
-  --nb-yellow: rgb(255 224 64 / 0.65);
-  /* The highlighters of the tones' fills (--tone-fill), solid, mixed once with the paper's --surface here, so that a
-     pill on a filled face reads as on the page; on a face of another ground they keep the paper's mix. muted keeps
-     its pale ground */
-  --nb-green: color-mix(in srgb, rgb(120 220 130) 55%, var(--surface));
-  --nb-pink: color-mix(in srgb, rgb(255 140 185) 50%, var(--surface));
-  --nb-blue: color-mix(in srgb, rgb(120 190 255) 50%, var(--surface));
-  --nb-orange: color-mix(in srgb, rgb(255 170 80) 55%, var(--surface));
-  --accent-fill: var(--nb-blue); --good-fill: var(--nb-green); --warn-fill: var(--nb-orange); --bad-fill: var(--nb-pink);
-  --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
-  --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);
-  /* The soft shadow under what lies on the page */
-  --floe-shadow-y: 3px; --floe-shadow-blur: 8px; --floe-shadow-spread: -5px;
-  /* Hand-drawn corners: a box's, a pill's and a round mark's */
-  --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px; --nb-pill: 3px 10px 4px 12px; --nb-round: 48% 52% 45% 55%;
-  /* The corners of what is drawn without a hand (runbook's box, a key, a bar, a template's pill) */
-  --radius: 12px; --radius-small: 6px; --radius-pill: 999px;
+  --code-bg: #2a2724; --code-fg: #f6f0e6; --code-prompt: #ffb070;
+  /* Ruled paper with a margin line down the left, two thin strokes of a calm red, apart from the orange marker. The
+     rules are the ground's alone: a box is a sheet of white paper, unruled.
+     LIMIT: the rules do not meet the lines of text; that would take every block sized to a step of the rules
+     (block-step-size, in no browser yet), and the templates set lines of their own heights (1.7 to 1.85) */
+  --nb-rule: #ebe5d6;
+  --nb-margin-ink: rgb(170 100 92 / 0.6);
+  --nb-margin: linear-gradient(90deg, transparent 0 5px, var(--nb-margin-ink) 5px 6px, transparent 6px 9px, var(--nb-margin-ink) 9px 10px, transparent 10px);
+  --page-bg: var(--nb-margin), repeating-linear-gradient(transparent 0 31px, var(--nb-rule) 31px 32px), var(--bg);
+  --rule: none;
+  --shadow: rgb(80 50 20 / 0.3);
+  /* The markers: orange for the page's own strokes, the tones' for theirs, the paper showing through */
+  --nb-marker: rgb(255 150 50 / 0.55);
+  --nb-yellow: rgb(255 214 70 / 0.65);
+  --accent-fill: color-mix(in srgb, rgb(255 160 80) 55%, var(--surface));
+  --good-fill: color-mix(in srgb, rgb(120 215 130) 55%, var(--surface));
+  --warn-fill: color-mix(in srgb, rgb(255 205 70) 60%, var(--surface));
+  --bad-fill: color-mix(in srgb, rgb(255 130 150) 55%, var(--surface));
+  --floe-shadow-y: 2px; --floe-shadow-blur: 6px; --floe-shadow-spread: -3px;
+  /* Hand-drawn corners: a pill's and a round mark's */
+  --nb-pill: 3px 10px 4px 12px; --nb-round: 48% 52% 45% 55%;
+  --radius: 10px; --radius-small: 5px; --radius-pill: 999px;
 }
 }
 </style>
@@ -246,8 +239,14 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
-/* Scraps of a handwritten notebook: ruled paper, marker strokes for states, sticky notes for cards and
-   frames drawn round by hand, in a rounded face */
+/* A section's head is highlighted: a broad orange marker stroke under the lower 65% of its words. A head in a band is
+   plain, a band's words in its face's colour; a subsection's head takes a thinner yellow stroke */
+section > h2 {
+  width: fit-content; max-width: 100%; padding: 0 0.4rem; color: var(--on-face, var(--fg));
+  background: linear-gradient(transparent 35%, var(--nb-marker) 35%);
+}
+[data-floe-look~=band] section > h2 { background: none; color: inherit; }
+section > h3 { color: var(--on-face, var(--fg)); background: linear-gradient(transparent 70%, var(--nb-yellow) 70%) left / fit-content no-repeat; }
 }
 }
 </style>
@@ -638,66 +637,62 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border-radius: var(--nb-hand); --floe-shadow-color: var(--shadow); }
+:scope { border-radius: var(--radius-small); --floe-shadow-color: var(--shadow); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A note is on its tone's pale face, marked down its left in the tone's marker, its title highlighted in the same */
 :scope {
-  background: var(--surface); color: var(--fg); border: 2px solid var(--tone);
-  border-radius: var(--nb-hand); --floe-mark: 1.85rem;
+  border: 0; border-radius: var(--radius-small); color: var(--fg); --floe-mark: 1.7rem;
+  background: linear-gradient(var(--tone-fill), var(--tone-fill)) left / 10px 100% no-repeat, var(--tone-soft); --floe-shadow-color: var(--shadow);
 }
-:scope::before { background: none; border: 2px solid currentColor; border-radius: var(--nb-round); color: var(--tone); }
+:scope::before { background: none; border: 2px solid currentColor; border-radius: var(--nb-round); color: var(--fg); }
+.title { color: var(--fg); background: linear-gradient(transparent 55%, var(--tone-fill) 55%); width: fit-content; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The panel of a card, on plain paper */
-.card { position: relative; background: var(--surface); }
-:scope.numbered > .card::before { content: none; }
-/* Options are sticky notes, each held by a strip of tape over its top, within a card's padding (defaults.css's two variables) */
-:scope.numbered > .card {
-  border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face);
-  --floe-shadow-color: var(--nb-stick-shadow);
+/* Options: numbered sheets, the number circled in marker */
+:scope.numbered > .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); --floe-shadow-color: var(--shadow); }
+:scope.numbered > .card::before { background: var(--nb-marker); border-radius: var(--nb-round); color: var(--fg); font-weight: 800; }
 }
-:scope.numbered > .card:nth-child(3n + 2) { --face: var(--nb-stick-2); }
-:scope.numbered > .card:nth-child(3n) { --face: var(--nb-stick-3); }
-:scope.numbered > .card::before {
-  content: ""; position: absolute; top: -8px; left: 50%; width: 84px; height: 22px; margin-left: -42px;
-  background: var(--nb-tape);
 }
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The option taken is drawn round in thick orange marker */
+.option.pick { --floe-inset: inset 0 0 0 4px var(--nb-marker); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope {
-  background-color: var(--surface); background-image: repeating-linear-gradient(transparent 0 35px, var(--nb-rule) 35px 36px);
-  border: 2px solid var(--fg); border-radius: var(--nb-hand); color: var(--fg);
-}
+/* A box is a white sheet in a fine frame, lifted off the ruled paper */
+:scope { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); --floe-shadow-color: var(--shadow); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope {
-  background-color: var(--surface); background-image: repeating-linear-gradient(transparent 0 35px, var(--nb-rule) 35px 36px);
-  border: 2px solid var(--fg); border-radius: var(--nb-hand); color: var(--fg);
-}
+/* A box is a white sheet in a fine frame, lifted off the ruled paper */
+:scope { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); --floe-shadow-color: var(--shadow); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { --table-head-bg: none; --table-head-fg: var(--fg); --table-rule: none; }
-:scope thead th { border-bottom: 3px double var(--fg); font-size: 0.9rem; font-weight: 700; }
+/* A table framed in pen, its head highlighted in orange */
+:scope { border: 1.5px solid var(--fg); background: var(--surface); --table-head-bg: var(--accent-soft); --table-head-fg: var(--fg); --table-rule: 1px solid var(--line); }
+:scope thead th { border-bottom: 1.5px solid var(--fg); font-weight: 700; }
 }
 }
 </style>

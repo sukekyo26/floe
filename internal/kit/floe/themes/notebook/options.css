@@ -1,0 +1,2 @@
+/* The option taken is drawn round in thick orange marker */
+.option.pick { --floe-inset: inset 0 0 0 4px var(--nb-marker); }
