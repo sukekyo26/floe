@@ -1,0 +1,16 @@
+/* Each tone a frame of its own shape on its soft face, the colour the tone's: brackets at each corner (warn), a double
+   frame (bad), a bracket down the left (good), a line along the top (none) */
+:scope { border: 0; --floe-mark: 1.8rem; background: var(--tone-soft); }
+:scope::before { border-radius: 0; background: var(--surface); border: 2px solid var(--tone-fill); color: var(--tone); font-family: var(--mono); font-weight: 800; }
+.title { font-family: var(--mono); color: var(--tone); }
+:scope[data-floe-tone=warn] { background:
+  linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 4px 18px no-repeat,
+  linear-gradient(var(--tone-fill), var(--tone-fill)) right top / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) right top / 4px 18px no-repeat,
+  linear-gradient(var(--tone-fill), var(--tone-fill)) left bottom / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) left bottom / 4px 18px no-repeat,
+  linear-gradient(var(--tone-fill), var(--tone-fill)) right bottom / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) right bottom / 4px 18px no-repeat,
+  var(--tone-soft); }
+:scope[data-floe-tone=bad] { border: 2px solid var(--tone-fill); --floe-inset: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--tone-fill); }
+:scope[data-floe-tone=good] { background:
+  linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 4px 100% no-repeat,
+  linear-gradient(var(--tone-fill), var(--tone-fill)) left bottom / 18px 4px no-repeat, var(--tone-soft); }
+:scope:not([data-floe-tone]) { background: linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 100% 4px no-repeat, var(--tone-soft); }

@@ -1,0 +1,29 @@
+/* A dark ground of colour, never black, under faces a step lighter; light text, the neon green free for text too. The
+   other lights (the glow, yellow, pink, the rainbow) stay off text */
+:scope {
+  --bg: #2a3230; --surface: #424d4a; --quiet: #4c5854; --fg: #eaf3ef; --muted: #cad6d2; --line: #63726e;
+  --accent: #5cff86; --accent-soft: #285a37;
+  --good: #b9ff6a; --good-soft: #3a5428; --warn: #ffd65a; --warn-soft: #5a4a19; --bad: #ffbcc6; --bad-soft: #622d3a;
+  --accent-fill: #2cf05f; --good-fill: #a6f03a; --warn-fill: #ffd43d; --bad-fill: #ff7a93;
+  --chart-1: #5cff86; --chart-2: #ffd65a; --chart-3: #ff8fa0; --chart-4: #b9ff6a;
+  --code-bg: #161d1b; --code-fg: #dcffe4; --code-prompt: #2cf05f; --code-add: #8ff0b4; --code-del: #ffc6c3;
+  --on-fill: #0e1410; --shadow: rgb(44 240 95 / 0.35);
+  --display: var(--mono);
+  --rule: none;
+  --radius: 0; --radius-small: 0; --radius-pill: 0;
+  /* Its glow: a soft light around a box, no offset */
+  --floe-shadow-x: 0; --floe-shadow-y: 0; --floe-shadow-blur: 12px; --floe-shadow-spread: 0;
+  /* Its own lights: a green for lines and cut edges, a yellow for labels and barcodes, a pink for the other cut edge, the
+     dark of a terminal's band */
+  --cyber-glow: #2cf05f; --cyber-yellow: #ffd43d; --cyber-pink: #ff6fbd; --cyber-ink: #161e1b;
+  --cyber-rainbow: linear-gradient(90deg, #5cff86, #d4ff5a, #ffd43d, #ff9a6b, #ff6fbd);
+  --cyber-barcode: repeating-linear-gradient(90deg, var(--cyber-yellow) 0 2px, transparent 2px 4px, var(--cyber-yellow) 4px 5px,
+    transparent 5px 9px, var(--cyber-yellow) 9px 12px, transparent 12px 14px, var(--cyber-yellow) 14px 15px, transparent 15px 19px);
+  /* What a hologram box's cut corners show: the page's ground, a band's face in a band, a box's face in a box */
+  --cyber-around: var(--bg);
+  /* The page: a faint holographic light across the screen, held still as the page scrolls */
+  --page-bg:
+    linear-gradient(120deg, transparent 0 30%, rgb(92 255 134 / 0.06) 40%, rgb(255 212 61 / 0.05) 50%, rgb(255 111 189 / 0.06) 60%, transparent 70%) fixed,
+    var(--bg);
+  color-scheme: dark;
+}

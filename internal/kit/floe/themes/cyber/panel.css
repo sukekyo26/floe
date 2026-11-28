@@ -1,0 +1,16 @@
+/* A hologram box: a rainbow along the top, the top left corner cut and lit in green, the bottom right in pink, on a
+   ground of its own. The cut corners are painted in what is around the box (--cyber-around), not cut out by clip-path,
+   which would cut the glow and a focus ring within.
+   LIMIT: a box held in another box shows the page's ground in its cut corners, not the outer box's face: a box nested
+   draws as it does alone (TestLookRule/nesting), so it cannot take its colour from where it stands */
+:scope {
+  border: 0; background-color: var(--surface); --floe-shadow-color: transparent;
+  background-image: var(--cyber-rainbow),
+    linear-gradient(135deg, transparent 0 13px, var(--cyber-glow) 13px 15px, transparent 15px),
+    linear-gradient(315deg, transparent 0 13px, var(--cyber-pink) 13px 15px, transparent 15px),
+    linear-gradient(135deg, var(--cyber-around) 0 14px, transparent 14px),
+    linear-gradient(315deg, var(--cyber-around) 0 14px, transparent 14px);
+  background-size: 100% 3px, 34px 34px, 34px 34px, 34px 34px, 34px 34px;
+  background-position: left top, left top, right bottom, left top, right bottom;
+  background-repeat: no-repeat;
+}

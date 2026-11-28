@@ -1,0 +1,7 @@
+/* A card's number is a green chip of mono figures */
+:scope.numbered { --floe-mark: auto; }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero);
+  justify-self: start; padding: 0.05rem 0.5rem; background: var(--cyber-glow); color: var(--on-fill);
+  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 800;
+}

@@ -1,0 +1,14 @@
+/* A terminal's band for the head, its words in light green over a line of green; each row numbered in its first cell.
+   The frame stays (a table is always framed) and the corners are not cut: the head and the rows paint over them */
+:scope {
+  border: 2px solid var(--cyber-glow); background: var(--surface); counter-reset: cyber-row;
+  --table-head-bg: var(--cyber-ink); --table-head-fg: #c8ffd4; --table-rule: 1px solid var(--line);
+}
+:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); font-family: var(--mono); font-weight: 700; border-bottom: 3px solid var(--cyber-glow); }
+:scope thead th:last-child { background: var(--cyber-barcode) right 0.6rem center / 70px 12px no-repeat, var(--table-head-bg); }
+:scope tbody tr { counter-increment: cyber-row; }
+:scope tbody td:first-child { font-family: var(--mono); font-weight: 700; }
+:scope tbody td:first-child::before {
+  content: counter(cyber-row, decimal-leading-zero); content: counter(cyber-row, decimal-leading-zero) / counter(cyber-row, decimal-leading-zero);
+  margin-right: 0.8rem; color: var(--muted); font-weight: 400;
+}
