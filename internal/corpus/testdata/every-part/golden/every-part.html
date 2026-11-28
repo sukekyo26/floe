@@ -1720,46 +1720,58 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each link a small frame on a line, wrapping: where it goes, its title, and ↗ for one that leaves floe; a few words
-   beside the frame. The frame is the link, so that its reach and ring are the whole of it.
+/* Each link a small frame on a line, wrapping: where it goes, its title underlined as a link is, and ↗ for one that
+   leaves floe; a few words beside the frame. The frame is the link, so that its reach and ring are the whole of it.
+   It has no ground of its own, not to stand out as a button: its colours come from a face's text colour on the root,
+   where base.css has not yet taken the face away from what the box holds, as tabs' do.
    LIMIT: the URL itself is not shown, so a printed page tells only the host or docs. Print it under the frame if pages
    come to be read on paper */
-:scope { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline; }
+:scope {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline;
+  --links-title: var(--on-face, var(--fg)); --links-to: var(--on-face, var(--accent));
+  --links-words: var(--on-face, var(--muted)); --links-line: var(--on-face, var(--line));
+}
 :scope > li { display: flex; flex-wrap: wrap; gap: 0 0.5rem; align-items: baseline; min-width: 0; }
 :scope a {
   display: inline-flex; gap: 0.45rem; align-items: baseline; min-width: 0; max-width: 100%;
-  border: 1px solid var(--line); border-radius: var(--radius-small); padding: 0.05rem 0.55rem;
-  text-decoration: none; color: var(--on-face, var(--fg));
+  border: 1px solid var(--links-line); border-radius: var(--radius-small); padding: 0.05rem 0.55rem;
+  color: var(--links-title); text-decoration: none; outline-color: var(--links-to);
 }
-:scope a:hover { border-color: var(--on-face, var(--accent)); }
-:scope a:hover .title { text-decoration: underline; }
-:scope .to { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--on-face, var(--accent)); white-space: nowrap; }
-:scope .title { font-weight: 700; min-width: 0; }
-:scope .out { font-size: var(--floe-text-small); color: var(--on-face, var(--accent)); }
-:scope .text { font-size: var(--floe-text-aside); color: var(--on-face, var(--muted)); }
+:scope a:hover { border-color: var(--links-to); }
+:scope .title { font-weight: 700; min-width: 0; text-decoration: underline 1px; text-underline-offset: 0.2em; }
+:scope a:hover .title { text-decoration-thickness: 2px; }
+:scope .to { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--links-to); white-space: nowrap; }
+:scope .out { font-size: var(--floe-text-small); color: var(--links-to); }
+:scope .text { font-size: var(--floe-text-aside); color: var(--links-words); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="links"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each link a small frame on a line, wrapping: where it goes, its title, and ↗ for one that leaves floe; a few words
-   beside the frame. The frame is the link, so that its reach and ring are the whole of it.
+/* Each link a small frame on a line, wrapping: where it goes, its title underlined as a link is, and ↗ for one that
+   leaves floe; a few words beside the frame. The frame is the link, so that its reach and ring are the whole of it.
+   It has no ground of its own, not to stand out as a button: its colours come from a face's text colour on the root,
+   where base.css has not yet taken the face away from what the box holds, as tabs' do.
    LIMIT: the URL itself is not shown, so a printed page tells only the host or docs. Print it under the frame if pages
    come to be read on paper */
-:scope { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline; }
+:scope {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline;
+  --links-title: var(--on-face, var(--fg)); --links-to: var(--on-face, var(--accent));
+  --links-words: var(--on-face, var(--muted)); --links-line: var(--on-face, var(--line));
+}
 :scope > li { display: flex; flex-wrap: wrap; gap: 0 0.5rem; align-items: baseline; min-width: 0; }
 :scope a {
   display: inline-flex; gap: 0.45rem; align-items: baseline; min-width: 0; max-width: 100%;
-  border: 1px solid var(--line); border-radius: var(--radius-small); padding: 0.05rem 0.55rem;
-  text-decoration: none; color: var(--on-face, var(--fg));
+  border: 1px solid var(--links-line); border-radius: var(--radius-small); padding: 0.05rem 0.55rem;
+  color: var(--links-title); text-decoration: none; outline-color: var(--links-to);
 }
-:scope a:hover { border-color: var(--on-face, var(--accent)); }
-:scope a:hover .title { text-decoration: underline; }
-:scope .to { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--on-face, var(--accent)); white-space: nowrap; }
-:scope .title { font-weight: 700; min-width: 0; }
-:scope .out { font-size: var(--floe-text-small); color: var(--on-face, var(--accent)); }
-:scope .text { font-size: var(--floe-text-aside); color: var(--on-face, var(--muted)); }
+:scope a:hover { border-color: var(--links-to); }
+:scope .title { font-weight: 700; min-width: 0; text-decoration: underline 1px; text-underline-offset: 0.2em; }
+:scope a:hover .title { text-decoration-thickness: 2px; }
+:scope .to { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--links-to); white-space: nowrap; }
+:scope .out { font-size: var(--floe-text-small); color: var(--links-to); }
+:scope .text { font-size: var(--floe-text-aside); color: var(--links-words); }
 }
 }
 </style>
