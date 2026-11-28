@@ -93,6 +93,8 @@ func (s *Store) drawPicked(ctx context.Context, dw Drawing, slug string, m *Meta
 // DrawLink draws the linked data file file of slug, whose meta.json is m, with dw under ctx: in the theme its theme:
 // names when that is not the one named before, else in the page's (PageTheme), under slug for a page of no title, its
 // images under its real directory, cut off (tmpl.Options.CutOff) when cut.
+// LIMIT: a data file linked with --theme whose file names another theme: is drawn in the file's, as GivenTheme does
+// not keep --theme apart from the theme: it names. Keep --theme apart if links come to take it.
 func DrawLink(ctx context.Context, dw Drawing, slug string, m *Meta, file string, cut bool) ([]byte, error) {
 	if dw.Err != nil {
 		return nil, dw.Err
