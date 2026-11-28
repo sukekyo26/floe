@@ -49,7 +49,9 @@ const measureLinks = `(() => {
     if (!to || !to.textContent || !title) out.push('row ' + i + ': no destination or title');
     else if (to.getBoundingClientRect().left > title.getBoundingClientRect().left) out.push('row ' + i + ': the destination after the title');
     if (title && !getComputedStyle(title).textDecorationLine.includes('underline')) out.push('row ' + i + ': the title not underlined');
-    if (title && !title.getClientRects()[1]) {
+    const lines = document.createRange();
+    if (title) lines.selectNodeContents(title);
+    if (title && new Set([...lines.getClientRects()].map((r) => Math.round(r.top))).size === 1) {
       const t = title.getBoundingClientRect(), edge = parseFloat(c.borderTopWidth), above = t.top - f.top - edge, below = f.bottom - edge - t.bottom;
       if (Math.abs(above - below) > 1) out.push('row ' + i + ': the title ' + above + ' below the frame\'s top, ' + below + ' above its bottom');
       if (t.height > 0.85 * parseFloat(getComputedStyle(title).fontSize)) out.push('row ' + i + ': the title ' + t.height + ' tall, not cut to its letters (a line box holds them low)');
