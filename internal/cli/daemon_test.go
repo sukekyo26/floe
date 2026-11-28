@@ -834,7 +834,8 @@ func TestPortFreed(t *testing.T) {
 	if r := e.run("list"); r.code != 0 {
 		t.Fatalf("list after the port came free = %+v", r)
 	}
-	if took := time.Since(start); took > 6*time.Second {
+	// Below the 11 s of running the wait out (first probe 1 s + waitFor 10 s), above the 6.2 s seen on a busy Windows CI.
+	if took := time.Since(start); took > 9*time.Second {
 		t.Errorf("starting a server once the port came free took %v", took)
 	}
 	if _, up := e.health(t.Context()); !up {
