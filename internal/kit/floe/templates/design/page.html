@@ -49,6 +49,7 @@
 {{- if or .Data.colors .Data.type}}
 <section aria-labelledby="styles"><h2 id="styles">{{word "styles"}}</h2>
 {{- with .Data.colors}}<p class="label">{{word "colors"}}</p><ul class="palette">{{range .}}<li><span class="tile" style="background: {{.value}}"></span><b>{{.name}}</b><code>{{.value}}</code>{{with .use}}<span class="use">{{markdownLine .}}</span>{{end}}</li>{{end}}</ul>{{end}}
+{{- /* LIMIT: a size has no upper bound; a sample of 9999px breaks the page that wrote it, which its writer sees */}}
 {{- with .Data.type}}<p class="label">{{word "type"}}</p><ul class="type">{{range .}}<li><span class="sample" style="font-size: {{.size}}; font-weight: {{or .weight 400}}">{{word "sample"}}</span><span><b>{{.name}}</b><code>{{.size}} / {{or .weight 400}}</code>{{with .use}}<span class="use">{{markdownLine .}}</span>{{end}}</span></li>{{end}}</ul>{{end}}
 </section>
 {{- end}}
