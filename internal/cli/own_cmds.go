@@ -207,7 +207,7 @@ print that file alone, as written but the byte order mark at its start: floe the
 			if err != nil {
 				return err
 			}
-			return a.show(k.Themes(), args, "tmpl_unknown_theme", nil)
+			return a.show(k.Themes(), args, "cli_unknown_theme", nil)
 		},
 	}, &cobra.Command{
 		Use:   "new <name>",
