@@ -1,4 +1,2 @@
-:scope {
-  background-color: var(--surface); background-image: repeating-linear-gradient(transparent 0 35px, var(--nb-rule) 35px 36px);
-  border: 2px solid var(--fg); border-radius: var(--nb-hand); color: var(--fg);
-}
+/* A box is a white sheet in a fine frame, lifted off the ruled paper */
+:scope { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); --floe-shadow-color: var(--shadow); }

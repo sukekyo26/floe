@@ -1,2 +1,3 @@
-:scope { --table-head-bg: none; --table-head-fg: var(--fg); --table-rule: none; }
-:scope thead th { border-bottom: 3px double var(--fg); font-size: 0.9rem; font-weight: 700; }
+/* A table framed in pen, its head highlighted in orange */
+:scope { border: 1.5px solid var(--fg); background: var(--surface); --table-head-bg: var(--accent-soft); --table-head-fg: var(--fg); --table-rule: 1px solid var(--line); }
+:scope thead th { border-bottom: 1.5px solid var(--fg); font-weight: 700; }

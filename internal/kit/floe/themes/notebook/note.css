@@ -1,5 +1,7 @@
+/* A note is on its tone's pale face, marked down its left in the tone's marker, its title highlighted in the same */
 :scope {
-  background: var(--surface); color: var(--fg); border: 2px solid var(--tone);
-  border-radius: var(--nb-hand); --floe-mark: 1.85rem;
+  border: 0; border-radius: var(--radius-small); color: var(--fg); --floe-mark: 1.7rem;
+  background: linear-gradient(var(--tone-fill), var(--tone-fill)) left / 10px 100% no-repeat, var(--tone-soft); --floe-shadow-color: var(--shadow);
 }
-:scope::before { background: none; border: 2px solid currentColor; border-radius: var(--nb-round); color: var(--tone); }
+:scope::before { background: none; border: 2px solid currentColor; border-radius: var(--nb-round); color: var(--fg); }
+.title { color: var(--fg); background: linear-gradient(transparent 55%, var(--tone-fill) 55%); width: fit-content; }
