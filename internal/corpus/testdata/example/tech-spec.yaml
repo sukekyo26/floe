@@ -11,7 +11,7 @@ date: 2030-05-14
 summary: 'Notifications leave the web request and go out from a queue, so that a slow mail server never slows a page.'
 related:
   - { title: 'Requirements: notifications that never slow a page', url: 'docs/notifications-prd.html', text: 'What this meets' }
-  - { title: 'Outage report of March', url: 'https://status.example.com/incidents/42', text: 'Saves failed for 20 minutes' }
+  - { title: 'Outage report of March', url: '/a/outage-march/', text: 'Saves failed for 20 minutes' }
 background: |
   Today a notification is sent **inside the web request** that causes it: saving a comment sends its email before the
   page answers. When the mail provider is slow, so is the page, and a provider outage turns into failed saves.
