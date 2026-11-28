@@ -47,7 +47,7 @@ func TestFloe(t *testing.T) {
 	}
 	parts, looks, themes, templates := k.Names()
 	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows", "tags", "toc", "zoom"}) || len(themes) != 13 ||
-		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "prd", "report", "runbook", "slides", "tech-spec"}) {
+		!slices.Equal(templates, []string{"adr", "design", "handoff", "meeting", "postmortem", "prd", "report", "runbook", "slides", "tech-spec"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
 	for _, name := range parts {
@@ -886,6 +886,7 @@ func TestShapes(t *testing.T) {
 		"template adr":        "-",
 		"template design":     "accessibility,colors,components,copy,date,flow,goal,lang,more,open,owner,related,screens,status,summary,template,theme,title,type,users",
 		"template handoff":    "asks,date,doing,done,from,lang,more,next,notes,summary,template,theme,title,to",
+		"template meeting":    "absent,actions,attendees,date,decided,lang,more,next,place,template,theme,title,topics",
 		"template postmortem": "actions,authors,cause,date,effects,lang,lessons,more,severity,summary,template,theme,timeline,title",
 		"template prd":        "actors,background,constraints,date,functional,glossary,goals,lang,more,nonfunctional,open,owner,related,scope,status,summary,template,theme,title,version",
 		"template report":     "eyebrow,lang,lead,sections,template,theme,title,toc",

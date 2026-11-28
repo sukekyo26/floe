@@ -285,7 +285,7 @@ func TestListShow(t *testing.T) {
 				"files: schema.json, computed.yaml, example.yaml, page.html, page.css\n"
 		}, ""},
 		{[]string{"template", "show", "memo", "computed.yaml"}, 0, func(out string) bool { return out == "n: 1\n" }, ""},
-		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, prd, report, runbook, slides, tech-spec` + "\n"},
+		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, meeting, memo, postmortem, prd, report, runbook, slides, tech-spec` + "\n"},
 		{[]string{"theme", "list"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "app\tfloe\t-\tAn app's screen: cool grey ground, white cards raised by soft shadows, a raspberry accent\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t-\t\n")
 		}, ""},

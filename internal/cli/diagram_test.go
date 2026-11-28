@@ -210,7 +210,7 @@ func TestInspectData(t *testing.T) {
 			"a template there is none of",
 			[]string{"unknown.yaml"},
 			1, "",
-			"unknown.yaml:1:11: unknown template \"nothing\"; use adr, design, handoff, mine, postmortem, prd, refusing, report, runbook, slides, tech-spec\n",
+			"unknown.yaml:1:11: unknown template \"nothing\"; use adr, design, handoff, meeting, mine, postmortem, prd, refusing, report, runbook, slides, tech-spec\n",
 		},
 	} {
 		code, out, errs := runIn(dir, env, append([]string{"diagram", "inspect"}, c.args...)...)
