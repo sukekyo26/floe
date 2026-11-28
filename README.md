@@ -11,13 +11,13 @@ floe makes documents out of YAML data that AI agents write: a template draws eac
 linux and macOS (amd64 / arm64):
 
 ```sh
-curl -fsSL https://floe-3cf.pages.dev/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 ```
 
 Windows 11 (amd64 / arm64), in PowerShell:
 
 ```powershell
-irm https://floe-3cf.pages.dev/install.ps1 | iex
+irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex
 ```
 
 It puts `floe.exe` in `%USERPROFILE%\.local\bin`; [docs/commands.md](docs/commands.md#windows) tells what differs on Windows.

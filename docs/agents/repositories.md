@@ -81,9 +81,8 @@ floe repository check
 ```
 
 4. Make CI run the check on every pull request and on every push to the branch they merge into.
-   - Install floe with the command the repository's CI or README has. With none, use `curl -fsSL https://floe-3cf.pages.dev/install.sh | FLOE_VERSION=<version> sh`.
-   - `<version>` is the one `.floe/repository.yaml` names, with no `v`.
-   - The installer puts floe in `$HOME/.local/bin`: add it to the `PATH` of the later steps, or set `FLOE_INSTALL_DIR` to a directory on it.
+   - Install floe with the command the repository's CI or README has. With none, ask the user for it, and do not make up its URL.
+   - Set `FLOE_VERSION=<version>`, the one `.floe/repository.yaml` names, with no `v`, for the `sh` that runs the installer.
    - Fetch the icons of a cloud before the check (*Icons*).
 5. Add to `.gitattributes`:
 

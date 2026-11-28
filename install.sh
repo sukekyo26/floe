@@ -2,7 +2,7 @@
 # install.sh — fetch a floe release and drop it into your PATH.
 #
 # Usage:
-#   curl -fsSL https://floe-3cf.pages.dev/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 #
 # Environment overrides:
 #   FLOE_VERSION      Version to install (e.g. "0.1.0"); default "latest".
@@ -15,7 +15,6 @@ set -eu
 
 REPO=sukekyo26/floe
 INSTALL_DIR="${FLOE_INSTALL_DIR:-$HOME/.local/bin}"
-# LIMIT: a CI that pins FLOE_VERSION still runs this script from main. The tests fake only today's release layout, so a change of asset names or SHA256SUMS that leaves old versions uninstallable fails none. When changing them, keep reading the old layout.
 VERSION="${FLOE_VERSION:-latest}"
 TIMEOUT="${FLOE_INSTALL_TIMEOUT:-120}"
 
@@ -152,7 +151,7 @@ fi
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$os" in
   linux | darwin) ;;
-  *) die "unsupported OS: $os (install.sh installs floe on linux and darwin; on Windows, run install.ps1 in PowerShell: irm https://floe-3cf.pages.dev/install.ps1 | iex)" ;;
+  *) die "unsupported OS: $os (install.sh installs floe on linux and darwin; on Windows, run install.ps1 in PowerShell: irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex)" ;;
 esac
 
 arch=$(uname -m)

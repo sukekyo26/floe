@@ -1,7 +1,7 @@
 # install.ps1 - fetch a floe release for Windows and put it where you can run it.
 #
 # Usage:
-#   irm https://floe-3cf.pages.dev/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex
 #
 # Environment overrides:
 #   FLOE_VERSION      Version to install (e.g. "0.2.0"); default "latest".
@@ -199,7 +199,7 @@
     if ($env:FLOE_VERSION) { $line += '$env:FLOE_VERSION = ' + (Quote $env:FLOE_VERSION) + '; ' }
     if ($env:FLOE_INSTALL_TIMEOUT) { $line += '$env:FLOE_INSTALL_TIMEOUT = ' + (Quote $env:FLOE_INSTALL_TIMEOUT) + '; ' }
     $line += '$env:FLOE_ADD_TO_PATH = ''1''; '
-    if ($self) { $line += '& ' + (Quote $self) } else { $line += "irm https://floe-3cf.pages.dev/install.ps1 | iex" }
+    if ($self) { $line += '& ' + (Quote $self) } else { $line += "irm https://raw.githubusercontent.com/$repo/main/install.ps1 | iex" }
     Write-Host "floe-install: $dir is not on your PATH. To add it, run:"
     Write-Host "  $line"
     Write-Host 'floe-install: then open a new terminal'
@@ -250,7 +250,7 @@
 
   function Install {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
-      throw 'install.ps1 installs floe on Windows; on Linux and macOS run install.sh: curl -fsSL https://floe-3cf.pages.dev/install.sh | sh'
+      throw 'install.ps1 installs floe on Windows; on Linux and macOS run install.sh: curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh'
     }
 
     # A 32-bit PowerShell sees x86, and the machine's own in PROCESSOR_ARCHITEW6432.
@@ -298,7 +298,6 @@
     # floe itself refuses UNC paths; \\?\ and \\.\ are in the same form.
     if ($dir.StartsWith('\\', [StringComparison]::Ordinal)) { throw $notLocal }
 
-    # LIMIT: as in install.sh, a pinned FLOE_VERSION still runs this script from main, and the tests fake only today's release layout.
     $version = $env:FLOE_VERSION
     $tag = $null
     if ($version -and $version -cne 'latest') {
