@@ -1,4 +1,4 @@
 /* Options are plans to pick from: each number a grey disc, the advised one ringed in raspberry with its number filled */
 :scope.numbered > .option::before { border-radius: 50%; background: var(--app-chip); color: var(--fg); font-weight: 800; }
-.option.pick { outline: 2.5px solid var(--on-face, var(--accent)); outline-offset: -2.5px; }
+.option.pick { outline-width: 2.5px; }
 :scope.numbered > .option.pick::before { background: var(--accent); color: var(--on-fill); }

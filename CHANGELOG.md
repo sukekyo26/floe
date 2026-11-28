@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix the ring of the advised option of the part `options` melting into a band in most themes (`swiss`, `app`, `ink` and others): the ring now lies 4px inside the card, on the card's own ground, in a band and out of it alike. A theme's card frame should stay within 2px, or the ring covers it.
+
 ## [0.5.0] - 2026-11-28
 
 ### Added
