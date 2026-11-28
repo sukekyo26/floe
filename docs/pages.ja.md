@@ -172,5 +172,5 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 plan.yaml:12:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
-- `text` の部品（report の節と小節、tech-spec・handoff・adr・postmortem・runbook の `more` の中、runbook の手順の `text`、slides の枚、`details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中も）、`entries`・`options` の項目の `text`、`checks` の項目の `actual` の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
+- `text` の部品（report の節と小節、tech-spec・prd・handoff・adr・postmortem・runbook の `more` の中、runbook の手順の `text`、slides の枚、`details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中も）、`entries`・`options` の項目の `text`、`checks` の項目の `actual` の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
 - 誤りのあるファイルは描かないので、その警告は誤りを直した後に出ます。ほかの描けたファイルの警告は、誤りと一緒に出します。

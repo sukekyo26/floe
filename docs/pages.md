@@ -172,5 +172,5 @@ A page drawn may have warnings: advice on a better way to write it, which leaves
 plan.yaml:12:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
-- A fenced block of code in a `text` part, in a section (report's and its subsections, `more` of tech-spec, handoff, adr, postmortem and runbook, runbook's `text` of a step, and a slide of slides) or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options`, in the `text` of an item of `entries` or `options`, and in the `actual` of an item of `checks`, is warned of: write it in `code`, or a command in `terminal`.
+- A fenced block of code in a `text` part, in a section (report's and its subsections, `more` of tech-spec, prd, handoff, adr, postmortem and runbook, runbook's `text` of a step, and a slide of slides) or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options`, in the `text` of an item of `entries` or `options`, and in the `actual` of an item of `checks`, is warned of: write it in `code`, or a command in `terminal`.
 - A file with a mistake is not drawn, so its warnings come once its mistakes are fixed. Those of the other files drawn are told with the mistakes.
