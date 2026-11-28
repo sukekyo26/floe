@@ -16,7 +16,7 @@ floe draws a page from a YAML data file you write, checks it, and serves it at t
 
 ## Writing a page
 
-1. Pick a template from `floe template list`: the one made for the page's purpose if there is one (`tech-spec` for a design document, `handoff`, `runbook`, …), else `report`. Read its example and schema before writing: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the file's structure, not a fixed set of parts.
+1. Pick a template from `floe template list`: the one made for the page's purpose if there is one (`tech-spec` for a technical design document, `handoff`, `runbook`, …), else `report`. Read its example and schema before writing: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the file's structure, not a fixed set of parts.
 2. Name the file for the page, as `db-choice.yaml` (*The data file*).
 3. Choose parts from `floe part list` that the template's schema allows where you put them (*Picking parts*). A part MUST NOT hold a key its schema does not list: look up the keys of each part the example does not show, in `floe part list` or, where it lists none (`chart`, `stats`, `diagram`, …), in `floe part show <part> schema.json`.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until none is left (*Reading mistakes*). `warning:` lines are advice: a file with only those is done.

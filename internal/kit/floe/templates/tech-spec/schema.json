@@ -1,16 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "tech-spec",
-  "description": "A design document, its conclusion first: the background, goals and non-goals, decisions with their options and the one taken, what is decided without options, what it touches, and sections of your own.",
+  "description": "A technical specification, its conclusion first: the background, goals and non-goals, the proposed solution with its diagram, decisions with their options and the one taken, what is decided without options, the data and interfaces, what it touches, security and privacy, how it is tested, rolled out and watched, risks, open questions, and sections of your own.",
   "type": "object",
   "properties": {
     "status": { "type": "string", "minLength": 1, "description": "Where the design stands, such as Draft or Approved, stamped under the title" },
     "owner": { "type": "string", "minLength": 1, "description": "Who wrote it or owns it" },
+    "reviewers": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "Who reviews it" } },
     "date": { "type": "string", "minLength": 1 },
     "summary": { "type": "string", "minLength": 1, "description": "A sentence or two under the title; a line of Markdown" },
+    "related": { "$ref": "floe:///parts/links.json", "description": "Documents it answers to or leads to, such as the requirements it meets" },
     "background": { "type": "string", "minLength": 1, "format": "markdown", "description": "Why the design is needed" },
     "goals": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" } },
     "non_goals": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "What it leaves out; a line of Markdown" } },
+    "solution": { "type": "string", "minLength": 1, "format": "markdown", "description": "The proposed solution, as a whole" },
+    "diagram": { "$ref": "floe:///parts/diagram.json", "description": "How the pieces fit, under the solution" },
     "decisions": {
       "type": "array", "minItems": 1,
       "description": "Each a question and its options; the one taken, marked with pick, heads the page, and one without is undecided",
@@ -29,6 +33,8 @@
       "type": "array", "minItems": 1,
       "items": { "type": "string", "minLength": 1, "description": "What is decided without weighing options, such as a rule or a number: a decision's option taken is at the top already; a line of Markdown" }
     },
+    "data": { "type": "array", "minItems": 1, "description": "The data's shape, as parts: tables, fields, code", "items": { "$ref": "floe:///parts/any.json" } },
+    "interfaces": { "type": "array", "minItems": 1, "description": "The APIs and what it exchanges with others, as parts", "items": { "$ref": "floe:///parts/any.json" } },
     "impact": {
       "type": "array", "minItems": 1,
       "items": {
@@ -38,6 +44,34 @@
           "text": { "type": "string", "minLength": 1, "description": "How; a line of Markdown" }
         },
         "required": ["what", "text"],
+        "additionalProperties": false
+      }
+    },
+    "security": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "What it guards and how, for security and privacy; a line of Markdown" } },
+    "testing": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "What is tested and how; a line of Markdown" } },
+    "rollout": { "$ref": "floe:///parts/steps.json", "description": "How it goes out, step by step, and how it is undone" },
+    "monitoring": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "What is watched and when someone is told; a line of Markdown" } },
+    "risks": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "risk": { "type": "string", "minLength": 1, "description": "What may go wrong; a line of Markdown" },
+          "mitigation": { "type": "string", "minLength": 1, "description": "What is done about it; a line of Markdown" }
+        },
+        "required": ["risk"],
+        "additionalProperties": false
+      }
+    },
+    "open": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string", "minLength": 1, "description": "What is not decided yet; a line of Markdown" },
+          "by": { "type": "string", "minLength": 1, "description": "Who answers it" }
+        },
+        "required": ["question"],
         "additionalProperties": false
       }
     },
@@ -55,6 +89,6 @@
       }
     }
   },
-  "required": ["background", "goals"],
+  "required": ["background", "goals", "solution"],
   "additionalProperties": false
 }

@@ -14,6 +14,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- **BREAKING**: 変更：`tech-spec` が `solution`（解決策の全体。Markdown）を必須にした。無いデータは `floe check`（CI でも）で `missing property 'solution'` と断られ、`floe rebuild` は保存したページを前に描いたまま残す。`solution: |` の下に数行書いて publish し直す。あわせて、任意の段 `reviewers`・`related`（部品 `links`）・`diagram`・`data` と `interfaces`（部品の並び）・`security`・`testing`・`rollout`（部品 `steps`）・`monitoring`・`risks`（`risk` と `mitigation`）・`open`（`question` と `by`）を足した（書いた段だけを描く）。ページの頭は、文書の種類の行、題と要約、線で挟んだ状態・日付・作成者・レビュアー・関連文書になり、結論は帯でなく枠に、目次は左の柱に置く。
 - **BREAKING**: 変更：floe のテンプレート `design` の名前を `tech-spec` に変えた（ページは前のまま）。`template: design` のデータは知らないテンプレートとして断られ（`unknown template "design"; use adr, handoff, postmortem, report, runbook, slides, tech-spec`）、`floe rebuild` は保存したページについてそう言い、前に描いたまま残す。そのデータの `template:` を `tech-spec` に書き換えて publish し直す。`--from design` で作った自分のテンプレートは変わらない。`design` の名前は、これから足す画面のデザインのテンプレートに使う。
 - 変更：部品 `links` が、1 つのリンクを 1 行の小さな枠（札）にして横に並べるようになった。札の頭に行き先（floe の中のパスは `docs`、github.com の PR は `PR #412`、メールは「メール」、ほかはホスト名）、題の後ろに floe の外へ出るものは ↗ を出し、`text` は札の横に添える。行と鎖の印、囲みの枠、題の下の URL は無くなり、印刷したページでは行き先だけが分かる。データはそのまま描ける。`part.html` に、URL の行き先を出す関数 `linkTo` を足した（`links` から作った自分の部品も使える）。
 - 変更：Markdown（部品 `text`、Markdown の欄、部品の中の Markdown）の見出しを、どのテンプレートの見出しより小さくした。`#` は 1.05em、`##` は 1em、`###`〜`######` は 0.95em。`adr`・`postmortem`・`runbook` で `#` が節の見出しより目立たず、`##` が `adr` の節の見出しと同じに見えない。
