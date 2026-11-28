@@ -1,0 +1,3 @@
+/* A step's number in a square of mono figures; its colours stay the look's (the tone and the mark) */
+:scope > li::before { border-radius: 0; font-family: var(--mono); }
+:scope > li::after { border-radius: 0; }

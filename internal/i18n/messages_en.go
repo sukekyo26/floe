@@ -492,6 +492,7 @@ var messagesEN = map[string]string{
 	"theme_about_aurora":       "A dawn sky behind frosted glass: a wash of violets, surfaces of clouded white, a violet accent and fine lines of light",
 	"theme_about_blueprint":    "Blue ink on squared paper, its sections ruled in the ink",
 	"theme_about_brutal":       "Black on cream, flat primaries, its sections ruled thick",
+	"theme_about_cyber":        "A street terminal at night: a gunmetal ground, hologram boxes with a rainbow edge and cut corners, green and yellow light",
 	"theme_about_default":      "floe's own, which every theme starts from: a warm grey ground, white surfaces in thin frames, a teal accent",
 	"theme_about_editorial":    "A magazine in ink and yellow: sections open on yellow bands, a short yellow bar over cards and figures, large heavy figures",
 	"theme_about_ink":          "Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink",

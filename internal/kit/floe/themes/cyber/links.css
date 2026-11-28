@@ -1,0 +1,2 @@
+/* A link's frame is a small terminal box: the green line on its left, mono for where it goes */
+:scope a { border-left: 3px solid var(--cyber-glow); }
