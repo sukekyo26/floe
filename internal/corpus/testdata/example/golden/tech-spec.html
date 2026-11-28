@@ -901,29 +901,34 @@ body { margin: 0; }
 <style>
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
-/* A spec sheet: a rail of the spec's properties and contents on the left, the conclusion first, then the
-   sections numbered, and the work grouped as Build and Ship.
+/* A spec sheet: the contents in a rail on the left; the head, the conclusion in a frame, then the sections, and the
+   work grouped as Build and Ship.
    LIMIT: the rail goes above the body under 900px; a width just over it is not looked at */
 body { line-height: 1.8; padding-block: 2rem 4rem; }
 .sheet { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 3rem; }
 .rail { position: sticky; top: 1.5rem; align-self: start; display: grid; gap: 1rem; padding-right: 1.5rem; border-right: 1px solid var(--line); }
-.kind { font-family: var(--mono); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.15em; color: var(--accent); }
-.props { display: grid; gap: 0.6rem; font-size: 0.88rem; }
-.props dt { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); letter-spacing: 0.08em; }
-.props dd { margin: 0; display: grid; }
 main { display: grid; gap: 2.6rem; align-content: start; min-width: 0; }
+/* The head: the kind as a small line over a large title with room above it, the summary, then the fields in two
+   columns of a fixed face between a fine rule and a double rule */
+.head { display: grid; gap: 0.7rem; padding-top: 1.2rem; }
+.kindline { font-family: var(--mono); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.2em; color: var(--accent); }
+.head h1 { font-size: clamp(2rem, 4.8vw, 2.8rem); line-height: 1.2; }
 .summary { font-size: 1.1rem; color: var(--muted); }
-.label { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.1em; color: var(--muted); }
-.verdict { padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius); display: grid; gap: 0.6rem; }
-.verdict h2 { font-size: 0.8rem; letter-spacing: 0.15em; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem 2rem; font-size: 0.85rem; margin-top: 0.6rem; padding-block: 0.8rem; border-top: 1px solid var(--fg); border-bottom: 3px double var(--fg); }
+.fields > div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 0.8rem; align-items: baseline; }
+.fields .wide { grid-column: 1 / -1; }
+.fields dt { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+.fields dd { margin: 0; }
+/* The conclusion without a fill: a frame in the accent, the picks in it */
+.verdict { padding: var(--floe-pad-block) var(--floe-pad-inline); border: 2px solid var(--accent); border-radius: var(--radius); display: grid; gap: 0.6rem; }
+.verdict h2 { font-size: 0.8rem; letter-spacing: 0.15em; color: var(--on-face, var(--accent)); }
 .verdict ol { display: grid; gap: 0.8rem; }
 .verdict li { display: grid; gap: 0.1rem; }
 .verdict .question { font-size: 0.9rem; }
 .verdict .pick { font-size: 1.35rem; line-height: 1.4; }
-.verdict .why { font-size: 0.9rem; }
+.verdict .why { font-size: 0.9rem; color: var(--muted); }
 .block { display: grid; gap: var(--floe-room); }
-.block > h2 { font-size: 1.3rem; display: flex; align-items: baseline; gap: 0.8rem; }
-.no { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-small); padding: 0 0.35rem; }
+.block > h2 { font-size: 1.3rem; }
 .block > h3, .decision > h3 { font-size: 1.05rem; }
 .goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1.5rem; }
 .goals h3 { font-size: 0.95rem; }
@@ -942,25 +947,6 @@ main { display: grid; gap: 2.6rem; align-content: start; min-width: 0; }
   .sheet { grid-template-columns: 1fr; }
   .rail { position: static; border-right: 0; padding-right: 0; border-bottom: 1px solid var(--line); padding-bottom: 1rem; }
 }
-/* The conclusion without a fill: a frame in the accent, the picks in it */
-.verdict { border: 2px solid var(--accent); }
-.verdict h2 { color: var(--on-face, var(--accent)); }
-.verdict .why { color: var(--muted); }
-/* The documents it answers to, on a line under the title: the label, then the links part */
-.related { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; align-items: baseline; }
-.related .label { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.1em; }
-   under them, then the title */
-/* The head: the kind as a small line over a large title with room above it, the summary, then the fields in two
-   columns of a fixed face between a fine rule and a double rule */
-.head { display: grid; gap: 0.7rem; padding-top: 1.2rem; }
-.kindline { font-family: var(--mono); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.2em; color: var(--accent); }
-.head h1 { font-size: clamp(2rem, 4.8vw, 2.8rem); line-height: 1.2; }
-.summary { font-size: 1.1rem; }
-.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem 2rem; font-size: 0.85rem; margin-top: 0.6rem; padding-block: 0.8rem; border-top: 1px solid var(--fg); border-bottom: 3px double var(--fg); }
-.fields > div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 0.8rem; align-items: baseline; }
-.fields .wide { grid-column: 1 / -1; }
-.fields dt { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
-.fields dd { margin: 0; }
 @media (max-width: 760px) { .fields { grid-template-columns: 1fr; } }
 }
 }
