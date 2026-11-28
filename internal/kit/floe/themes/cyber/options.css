@@ -1,1 +1,3 @@
-.option.pick { --floe-inset: inset 0 0 0 2px var(--cyber-glow); --floe-shadow-color: var(--shadow); background: var(--accent-soft); }
+/* The one to take on a green a little lighter than the accent's soft colour, which is the band's own ground here; no
+   lighter, for its muted text to read 4.5:1 (AA) */
+.option.pick { --floe-inset: inset 0 0 0 2px var(--cyber-glow); --floe-shadow-color: var(--shadow); background-color: #2a613a; }

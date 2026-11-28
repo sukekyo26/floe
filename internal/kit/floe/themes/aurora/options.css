@@ -1,3 +1,2 @@
-/* The option picked on the accent's soft glass under a thick ribbon; a line's code in it on the surface, as its own ground is that colour too */
-.option.pick { background: var(--aurora-ribbon) top / 100% 8px no-repeat, var(--accent-soft); }
-.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
+/* The option picked under a thick ribbon */
+.option.pick { background-image: var(--aurora-ribbon); background-position: top; background-size: 100% 8px; background-repeat: no-repeat; }

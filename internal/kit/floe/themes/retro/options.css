@@ -1,0 +1,3 @@
+/* The one to take on the accent's soft colour, as the part sets it: this theme's cards.css paints a card's ground
+   over the part's */
+.option.pick { background-color: var(--accent-soft); }
