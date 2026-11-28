@@ -1,0 +1,3 @@
+/* The figure leads, large in Mincho; its name a head with a short vermilion stroke under it */
+.stat dt { width: fit-content; padding-bottom: 0.15rem; background: linear-gradient(90deg, var(--washi-shu) 0 1.4rem, transparent 1.4rem) left bottom / 100% 2px no-repeat; }
+.stat .value { font-family: var(--font); font-size: 2.3rem; line-height: 1.2; }

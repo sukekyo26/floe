@@ -1,0 +1,4 @@
+/* The head on pale sumi, a sumi stroke down its left.
+   The margin is the one place the theme makes room: a head painted needs it off the parts below */
+:scope > summary { background: linear-gradient(var(--washi-sumi), color-mix(in srgb, var(--washi-sumi) 40%, transparent)) left / 5px 100% no-repeat, var(--washi-usuzumi); }
+:scope[open] > summary { margin-bottom: var(--floe-room); }

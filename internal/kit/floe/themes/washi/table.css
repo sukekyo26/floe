@@ -1,4 +1,4 @@
-:scope { border: 0; padding-inline: 1.4rem; --table-rule: 1px solid var(--washi-hair);
-  --table-head-bg: none; --table-head-fg: var(--fg); }
-:scope table { border-top: var(--washi-frame) var(--fg); border-bottom: var(--washi-frame) var(--fg); }
-:scope thead th { border-bottom: 1px solid var(--fg); font-size: 0.9rem; letter-spacing: 0.1em; }
+/* Framed in sumi, its head over a vermilion stroke across the table */
+:scope { border: 1px solid var(--washi-sumi); background: var(--surface); --table-head-bg: none; --table-head-fg: var(--fg); --table-rule: 1px solid var(--line); }
+:scope thead th { border-bottom: 0; font-weight: 700; }
+:scope thead { background: linear-gradient(90deg, var(--washi-shu) 0 25%, color-mix(in srgb, var(--washi-shu) 55%, transparent) 60%, color-mix(in srgb, var(--washi-shu) 15%, transparent)) left bottom / 100% 4px no-repeat; }

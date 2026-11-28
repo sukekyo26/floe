@@ -1,0 +1,2 @@
+/* Numbers in square seals */
+:scope > li::before { border-radius: var(--radius-small); }

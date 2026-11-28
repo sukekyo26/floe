@@ -1,1 +1,2 @@
-:scope { --tabs-picked-bg: none; --tabs-picked-fg: var(--fg); --tabs-picked-ring: inset 0 -2px 0 var(--washi-shu); }
+/* The tab picked a white sheet, a vermilion stroke under its name */
+:scope { --tabs-picked-bg: linear-gradient(90deg, var(--washi-shu), color-mix(in srgb, var(--washi-shu) 40%, transparent)) left bottom / 100% 3px no-repeat, var(--surface); --tabs-picked-fg: var(--fg); --tabs-picked-ring: none; }

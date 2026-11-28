@@ -15,7 +15,7 @@ func TestRenderedLayers(t *testing.T) { //nolint:paralleltest // the browser tes
 	s.b.navigate("/a/bare-washi/?raw")
 	check(t, "bare", []string{s.b.eval(`(() => { const r = getComputedStyle(document.documentElement), s = getComputedStyle(document.querySelector('p'));
 		return [r.backgroundColor, getComputedStyle(document.body).backgroundColor, s.color, s.fontFamily.split(',')[0]].join(' | ') })()`)},
-		`rgb(237, 228, 207) | rgba(0, 0, 0, 0) | rgb(29, 27, 24) | "Hiragino Mincho ProN"`)
+		`rgb(243, 239, 230) | rgba(0, 0, 0, 0) | rgb(31, 28, 25) | "Hiragino Mincho ProN"`)
 	s.b.navigate("/a/bare-blueprint/?raw")
 	check(t, "squares", []string{s.b.eval(`(() => { const r = getComputedStyle(document.documentElement);
 		return [r.backgroundImage.split('linear-gradient').length - 1, r.backgroundSize, r.backgroundColor].join(' | ') })()`)},

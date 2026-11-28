@@ -1,0 +1,2 @@
+/* The place read marked by vermilion down its left */
+:scope a[aria-current] { border-left-color: var(--washi-shu); color: var(--fg); }

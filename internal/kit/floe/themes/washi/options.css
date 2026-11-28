@@ -1,0 +1,6 @@
+/* Numbers in square sumi seals. The pick is marked: its number and its pill vermilion seals, a vermilion stroke over its top */
+:scope.numbered { --floe-mark: 1.6rem; }
+:scope.numbered > .option::before { border-radius: var(--radius-small); background: var(--washi-sumi); color: var(--surface); font-weight: 700; font-size: var(--floe-text-small); }
+:scope.numbered > .option.pick::before { background: var(--washi-shu); color: var(--on-fill); }
+.option.pick { background: linear-gradient(90deg, var(--washi-shu), color-mix(in srgb, var(--washi-shu) 55%, transparent) 75%, transparent) top / 100% 5px no-repeat, var(--surface); }
+.option.pick > .title > [data-floe-part=cell] { background: var(--washi-shu); border-color: var(--washi-shu); color: var(--on-fill); }

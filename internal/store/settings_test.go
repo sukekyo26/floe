@@ -37,7 +37,7 @@ func report(theme string) string {
 }
 
 // accents are the accent colours of themes' palettes, which a page drawn in one holds and no other does.
-var accents = map[string]string{"ink": "#2b3a67", "washi": "#264c78", "app": "#c2185b"}
+var accents = map[string]string{"ink": "#2b3a67", "washi": "#3d3833", "app": "#c2185b"}
 
 // drawnIn is the theme of accents the stored page slug of s is drawn in, "" for none of them (default).
 func drawnIn(t *testing.T, s *store.Store, root, slug string) string {
