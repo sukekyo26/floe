@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add floe's template `prd`, product requirements: the background, goals with their measures, the scope with its actors, functional and optional non-functional requirements as cards in lanes of priority (Must, Should, Could), each with the acceptance criteria (`given`, `when`, `then`) that verify it hanging under its card, constraints, a glossary, open questions and related documents (the part `links`). Write a criterion that verifies two requirements under both.
 - Add `floe repository new`, `render`, `check`, `template`, `part` and `theme`, which keep a repository's documents with no settings: `.floe/repository.yaml` names floe's version and the documents' directories, and `floe repository check` checks the repository's templates, parts and themes in `.floe/`, every document and its page in one line, from any directory of the repository, in CI too. They read neither `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` nor `FLOE_THEMES_DIR`, use no server, refuse another version of floe than the setting names, and read and write nothing out of the repository but the icon sets.
 - Add the function `count` to `page.html` and `part.html`: `{{count $i}}` writes the index of a `range` as a number from 1, so that a template numbers its items in the page's text rather than by a CSS counter.
 
