@@ -1,5 +1,7 @@
 /* A dark ground of colour, never black, under faces a step lighter; light text, the neon green free for text too. The
-   other lights (the glow, yellow, pink, the rainbow) stay off text */
+   other lights (the glow, yellow, pink, the rainbow) stay off text 
+   LIMIT: a page prints on its dark ground, as print keeps the ground (paper-ground); printing is rarely used
+   LIMIT: an image of a transparent ground and dark lines is hard to see on the dark ground; its ground is the writer's */
 :scope {
   --bg: #2a3230; --surface: #424d4a; --quiet: #4c5854; --fg: #eaf3ef; --muted: #cad6d2; --line: #63726e;
   --accent: #5cff86; --accent-soft: #285a37;
