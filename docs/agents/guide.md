@@ -126,7 +126,7 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 
 ## Themes
 
-- Do not write `theme` unless the user names a theme for the page: the user picks themes on the management page, at the root of the page's URL.
+- Do not write `theme` unless the user names a theme for the page: the user picks themes on the management page, at the root of the page's URL. A `theme` (or `--theme`) changes a stored page's theme only when it names another than the last publish did.
 - When you give the user a URL, run `floe theme default`. If it prints a name, say nothing of themes. If it prints nothing, tell the user once in the conversation that the default theme for new pages can be chosen in the management page's settings (the gear in the page list's bar).
 
 ## Picking parts

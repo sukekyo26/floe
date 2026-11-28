@@ -97,7 +97,7 @@ window.fetch = (input: string | URL | Request, init?: RequestInit) => {
     return answer(dir in FILES ? json(FILES[dir]) : new Response('', { status: 404 }));
   }
   if (url.pathname === '/api/settings' || url.pathname.endsWith('/read')) return answer(new Response(''));
-  if (url.pathname.endsWith('/theme')) return answer(method === 'GET' ? json({ own: '' }) : new Response(''));
+  if (url.pathname.endsWith('/theme')) return answer(new Response(''));
   const own = /^\/api\/pages\/([^/]+)$/.exec(url.pathname);
   const at = entries.findIndex((x) => x.slug === decodeURIComponent(own?.[1] ?? ''));
   if (own && method === 'PATCH' && at >= 0) {

@@ -20,7 +20,7 @@ const read: ThemesRead = {
 const draw = (state: Partial<SettingsState>, page: Page | null) => {
   testBoot();
   const settings = {
-    state: createStore<SettingsState>({ opened: 1, read, own: '', failed: '', ...state }),
+    state: createStore<SettingsState>({ opened: 1, read, failed: '', ...state }),
     open: () => Promise.resolve(),
     saved: () => undefined,
   } as Settings;
@@ -55,11 +55,11 @@ describe(SettingsDialog, () => {
     expect(radios(html)).toStrictEqual(['default:false', 'mine:true']);
   });
 
-  it('opens a page’s themes alone, wide, the card that takes its theme off first and checked', () => {
+  it('opens a page’s themes alone, wide, the page’s theme checked and no card that takes it off', () => {
     expect.assertions(2);
-    const html = draw({ own: 'default' }, { slug: 'a', title: 'A' } as Page);
+    const html = draw({}, { slug: 'a', title: 'A', theme: 'mine' } as Page);
     expect(attrs(html, '<dialog')).toMatch(/data-panel="theme"[^>]*w-\[min\(64rem/);
-    expect(radios(html)).toStrictEqual([':true', 'default:false', 'mine:false']);
+    expect(radios(html)).toStrictEqual(['default:false', 'mine:true']);
   });
 
   it('draws a page’s themes from its opening: no way back to take the focus', () => {

@@ -147,7 +147,7 @@ func redraw(session drawproc.Session, slug string, m *Meta, dir string) (*drawn,
 	// rule comes to change, or if a copy comes to lose its images.
 	// Its warnings are of the copy, which no one mends: a publish of the data file tells them.
 	drew := session.Draw(drawproc.Job{
-		File: data, Source: src, Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, CutOff: false,
+		File: data, Source: src, Theme: m.Theme, Default: "", Untitled: slug, CutOff: false,
 		ImagesRoot: imagesDir, Sent: nil, ImagesDir: imagesDir,
 	})
 	page, err := drew.Page, drew.Err

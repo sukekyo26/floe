@@ -70,17 +70,13 @@ type Meta struct {
 	// TitleEdited marks a title set on the management page, kept across republishes.
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
-	// Theme is the theme a data file is drawn with over the data's (floe publish --theme), and DataTitle
-	// its title: when published, which clearing the title on the management page gives back; of a folder, where it is
-	// in its repository when linked (docs/v1), else its name.
-	Theme     string `json:"theme,omitempty"`
+	// Theme is the theme a page drawn from a data file is drawn in, its one (PageTheme), and GivenTheme the one its
+	// last publish named, --theme else its data's theme:, "" for none.
+	Theme      string `json:"theme,omitempty"`
+	GivenTheme string `json:"givenTheme,omitempty"`
+	// DataTitle is its data file's title: when published, which clearing the title on the management page gives back;
+	// of a folder, where it is in its repository when linked (docs/v1), else its name.
 	DataTitle string `json:"dataTitle,omitempty"`
-	// CreatedTheme is the default theme of settings.json when a page drawn from a data file was first stored, or
-	// replaced by another file's: the default it is drawn with for good, under --theme and the data's theme:.
-	CreatedTheme string `json:"createdTheme,omitempty"`
-	// PickedTheme is the theme picked for the page on the management page (PickTheme), over --theme: kept across
-	// republishes and rebuilds, dropped when another file's page replaces it.
-	PickedTheme string `json:"pickedTheme,omitempty"`
 	// Template is the template a stored page is drawn with, read from its data file at each publish and rebuild.
 	Template string `json:"template,omitempty"`
 	// Source is the directory of a stored page's copy, under its own; a new one each publish and rebuild.
@@ -121,10 +117,35 @@ func (m *Meta) IsLink() bool {
 	return m.Path != ""
 }
 
-// GivenTheme is the theme the page is drawn in over its data's theme:, "" for none: the one picked on the management
-// page, else --theme.
-func (m *Meta) GivenTheme() string {
-	return cmp.Or(m.PickedTheme, m.Theme)
+// PageTheme is the theme the page is drawn in when given is what its publish, or its linked file when opened, names
+// (--theme, else the data's theme:): given when it names one other than the last publish did, else the page's own,
+// which the management page picks. A publish of the same theme: thus keeps the one picked.
+func (m *Meta) PageTheme(given string) string {
+	if given != "" && given != m.GivenTheme {
+		return given
+	}
+	return m.Theme
+}
+
+// drawTheme is what a page whose meta.json is m is drawn with over its data's theme: (drawproc.Job.Theme), given
+// naming --theme and written its data's theme:: PageTheme, "" when that is the data's own, so that a theme that is none
+// is told at the theme: written.
+func drawTheme(m *Meta, given, written string) string {
+	theme := m.PageTheme(cmp.Or(given, written))
+	if theme == written {
+		return ""
+	}
+	return theme
+}
+
+// writtenTheme is the theme: of the data file file of content src, "" for none or one that cannot be read, whose
+// mistakes the drawing tells.
+func writtenTheme(file string, src []byte) string {
+	d, _ := doc.Read(file, src, "") //nolint:errcheck // told by the drawing
+	if d == nil {
+		return ""
+	}
+	return d.Theme
 }
 
 // TakesTheme reports whether a theme can be picked for the entry: a page drawn from a data file, stored or linked.

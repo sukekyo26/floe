@@ -199,9 +199,9 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}, "|"))
 }
 
-// TestUIPageTheme opens a page's themes from its row's menu, none chosen first and checked, picks one, which draws the
-// page in it and stays checked, the focus back on the menu; a refusal is said in the modal's words, and a theme picked
-// that is gone is told.
+// TestUIPageTheme opens a page's themes from its row's menu, the page's theme checked and no card that takes it off,
+// picks one, which draws the page in it and stays checked, the focus back on the menu; a refusal is said in the modal's
+// words, and a theme of the page that is gone is told.
 func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -221,7 +221,8 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out := make([]string, 0, 16)
 	out = append(out,
 		b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').textContent, document.getElementById('theme-now').textContent].join(' / ')"),
-		b.eval("[...document.querySelector('#theme-grid [data-testid=theme-card]').querySelectorAll('[data-testid=theme-shot], [data-testid=nm]')].map((e) => e.textContent).join(' / ')"),
+		// No card takes the page's theme off: each is a theme
+		b.eval("[...document.querySelectorAll('#theme-grid input')].some((i) => i.value === '')"),
 		b.eval("JSON.stringify(document.querySelector('#theme-grid input:checked').value)"),
 		b.eval(icon),
 		// A page's theme is that page's alone: no word of the pages there are now
@@ -251,7 +252,7 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	closeSettings(b)
 	// A theme picked that is gone: the list read says so of the page
 	b.eval(`window.fetch = (u, i) => (!i?.method && new URL(u, location.href).pathname === '/api/pages'
-		? window.realFetch(u, i).then((r) => r.json()).then((list) => new Response(JSON.stringify(list.map((a) => (a.slug === 'p' ? { ...a, pickedTheme: 'acme' } : a)))))
+		? window.realFetch(u, i).then((r) => r.json()).then((list) => new Response(JSON.stringify(list.map((a) => (a.slug === 'p' ? { ...a, theme: 'acme' } : a)))))
 		: window.realFetch(u, i))`)
 	b.untilRead(b.reread(), "the list with the theme gone", "true")
 	open()
@@ -263,9 +264,9 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the settings", "document.getElementById('settings').open")
 	out = append(out, b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').hidden, document.getElementById('settings-list').hidden].join(' / ')"), b.eval(icon))
 	check(t, "page theme", out, strings.Join([]string{
-		"This page's theme / P / Choosing draws this page alone again. The theme chosen stays when the page is updated.",
-		"The page then shows in default / Remove this page's theme",
-		`""`, "page-icon", "false",
+		"This page's theme / P / Choosing draws the latest version of this page again in it. It stays until the data's theme: changes and the page is published.",
+		"false",
+		`"default"`, "page-icon", "false",
 		"false", "true", "true",
 		"ink",
 		"Failed to change this page's theme: the page changed meanwhile. Choose again", "true",

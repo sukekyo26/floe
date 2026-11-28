@@ -100,7 +100,7 @@ func (s *Server) version(slug string, m *store.Meta, rest string, v int, diff di
 	}
 	if rest == "" && m.IsData() {
 		_, gen := s.now()
-		return s.id + "." + strconv.Itoa(gen) + "." + files.Mark(file) + "." + m.UpdatedAt + "." + m.PickedTheme
+		return s.id + "." + strconv.Itoa(gen) + "." + files.Mark(file) + "." + m.UpdatedAt + "." + m.Theme
 	}
 	return s.id + "." + files.Mark(file)
 }

@@ -137,7 +137,7 @@ window.fetch = (input: string | URL | Request, init?: RequestInit) => {
   // The settings' themes and a page's own, written in nothing
   if (url.pathname === '/api/themes') return answer(json({ themes: THEMES, default: '', taskMode: false }));
   if (url.pathname === '/api/settings' || url.pathname.endsWith('/read')) return answer(new Response(''));
-  if (url.pathname.endsWith('/theme')) return answer(method === 'GET' ? json({ own: '' }) : new Response(''));
+  if (url.pathname.endsWith('/theme')) return answer(new Response(''));
   // A page's star, archive and the rest of its own fields, as PATCH /api/pages/{slug} writes them
   const own = /^\/api\/pages\/([^/]+)$/.exec(url.pathname);
   if (own && method === 'PATCH') {
