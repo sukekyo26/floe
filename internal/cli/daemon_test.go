@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"maps"
 	"math/rand/v2"
@@ -827,17 +828,20 @@ func TestHungUpPort(t *testing.T) {
 func TestPortFreed(t *testing.T) {
 	t.Parallel()
 
-	ln, port := holdPort(t)
-	e := newDenvOn(t, port)
-	time.AfterFunc(2500*time.Millisecond, func() { _ = ln.Close() }) //nolint:errcheck // frees the port
-	start := time.Now()
-	if r := e.run("list"); r.code != 0 {
-		t.Fatalf("list after the port came free = %+v", r)
+	// MEASURE (draft only): the timeline of each run, failed on purpose so that CI prints it.
+	var lines []string
+	for i := range 5 {
+		ln, port := holdPort(t)
+		e := newDenvOn(t, port)
+		start := time.Now()
+		var freed time.Time
+		time.AfterFunc(2500*time.Millisecond, func() { freed = time.Now(); _ = ln.Close() }) //nolint:errcheck // frees the port
+		r := e.run("list")
+		end := time.Now()
+		log, _ := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], server.LogName))
+		lines = append(lines, fmt.Sprintf("run %d: code %d, freed at %v, ended at %v (took %v); start %s; server.log %q",
+			i, r.code, freed.Sub(start).Round(time.Millisecond), end.Sub(start).Round(time.Millisecond),
+			end.Sub(freed).Round(time.Millisecond), start.Format("15:04:05.000"), string(log)))
 	}
-	if took := time.Since(start); took > 6*time.Second {
-		t.Errorf("starting a server once the port came free took %v", took)
-	}
-	if _, up := e.health(t.Context()); !up {
-		t.Error("no server answers on the port the command took")
-	}
+	t.Error("MEASURE\n" + strings.Join(lines, "\n"))
 }
