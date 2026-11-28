@@ -60,7 +60,7 @@ func (b *browser) current() string {
 // TestRenderedContents draws report's contents in every theme beside the sections, stuck in the window and marking the
 // section scrolled to; at the top the first, at the end the last, a section pressed while it is in sight; the page as
 // wide as the window, a narrow window with the sections alone over them, none on paper, and a page without them
-// as wide as before. design's contents mark their section too.
+// as wide as before. tech-spec's contents mark their section too.
 // LIMIT: a page in the frame of the management page is a target this tab cannot read; it is tried by hand.
 func TestRenderedContents(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -196,16 +196,16 @@ func TestRenderedContents(t *testing.T) { //nolint:paralleltest // the browser t
 	if got := b.eval("window.scriptErrors.join('|')"); got != "" {
 		amiss = append(amiss, "a script after no contents: "+got)
 	}
-	// design marks its section too.
+	// tech-spec marks its section too.
 	b.size(1440, 900, false)
-	design, err := os.ReadFile("../corpus/testdata/example/design.yaml")
+	techSpec, err := os.ReadFile("../corpus/testdata/example/tech-spec.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "publish", s.write(t, "design.yaml", string(design)), "--slug", "design")
-	b.navigate("/a/design/?raw")
+	s.floe(t, "publish", s.write(t, "tech-spec.yaml", string(techSpec)), "--slug", "tech-spec")
+	b.navigate("/a/tech-spec/?raw")
 	if got := scroll("document.getElementById('decisions').offsetTop"); got != "Options" {
-		amiss = append(amiss, "design: scrolled to its options, marks "+got)
+		amiss = append(amiss, "tech-spec: scrolled to its options, marks "+got)
 	}
 	check(t, "contents", amiss, "")
 }

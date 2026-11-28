@@ -100,7 +100,7 @@ func measureRowPad(want pads) string {
 })(` + mustJSON(want) + `)`
 }
 
-// rowsSection is a section of design's and postmortem's more holding an element of html that takes the look rows.
+// rowsSection is a section of tech-spec's and postmortem's more holding an element of html that takes the look rows.
 const rowsSection = "  - heading: Rows\n    parts:\n      - html: |\n          <div data-floe-look=\"rows\"><p>One</p><p>Two</p></div>\n"
 
 // rowsOn measures the page open, told as what, as measureRowPad does, and returns what it found rows of too.
@@ -118,7 +118,7 @@ func rowsOn(t *testing.T, s *site, what string, want pads) (measured, []string) 
 const lookRowPadFix = "pad a row by --floe-row-pad above and below and --floe-pad-inline at the sides: take the look rows or table, " +
 	"and write no padding of a row; a theme sets neither"
 
-// lookRowPad measures rowParts in every theme, on the screen and printed, and design's and postmortem's examples, by
+// lookRowPad measures rowParts in every theme, on the screen and printed, and tech-spec's and postmortem's examples, by
 // defaults.css's variables (basePads), and rowParts in a template of one's own (rowPadKit) whose page.css sets them
 // otherwise, by those, as measureRowPad does. Every part that takes the look rows or table, and table and facts, must be drawn as rows in
 // rowParts.
@@ -154,7 +154,7 @@ func lookRowPad(t *testing.T, s *site) measured {
 		}
 		s.b.media("")
 	}
-	for _, sample := range []string{"design", "postmortem"} {
+	for _, sample := range []string{"tech-spec", "postmortem"} {
 		data, err := os.ReadFile("../corpus/testdata/example/" + sample + ".yaml")
 		if err != nil {
 			t.Fatal(err)

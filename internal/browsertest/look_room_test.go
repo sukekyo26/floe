@@ -15,7 +15,7 @@ import (
 // the bottom of their names to the top of the panel shown, as their children are names and panels, not parts in a row.
 // A part's Markdown stands in a text's box (MarkdownFlow), measured as a text's is.
 // LIMIT: a flow in no box of Markdown (what a note drawn in HTML holds) and what a quote or a list holds (base.css's 0.6rem and 0.3rem, not room between parts) go unmeasured.
-// LIMIT: the room before a template's own section (report's .sub, design's .decision), between a template's own
+// LIMIT: the room before a template's own section (report's .sub, tech-spec's .decision), between a template's own
 // section or header and a note it places (adr's record superseding it after its header, runbook's caution after its
 // needs) and after the first child of an item whose mark stands in its
 // grid's row mark (a step's head, the row as tall as the mark) is not measured, until the room around a template's

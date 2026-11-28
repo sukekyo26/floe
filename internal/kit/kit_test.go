@@ -47,7 +47,7 @@ func TestFloe(t *testing.T) {
 	}
 	parts, looks, themes, templates := k.Names()
 	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows", "tags", "toc", "zoom"}) || len(themes) != 13 ||
-		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook", "slides"}) {
+		!slices.Equal(templates, []string{"adr", "handoff", "postmortem", "report", "runbook", "slides", "tech-spec"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
 	for _, name := range parts {
@@ -120,7 +120,7 @@ func TestEntryFiles(t *testing.T) {
 		{k.Parts, "bars", "schema.json, part.yaml, part.html, part.css"},
 		{k.Parts, "panel", "part.yaml, part.css"},
 		{k.Parts, "tone", "tone.json"},
-		{k.Templates, "design", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
+		{k.Templates, "tech-spec", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
 		{k.Themes, "retro", "theme.yaml, palette.css, base.css, markdown.css, band.css, bars.css, cards.css, cell.css, code.css, details.css, diagram.css, note.css, numbered.css, panel.css, stats.css, table.css, tabs.css, timeline.css, toc.css"},
 		{k.Themes, "ink", "theme.yaml, palette.css, markdown.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
 	} {
@@ -884,12 +884,12 @@ func TestShapes(t *testing.T) {
 		"part tree":           "[] change,note,path",
 		"part zoom":           "-",
 		"template adr":        "-",
-		"template design":     "background,date,decided,decisions,goals,impact,lang,more,non_goals,owner,status,summary,template,theme,title",
 		"template handoff":    "asks,date,doing,done,from,lang,more,next,notes,summary,template,theme,title,to",
 		"template postmortem": "actions,authors,cause,date,effects,lang,lessons,more,severity,summary,template,theme,timeline,title",
 		"template report":     "eyebrow,lang,lead,sections,template,theme,title,toc",
 		"template runbook":    "caution,lang,more,needs,owner,rollback,steps,summary,template,theme,title,updated",
 		"template slides":     "direction,lang,slides,subtitle,template,theme,title",
+		"template tech-spec":  "background,date,decided,decisions,goals,impact,lang,more,non_goals,owner,status,summary,template,theme,title",
 		"section html":        "html",
 	}
 	k := floe(t)

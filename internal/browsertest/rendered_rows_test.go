@@ -29,7 +29,7 @@ const measureRowsLook = `(() => {
   return [...out].join('\n');
 })()`
 
-// TestRenderedRows draws rowParts in every theme, design's and postmortem's examples (their pages' line heights are
+// TestRenderedRows draws rowParts in every theme, tech-spec's and postmortem's examples (their pages' line heights are
 // not report's), and rowParts in a template of one's own (rowPadKit) setting its own line height and the variables of
 // a row's padding: every row is in the page's line height, and the box of every part drawn as rows is padded as an
 // element of html's rows is.
@@ -51,7 +51,7 @@ func TestRenderedRows(t *testing.T) { //nolint:paralleltest // the browser tests
 		s.b.navigate("/a/rows-" + theme + "/?raw")
 		check("rowParts in " + theme)
 	}
-	for _, sample := range []string{"design", "postmortem"} {
+	for _, sample := range []string{"tech-spec", "postmortem"} {
 		data, err := os.ReadFile("../corpus/testdata/example/" + sample + ".yaml")
 		if err != nil {
 			t.Fatal(err)

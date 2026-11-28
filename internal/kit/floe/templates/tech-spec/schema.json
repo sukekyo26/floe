@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "design",
+  "title": "tech-spec",
   "description": "A design document, its conclusion first: the background, goals and non-goals, decisions with their options and the one taken, what is decided without options, what it touches, and sections of your own.",
   "type": "object",
   "properties": {

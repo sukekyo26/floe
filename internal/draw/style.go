@@ -145,7 +145,7 @@ const boxes = "@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { " +
 // when each template wrote it, and the theme's base.css and the looks do not. floe's own and fixed, it goes unchecked
 // by css.Check.
 // LIMIT: --column-width is the template's to set; a theme that sets it in its palette widens the column of a template
-// that sets none (report, design, handoff, postmortem) alone, as adr's and runbook's page.css win over it. Nothing
+// that sets none (report, tech-spec, handoff, postmortem) alone, as adr's and runbook's page.css win over it. Nothing
 // checks it; set it in a template's page.css alone.
 // LIMIT: with no font-size on the body, a browser sizes text in monospace alone from 13px, as no ancestor sets a size:
 // a theme whose --mono is monospace alone draws a line's code about 11px. Name a face before monospace.
