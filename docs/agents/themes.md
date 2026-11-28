@@ -122,7 +122,7 @@ Each item gives the action, then the reason in parentheses.
 
 ### Page and column
 
-- Leave `--column-width` to the template's `page.css` (a theme that sets it in its palette widens the column only of a template that sets none: report, tech-spec, handoff, meeting and postmortem; adr's and runbook's `page.css` win over it, and so does a report's with contents, `main:has(> .body) { --column-width: 100%; }`; floe does not check it).
+- Leave `--column-width` to the template's `page.css` (a theme that sets it in its palette widens the column only of a template that sets none: report, tech-spec, prd, handoff, meeting and postmortem; adr's and runbook's `page.css` win over it, and so does a report's with contents, `main:has(> .body) { --column-width: 100%; }`; floe does not check it).
 
 ### Colours
 

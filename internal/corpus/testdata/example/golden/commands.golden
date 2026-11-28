@@ -1,4 +1,4 @@
-$ floe check adr.yaml handoff.yaml meeting.yaml postmortem.yaml report.yaml runbook.yaml slides.yaml tech-spec.yaml
+$ floe check adr.yaml handoff.yaml meeting.yaml postmortem.yaml prd.yaml report.yaml runbook.yaml slides.yaml tech-spec.yaml
 exit 0
 $ floe render --out-dir $TMP/pages/adr.yaml adr.yaml
 exit 0
@@ -16,6 +16,10 @@ $ floe render --out-dir $TMP/pages/postmortem.yaml postmortem.yaml
 exit 0
 --- stdout
 $TMP/pages/postmortem.yaml/postmortem.html
+$ floe render --out-dir $TMP/pages/prd.yaml prd.yaml
+exit 0
+--- stdout
+$TMP/pages/prd.yaml/prd.html
 $ floe render --out-dir $TMP/pages/report.yaml report.yaml
 exit 0
 --- stdout
@@ -32,13 +36,14 @@ $ floe render --out-dir $TMP/pages/tech-spec.yaml tech-spec.yaml
 exit 0
 --- stdout
 $TMP/pages/tech-spec.yaml/tech-spec.html
-$ floe render --out-dir $TMP/together adr.yaml handoff.yaml meeting.yaml postmortem.yaml report.yaml runbook.yaml slides.yaml tech-spec.yaml
+$ floe render --out-dir $TMP/together adr.yaml handoff.yaml meeting.yaml postmortem.yaml prd.yaml report.yaml runbook.yaml slides.yaml tech-spec.yaml
 exit 0
 --- stdout
 $TMP/together/adr.html
 $TMP/together/handoff.html
 $TMP/together/meeting.html
 $TMP/together/postmortem.html
+$TMP/together/prd.html
 $TMP/together/report.html
 $TMP/together/runbook.html
 $TMP/together/slides.html

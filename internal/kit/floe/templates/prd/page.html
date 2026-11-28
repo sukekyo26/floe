@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<header class="head">
+<div class="floe-column">
+<p class="meta"><span class="kind" data-floe-part="cell">{{word "kind"}}</span>{{with .Data.status}}<span>{{.}}</span>{{end}}{{with .Data.version}}<span>{{word "version"}} {{.}}</span>{{end}}{{with .Data.owner}}<span>{{word "owner"}} {{.}}</span>{{end}}{{with .Data.date}}<span>{{.}}</span>{{end}}</p>
+<h1>{{.Title}}</h1>
+{{- with .Data.summary}}<p class="summary">{{markdownLine .}}</p>{{end}}
+{{- with .Data.related}}<div class="related"><p class="label">{{word "related"}}</p>{{.}}</div>{{end}}
+<ul class="goals" aria-label="{{word "goals"}}">{{range .Data.goals}}<li>{{with .measure}}<b>{{markdownLine .}}</b>{{end}}<span>{{markdownLine .what}}</span></li>{{end}}</ul>
+</div>
+</header>
+<main class="floe-column">
+<section aria-labelledby="scope"><h2 id="scope">{{word "scope"}}</h2>
+<div class="map">
+<div class="actors"><p class="label">{{word "actors"}}</p><ul>{{range .Data.actors}}<li data-floe-look="panel"><b>{{.name}}</b><span>{{markdownLine .role}}</span></li>{{end}}</ul></div>
+<div class="arrow" aria-hidden="true"></div>
+<div class="system"><p class="label">{{word "system"}}</p><p data-floe-look="tags">{{range .Data.scope.in}}<span class="chip">{{markdownLine .}}</span>{{end}}</p></div>
+<div class="outside"><p class="label">{{word "out"}}</p><ul>{{range .Data.scope.out}}<li>{{markdownLine .}}</li>{{end}}</ul></div>
+</div>
+</section>
+{{- /* LIMIT: two requirements of the same id draw two cards of one id; a reader sees the number twice */}}
+<section aria-labelledby="functional"><h2 id="functional">{{word "functional"}}</h2>
+<p class="abbr">{{word "abbr_fr"}}</p>
+<div class="board">
+{{- range $p := .Calc.fr_lanes}}
+<div class="lane" data-floe-tone="{{template "tone" $p}}">
+<h3><span data-floe-part="cell" data-floe-tone="{{template "tone" $p}}">{{word $p}}</span></h3>
+{{- range $.Data.functional}}{{if eq .priority $p}}
+<article class="card" data-floe-look="panel" id="{{.id}}"><p class="top"><span class="id">{{.id}}</span>{{with .actor}}<span class="who">{{.}}</span>{{end}}</p>
+<p class="title">{{markdownLine .title}}</p>{{with .text}}<p class="more">{{markdownLine .}}</p>{{end}}
+{{template "verify" .acceptance}}</article>
+{{- end}}{{end}}
+</div>
+{{- end}}
+</div>
+</section>
+{{- with .Data.nonfunctional}}
+<section aria-labelledby="nonfunctional"><h2 id="nonfunctional">{{word "nonfunctional"}}</h2>
+<p class="abbr">{{word "abbr_nfr"}}</p>
+<div class="board">
+{{- range $p := $.Calc.nfr_lanes}}
+<div class="lane" data-floe-tone="{{template "tone" $p}}">
+<h3><span data-floe-part="cell" data-floe-tone="{{template "tone" $p}}">{{word $p}}</span></h3>
+{{- range $.Data.nonfunctional}}{{if eq .priority $p}}
+<article class="card" data-floe-look="panel" id="{{.id}}"><p class="top"><span class="id">{{.id}}</span><span class="who">{{word (printf "kind_%s" .kind)}}</span></p>
+<p class="title">{{markdownLine .title}}</p>{{with .target}}<p class="target">{{.}}</p>{{end}}
+{{template "verify" .acceptance}}</article>
+{{- end}}{{end}}
+</div>
+{{- end}}
+</div>
+</section>
+{{- end}}
+<section aria-labelledby="background"><h2 id="background">{{word "background"}}</h2>{{.Data.background}}</section>
+{{- if or .Data.constraints .Data.glossary .Data.open}}
+<div class="foot">
+{{- with .Data.constraints}}<section aria-labelledby="constraints"><h2 id="constraints">{{word "constraints"}}</h2><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>{{end}}
+{{- with .Data.glossary}}<section aria-labelledby="glossary"><h2 id="glossary">{{word "glossary"}}</h2><dl class="glossary">{{range .}}<div><dt>{{.term}}</dt><dd>{{markdownLine .meaning}}</dd></div>{{end}}</dl></section>{{end}}
+{{- with .Data.open}}<section aria-labelledby="open"><h2 id="open">{{word "open"}}</h2><ol>{{range .}}<li>{{markdownLine .question}}{{with .by}}<span class="more">{{word "answers"}}{{.}}</span>{{end}}</li>{{end}}</ol></section>{{end}}
+</div>
+{{- end}}
+{{- range $i, $m := .Data.more}}
+<section aria-labelledby="more-{{$i}}"><h2 id="more-{{$i}}">{{$m.heading}}</h2>
+{{- range $m.parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
+</main>
+</body>
+</html>
+{{- define "tone"}}{{if eq . "must"}}bad{{else if eq . "should"}}warn{{else}}muted{{end}}{{end}}
+{{- define "verify"}}{{if .}}<ol class="verify" aria-label="{{word "acceptance"}}">{{range $j, $a := .}}<li><span class="no">AC{{count $j}}</span><span>{{with $a.given}}<span class="given">{{markdownLine .}}{{word "given_end"}}</span>{{end}}{{markdownLine $a.when}}</span><b>{{markdownLine $a.then}}</b></li>{{end}}</ol>{{else}}<p><span data-floe-part="cell" data-floe-tone="warn">{{word "unverified"}}</span></p>{{end}}{{end}}
