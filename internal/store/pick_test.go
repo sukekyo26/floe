@@ -104,6 +104,32 @@ func TestPickTheme(t *testing.T) {
 	}
 }
 
+// A publish whose page has its theme picked between the drawing and its Save is refused, nothing written, so that the
+// theme picked is not written over.
+func TestPublishAfterPick(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := floeDrawing(t)
+	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
+	up := floepublish.Upload{File: "a.yaml", Source: []byte(report("washi")), Images: nil, Project: "p", Repo: "p", Place: "a.yaml"}
+	e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{})
+	if err != nil {
+		t.Fatal(told(err, root))
+	}
+	if err = s.PickTheme(t.Context(), dw, "a", "ink"); err != nil {
+		t.Fatal(told(err, root))
+	}
+	err = s.Save(e)
+	var c *store.Conflict
+	if !errors.As(err, &c) || keyOf(err) != "store_theme_changed_publish" {
+		t.Errorf("saved after a pick: told %s", told(err, root))
+	}
+	if m := s.ReadMeta("a"); m.Theme != "ink" || drawnIn(t, s, root, "a") != "ink" {
+		t.Errorf("written: theme %q, drawn in %q", m.Theme, drawnIn(t, s, root, "a"))
+	}
+}
+
 // keyOf is the key of the one mistake err holds, alone or in a list, "" for none.
 func keyOf(err error) string {
 	var e *usererr.Error

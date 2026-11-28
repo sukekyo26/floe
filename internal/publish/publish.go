@@ -147,7 +147,7 @@ func PrepareData(
 	if err != nil {
 		return nil, err
 	}
-	theme, def, err := s.Themes(slug, up.owner(), opts, up.File, up.Source)
+	themes, err := s.Themes(slug, up.owner(), opts, up.File, up.Source)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a usererr for the caller to show
 	}
@@ -157,7 +157,7 @@ func PrepareData(
 		sent = map[string][]byte{}
 	}
 	drew := drawproc.Draw(ctx, dw.Draw, drawproc.Job{
-		File: up.File, Source: up.Source, Theme: theme, Default: def, Untitled: slug,
+		File: up.File, Source: up.Source, Theme: themes.Theme, Default: themes.Default, Untitled: slug,
 		CutOff: false, ImagesRoot: "", Sent: sent, ImagesDir: "",
 	})
 	page, warnings, drawErr := drew.Page, drew.Warnings, drew.Err
@@ -168,7 +168,7 @@ func PrepareData(
 	// LIMIT: a template changed between the two puts to read another image too is told that image is not there,
 	// for this put sends the images the first asked (a map, not nil): publish again. Ask again if that comes to matter.
 	if up.Images == nil && len(drew.Read) > 0 {
-		if _, refused := storedPage(s, slug, named, up, nil, opts, theme, def); refused != nil {
+		if _, refused := storedPage(s, slug, named, up, nil, opts, themes); refused != nil {
 			return nil, usererr.WithWarnings(refused, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 		}
 		return nil, &NeedImages{Images: needed(drew)}
@@ -176,7 +176,7 @@ func PrepareData(
 	if drawErr != nil {
 		return nil, drawErr //nolint:wrapcheck // mistakes at their places, for the caller to show
 	}
-	e, err := storedPage(s, slug, named, up, up.Source, opts, theme, def)
+	e, err := storedPage(s, slug, named, up, up.Source, opts, themes)
 	if err != nil {
 		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 	}
@@ -221,16 +221,16 @@ func imagesApart(file string, images map[string][]byte) error {
 }
 
 // storedPage builds the entry of the data file up as the stored page slug of content src (nil checks its owner only),
-// named after named when no slug was given ("" else), drawn with theme over its theme: and def under it (Store.Themes).
+// named after named when no slug was given ("" else), drawn with themes (Store.Themes).
 // opts are those Accept returned without a mistake.
 // LIMIT: renamed between the drawing and Save, an untitled page keeps the slug it was drawn with as its title in the
 // page, not in the list; a link's too. Publish it again if that shows.
 func storedPage(
-	s *store.Store, slug, named string, up Upload, src []byte, opts store.Options, theme, def string,
+	s *store.Store, slug, named string, up Upload, src []byte, opts store.Options, themes store.DrawThemes,
 ) (*store.Entry, error) {
 	return s.NewEntry(store.Seed{ //nolint:wrapcheck // a usererr for the caller to show
 		Slug: slug, Named: named, File: up.File, Owner: up.owner(), Folder: false, FolderTitle: "", Data: src, Options: opts,
-		Project: up.Project, Theme: theme, Default: def,
+		Project: up.Project, Themes: themes,
 	})
 }
 
@@ -272,17 +272,17 @@ func PrepareLink(
 	}
 	var data []byte
 	var warnings []*usererr.Error
-	theme, def := "", ""
+	var themes store.DrawThemes
 	if !folder && files.IsDataFile(path) {
 		if dw.Err != nil {
 			return nil, dw.Err
 		}
-		if theme, def, err = s.Themes(slug, owner, opts, path, src); err != nil {
+		if themes, err = s.Themes(slug, owner, opts, path, src); err != nil {
 			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
 		data = src
 		drew := drawproc.Draw(ctx, dw.Draw, drawproc.Job{
-			File: path, Source: src, Theme: theme, Default: def, Untitled: slug,
+			File: path, Source: src, Theme: themes.Theme, Default: themes.Default, Untitled: slug,
 			CutOff: false, ImagesRoot: filepath.Dir(path), Sent: nil, ImagesDir: "",
 		})
 		warnings, err = drew.Warnings, drew.Err
@@ -294,8 +294,7 @@ func PrepareLink(
 	// root, else its name
 	e, err := s.NewEntry(store.Seed{
 		Slug: slug, Named: named, File: file, Owner: owner, Folder: folder,
-		FolderTitle: cmp.Or(within, from, filepath.Base(path)), Data: data, Options: opts, Project: from, Theme: theme,
-		Default: def,
+		FolderTitle: cmp.Or(within, from, filepath.Base(path)), Data: data, Options: opts, Project: from, Themes: themes,
 	})
 	if err != nil {
 		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings

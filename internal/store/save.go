@@ -123,6 +123,8 @@ type Entry struct {
 	named string
 	// file is the file as the publisher named it, where a name that makes no slug is told.
 	file string
+	// seen is the theme the page had when its themes were looked at (DrawThemes.Seen), which settle holds it to.
+	seen string
 }
 
 // Seed is what a publish read and drew of its file, for NewEntry to build the entry Save writes of. What a caller
@@ -139,8 +141,8 @@ type Entry struct {
 //   - Options are those publish.Accept returned without a mistake.
 //   - Project is the project it is published from: a stored page's place's, a linked file's directory's, a linked
 //     folder's own.
-//   - Theme and Default are what Themes returned for the same slug, owner, Options and Data, which the page was drawn
-//     with; "" for a link to HTML or a folder, which takes no theme.
+//   - Themes is what Themes returned for the same slug, owner, Options and Data, which the page was drawn with; none
+//     for a link to HTML or a folder, which takes no theme.
 type Seed struct {
 	Slug        string
 	Named       string
@@ -151,8 +153,7 @@ type Seed struct {
 	Data        []byte
 	Options     Options
 	Project     string
-	Theme       string
-	Default     string
+	Themes      DrawThemes
 }
 
 // NewEntry builds the entry of in and checks it against the slug as it is now, without the lock: Save checks it
@@ -169,9 +170,9 @@ func (s *Store) NewEntry(in Seed) (*Entry, error) {
 	}
 	e := &Entry{
 		Slug: in.Slug, Source: src,
-		Meta: seedMeta(in.Owner.Path, cmp.Or(in.Owner.Path, in.File), in.Data, in.Options, in.Theme, in.Default),
+		Meta: seedMeta(in.Owner.Path, cmp.Or(in.Owner.Path, in.File), in.Data, in.Options, in.Themes),
 		Page: nil, Images: nil, Prev: nil, OffTask: "", Warnings: nil, opts: in.Options, project: in.Project,
-		owner: in.Owner, named: named, file: in.File,
+		owner: in.Owner, named: named, file: in.File, seen: in.Themes.Seen,
 	}
 	if in.Owner.link() {
 		e.Meta.Folder = in.Folder
@@ -186,16 +187,15 @@ func (s *Store) NewEntry(in Seed) (*Entry, error) {
 }
 
 // seedMeta is the seed of the Meta settle builds: the link's path ("" for a stored page), and of a page drawn
-// from the data file file of content data (nil for HTML) with theme over its theme: and def under it (Themes), its
-// title:, the theme it is drawn in and the one opts or its theme: names, and of a stored page its template: (a link's
-// is read from its file for the list).
-func seedMeta(path, file string, data []byte, opts Options, theme, def string) Meta {
+// from the data file file of content data (nil for HTML) with th (Themes), its title:, the theme it is drawn in and
+// the one opts or its theme: names, and of a stored page its template: (a link's is read from its file for the list).
+func seedMeta(path, file string, data []byte, opts Options, th DrawThemes) Meta {
 	var m Meta
 	m.Path = path
 	if data != nil {
 		m.GivenTheme = cmp.Or(opts.GivenTheme(), writtenTheme(file, data))
-		if d, _ := doc.Read(file, data, theme); d != nil { //nolint:errcheck // drawn without a mistake already
-			m.Theme = cmp.Or(d.Theme, def, kit.DefaultTheme)
+		if d, _ := doc.Read(file, data, th.Theme); d != nil { //nolint:errcheck // drawn without a mistake already
+			m.Theme = cmp.Or(d.Theme, th.Default, kit.DefaultTheme)
 			m.DataTitle = d.Title
 			if path == "" {
 				m.Template = d.Template
@@ -206,12 +206,16 @@ func seedMeta(path, file string, data []byte, opts Options, theme, def string) M
 }
 
 // settle checks e against prev, the entry its slug holds (nil for none), and builds its meta.json on
-// it. A replaced page or link keeps nothing of the old one.
+// it. A replaced page or link keeps nothing of the old one. A page whose theme is no longer the one its drawing looked
+// at (picked meanwhile) is refused (Conflict), so that the theme picked is not written over.
 func (e *Entry) settle(prev *Meta) error {
 	was := e.Meta
 	replacing, err := checkOwner(e.Slug, prev, e.owner, e.opts.Force)
 	if err != nil {
 		return err
+	}
+	if !replacing && prev != nil && prev.Theme != e.seen {
+		return conflict(usererr.New("store_theme_changed_publish", e.Slug))
 	}
 	base := prev
 	if replacing || base == nil {
@@ -228,27 +232,31 @@ func (e *Entry) settle(prev *Meta) error {
 	return nil
 }
 
-// Themes returns what a page drawn from the data file file of content src at slug is drawn with, over its theme: and
-// under it (drawproc.Job's Theme and Default): of a page there, drawTheme; of a new page, or one replacing another
-// file's (checkOwner), --theme over it and the theme for new pages of settings.json under it. A link to HTML or a
-// folder is drawn with no theme and does not call it. It looks at meta.json without the lock, before the drawing:
-// settle keeps what was drawn (Seed.Theme, Seed.Default), so that the page drawn and its meta.json agree. A mistake of
-// the owner is told by settle, after the drawing, as without it.
+// DrawThemes is what a page drawn from a data file is drawn with: Theme over its data's theme: and Default under it
+// (drawproc.Job's), and Seen the theme the page there had, "" for a new one.
+type DrawThemes struct {
+	Theme, Default, Seen string
+}
+
+// Themes returns what a page drawn from the data file file of content src at slug is drawn with: of a page there,
+// drawTheme; of a new page, or one replacing another file's (checkOwner), --theme over its theme: and the theme for new
+// pages of settings.json under it. A link to HTML or a folder is drawn with no theme and does not call it. It looks at
+// meta.json without the lock, before the drawing: settle keeps what was drawn (Seed.Themes), so that the page drawn and
+// its meta.json agree, and refuses a page whose theme was picked since. A mistake of the owner is told by settle,
+// after the drawing, as without it.
 // LIMIT: a page there when it is read, but replaced by another publish before Save, is kept as replacing with the
 // theme it was drawn in; refuse it at Save if that comes to matter.
-// LIMIT: a theme picked between the look and Save is lost, the page kept in the one it was drawn in: pick it again.
-// Refuse it at Save as PickTheme does if that comes to matter.
 // LIMIT: a slug Save picks again (pickAgain: the file's page renamed, or the slug taken, meanwhile) is drawn in the
 // theme of the one looked at here, as the title of a page drawn before (publish.PrepareData). Publish again if that
 // shows.
-func (s *Store) Themes(slug string, o Owner, opts Options, file string, src []byte) (theme, def string, err error) {
+func (s *Store) Themes(slug string, o Owner, opts Options, file string, src []byte) (DrawThemes, error) {
 	prev := s.ReadMeta(slug)
 	replacing, _ := checkOwner(slug, prev, o, opts.Force) //nolint:errcheck // told by settle, as above
 	if prev != nil && !replacing {
-		return drawTheme(prev, opts.GivenTheme(), writtenTheme(file, src)), "", nil
+		return DrawThemes{Theme: drawTheme(prev, opts.GivenTheme(), writtenTheme(file, src)), Default: "", Seen: prev.Theme}, nil
 	}
 	set, err := s.ReadSettings()
-	return opts.GivenTheme(), set.Theme, err
+	return DrawThemes{Theme: opts.GivenTheme(), Default: set.Theme, Seen: ""}, err
 }
 
 // projectOf is the project of a page published from project: the one it was in, unless it is new, replaces another
