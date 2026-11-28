@@ -72,6 +72,10 @@ var partsInDocs = Rule{Name: "parts-in-docs", Allow: []Allow{
 	{"--tabs-title", "tabs makes it on its root from a face's text colour"},
 	{"--tabs-ring", "tabs makes it on its root from a face's text colour"},
 	{"--tabs-print", "tabs makes it on its root from a face's text colour"},
+	{"--links-title", "links makes it on its root from a face's text colour, as tabs' --tabs-title"},
+	{"--links-to", "links makes it on its root from a face's text colour, as --links-title"},
+	{"--links-words", "links makes it on its root from a face's text colour, as --links-title"},
+	{"--links-line", "links makes it on its root from a face's text colour, as --links-title"},
 	{"--tabs-gap", "the gap between tabs' titles, which the panel's margin takes off --floe-room (tabs/part.css's LIMIT)"},
 }, Check: func(in *Input) []Finding {
 	var found []Finding

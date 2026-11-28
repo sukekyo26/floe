@@ -97,8 +97,8 @@ Set a part's variable on the root `:scope` of the theme's file of that part, or 
 
 | Variable | Set in | What it changes | Default |
 |---|---|---|---|
-| `--floe-mark` | The file of the part or look that draws the row | The size of a row's marker, its frame within | note `1.6rem`, numbered `2rem`, links `1lh`, marked `1.15rem`, timeline `0.7rem`, cards `1.75rem` (a card's number, on :scope.numbered) |
-| `--floe-mark-gap` | The same file | The gap between a row's marker and its text | note `0.85rem`, numbered `1rem`, links `0.25rem`, marked `0.3rem`, checklist `0.65rem`, timeline `0.65rem` |
+| `--floe-mark` | The file of the part or look that draws the row | The size of a row's marker, its frame within | note `1.6rem`, numbered `2rem`, marked `1.15rem`, timeline `0.7rem`, cards `1.75rem` (a card's number, on :scope.numbered) |
+| `--floe-mark-gap` | The same file | The gap between a row's marker and its text | note `0.85rem`, numbered `1rem`, marked `0.3rem`, checklist `0.65rem`, timeline `0.65rem` |
 | `--cards-gap` | `cards.css` | The space between what a card holds | `0.4rem` |
 | `--checks-gap` | `checks.css` | The space between what an item of `checks` holds | `0.35rem` |
 | `--entries-row-gap` | `entries.css` | The space between the lines of an entry's title and tags | `0.2rem` |
@@ -142,9 +142,9 @@ Each item gives the action, then the reason in parentheses.
 - Leave the space between parts to `--floe-room` (floe sets it on `:root`; a `gap` on the root of `cards.css` or `tabs.css` changes it).
 - Do not write a word in a `content` string; use symbols (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 
-### Rows: note, numbered, timeline, links, marked
+### Rows: note, numbered, timeline, marked
 
-- Size a row's marker (the symbol of a note, the ring of numbered, the dot of timeline, the sign of links, the letters of `marked`, which `checklist` takes) with `--floe-mark` and `--floe-mark-gap`, and hide it with `content: none` (its column then takes no space).
+- Size a row's marker (the symbol of a note, the ring of numbered, the dot of timeline, the letters of `marked`, which `checklist` takes) with `--floe-mark` and `--floe-mark-gap`, and hide it with `content: none` (its column then takes no space).
 - Do not set `display`, `gap` or `grid-template` on a row with a marker in the file of a part (`timeline.css`): floe lays the marker out in the layer `floe.marks`, under that file, so the rule wins over it without a word. In the file of a look (`marked.css`, on an element that is not a part's box, such as the `<ul>` of a template) the same rule loses to `floe.marks` and changes nothing.
 
 ### cards
