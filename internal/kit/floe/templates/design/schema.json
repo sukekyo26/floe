@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "design",
+  "description": "A design spec for the people who build the screens: the goal and its users, the flow between the screens, each screen's images on a computer and a phone with what it is for, its states and notes, then the design rules (colours and type), components, the words on the screens, accessibility and open questions. Point at the design files by related, and keep exports of the screens here.",
+  "type": "object",
+  "properties": {
+    "status": { "type": "string", "minLength": 1, "description": "Where it stands, such as Draft or In review, beside the title" },
+    "owner": { "type": "string", "minLength": 1, "description": "Who wrote it or owns it" },
+    "date": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1, "description": "A sentence or two under the title; a line of Markdown" },
+    "related": { "$ref": "floe:///parts/links.json", "description": "The design files and the documents it meets, such as the prd and the tech-spec" },
+    "goal": { "type": "string", "minLength": 1, "format": "markdown", "description": "What the screens are to let someone do" },
+    "users": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "who": { "type": "string", "minLength": 1 },
+          "need": { "type": "string", "minLength": 1, "description": "What they want from the screens; a line of Markdown" }
+        },
+        "required": ["who", "need"],
+        "additionalProperties": false
+      }
+    },
+    "flow": {
+      "type": "array", "minItems": 1,
+      "description": "How someone goes from screen to screen, drawn as written",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": { "type": "string", "minLength": 1, "description": "A screen's name" },
+          "action": { "type": "string", "minLength": 1, "description": "What they do; a line of Markdown" },
+          "to": { "type": "string", "minLength": 1, "description": "A screen's name" }
+        },
+        "required": ["from", "action", "to"],
+        "additionalProperties": false
+      }
+    },
+    "screens": {
+      "type": "array", "minItems": 1,
+      "description": "Each screen in a section of its own, its images large beside or over what it is for, its notes and its states",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "pc": { "type": "string", "format": "image", "description": "The screen on a computer, wide; an export of the design file" },
+          "phone": { "type": "string", "format": "image", "description": "The screen on a phone, narrow; an export of the design file" },
+          "text": { "type": "string", "minLength": 1, "description": "What the screen is for, and where it is reached from; a line of Markdown" },
+          "notes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "A rule of the screen, numbered in red; a line of Markdown" } },
+          "states": {
+            "type": "array", "minItems": 1,
+            "description": "The screen in other states, such as a mistake or an ended link, each a small card",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "image": { "type": "string", "format": "image" },
+                "text": { "type": "string", "minLength": 1, "description": "A line of Markdown" }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["name"],
+        "anyOf": [{ "required": ["pc"] }, { "required": ["phone"] }],
+        "additionalProperties": false
+      }
+    },
+    "colors": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "value": { "type": "string", "pattern": "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$", "description": "#RGB, #RGBA, #RRGGBB or #RRGGBBAA, drawn as a tile" },
+          "use": { "type": "string", "minLength": 1, "description": "Where it is used; a line of Markdown" }
+        },
+        "required": ["name", "value"],
+        "additionalProperties": false
+      }
+    },
+    "type": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "size": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?px$", "description": "Such as 24px; a sample is drawn at it" },
+          "weight": { "enum": [400, 700], "description": "400 when left out" },
+          "use": { "type": "string", "minLength": 1, "description": "Where it is used; a line of Markdown" }
+        },
+        "required": ["name", "size"],
+        "additionalProperties": false
+      }
+    },
+    "components": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "text": { "type": "string", "minLength": 1, "description": "How it looks and behaves; a line of Markdown" }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    "copy": {
+      "type": "array", "minItems": 1,
+      "description": "The words on the screens, each quoted as written",
+      "items": {
+        "type": "object",
+        "properties": {
+          "where": { "type": "string", "minLength": 1, "description": "Where it is shown, such as a screen and its button" },
+          "text": { "type": "string", "minLength": 1 }
+        },
+        "required": ["where", "text"],
+        "additionalProperties": false
+      }
+    },
+    "accessibility": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" } },
+    "open": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+          "by": { "type": "string", "minLength": 1, "description": "Who answers it" }
+        },
+        "required": ["question"],
+        "additionalProperties": false
+      }
+    },
+    "more": {
+      "type": "array", "minItems": 1,
+      "description": "Sections of your own after the rest, each a heading over parts",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": { "type": "string", "minLength": 1 },
+          "parts": { "type": "array", "items": { "$ref": "floe:///parts/any.json" } }
+        },
+        "required": ["heading"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["goal", "screens"],
+  "additionalProperties": false
+}

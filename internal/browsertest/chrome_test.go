@@ -501,8 +501,28 @@ type site struct {
 func newSite(t *testing.T) *site {
 	t.Helper()
 
-	s := servetest.Start(t, nil)
-	return &site{Site: s, b: newBrowser(t, s.Base, i18n.English)}
+	s := &site{Site: servetest.Start(t, nil), b: nil}
+	s.b = newBrowser(t, s.Base, i18n.English)
+	s.exampleImages(t)
+	return s
+}
+
+// exampleImages writes the images of floe's templates' assets/ to assets/ under home, where a template's example
+// written to home finds the images it names.
+func (s *site) exampleImages(t *testing.T) {
+	t.Helper()
+
+	found, err := filepath.Glob(filepath.Join("..", "kit", "floe", "templates", "*", "assets", "*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range found {
+		b, err := os.ReadFile(file) //nolint:gosec // G304: floe's own assets
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.write(t, "assets/"+filepath.Base(file), string(b))
+	}
 }
 
 // write writes text to rel under home and returns its path.

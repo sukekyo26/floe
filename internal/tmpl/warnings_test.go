@@ -66,7 +66,7 @@ func TestFloeExamplesWarnNot(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, warnings, err := tmpl.Draw(k, name+"/example.yaml", tp.Example(), none); err != nil || warnings != nil {
+		if _, warnings, err := tmpl.Draw(k, name+"/example.yaml", tp.Example(), tmpl.Options{Theme: "", Untitled: "", Images: exampleImages(t, name), ImagesDir: ""}); err != nil || warnings != nil {
 			t.Errorf("%s: %s\n%s", name, laid(warnings), told(err))
 		}
 	}

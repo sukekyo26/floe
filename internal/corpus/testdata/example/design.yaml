@@ -1,0 +1,77 @@
+# A design spec: the goal and the screens are what it needs. Each screen holds its image on a computer (pc), on a
+# phone (phone) or both, exported from the design file, which related points at. The other sections are drawn only
+# when written; sections of your own go in more.
+template: design
+lang: en
+title: 'Password reset screens'
+status: 'In review'
+owner: 'Design team'
+date: 2030-05-22
+summary: 'Three screens: enter the email, learn that it was sent, choose a new password. Never in doubt, and never telling whether an email is registered.'
+related:
+  - { title: 'Design file: password reset', url: 'design/password-reset.fig', text: 'Where the screens are drawn' }
+  - { title: 'Requirements: password reset', url: 'docs/password-reset-prd.html' }
+  - { title: 'Tech spec: reset links and tokens', url: '/a/password-reset-spec/' }
+goal: |
+  A member who forgot their password signs back in **within a minute, on a phone too**. Every screen shows one thing to
+  do next.
+users:
+  - { who: 'Member', need: 'Cannot sign in and is in a hurry: short words and a large button, straight to the next step' }
+  - { who: 'Support agent', need: 'Points a member to "this button on this screen", and checks how a reset went' }
+flow:
+  - { from: 'Enter the email', action: 'Press **Send the link**', to: 'Learn it was sent' }
+  - { from: 'Learn it was sent', action: 'Open the link in the email', to: 'Choose a new password' }
+screens:
+  - name: 'Enter the email'
+    pc: assets/forgot-pc.svg
+    phone: assets/forgot.svg
+    text: 'Reached by **Forgot your password?** on the sign-in screen'
+    notes:
+      - 'One field only. The button works before anything is entered (empty, it shows a mistake under the field)'
+      - '**Back to sign in** is a text link, never beside the button'
+  - name: 'Learn it was sent'
+    phone: assets/sent.svg
+    text: 'Shown every time, whether the email is registered or not'
+    notes:
+      - 'The email address is not shown, so that no one learns whether it is registered'
+      - '**No email?** points to the spam folder and to sending again'
+  - name: 'Choose a new password'
+    phone: assets/new.svg
+    text: 'Opened by the link in the email'
+    states:
+      - { name: 'The two differ', image: assets/mismatch.svg, text: 'The second field turns red, with how to fix it under it' }
+      - { name: 'The link has ended', image: assets/expired.svg, text: 'After 30 minutes or once used: only a button to send another' }
+    notes:
+      - 'The strength bar grows with each letter. The button works before it reads good, and shows a mistake if pressed'
+  - name: 'Password resets (support)'
+    pc: assets/history.svg
+    text: 'Support''s console on a computer: find a member by email and see how each reset went'
+    notes:
+      - 'Each result is a coloured tag, written in words as well as colour'
+      - 'Device and place are shown only when the link was used'
+colors:
+  - { name: 'Accent', value: '#1d6670', use: 'Buttons and links' }
+  - { name: 'Good', value: '#1d7542', use: 'The strength bar at good' }
+  - { name: 'Warning', value: '#8a5a10', use: 'The mark of an ended link' }
+  - { name: 'Mistake', value: '#b3261e', use: 'A field in a mistake' }
+  - { name: 'Ground', value: '#f4f3f0', use: 'The screens'' ground' }
+type:
+  - { name: 'Screen title', size: '24px', weight: 700, use: 'One on each screen' }
+  - { name: 'Body', size: '16px' }
+  - { name: 'Field label and mistake', size: '13px' }
+components:
+  - { name: 'Field', text: 'Its label over it, a mistake under it; red frame in a mistake' }
+  - { name: 'Main button', text: 'One on a screen, 52px tall' }
+  - { name: 'Strength bar', text: 'Three steps: weak, fair, good' }
+copy:
+  - { where: 'Enter the email: title', text: 'Forgot your password?' }
+  - { where: 'Enter the email: button', text: 'Send the link' }
+  - { where: 'Learn it was sent: title', text: 'Check your email' }
+  - { where: 'Learn it was sent: body', text: 'We sent a link to choose a new password to your registered email. Open it within 30 minutes.' }
+  - { where: 'The link has ended: title', text: 'This link has ended' }
+accessibility:
+  - 'Text on buttons and fields is 4.5:1 or more against its ground'
+  - 'A mistake is told in words as well as colour, tied to its field by `aria-describedby`'
+  - 'Password fields can be filled by a password manager (`autocomplete="new-password"`)'
+open:
+  - { question: 'What sets the steps of the strength bar: the length or how hard it is to guess?', by: 'Tech spec team' }
