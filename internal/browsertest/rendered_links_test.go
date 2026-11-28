@@ -34,7 +34,7 @@ var linksTo = []string{"example.com", "docs", "example.com", "example.com", "exa
 
 // measureLinks returns a line for each thing the frames draw wrong: the list or a frame past the page or the list, a
 // frame with a ground or a shadow (a button's), or without its frame, its destination, its title underlined and, on
-// one line, in the middle of the frame or, for one that leaves floe, its ↗; words not beside their frame; the first two frames not side by side on a wide page; or
+// one line, cut to its letters and in the middle of the frame or, for one that leaves floe, its ↗; words not beside their frame; the first two frames not side by side on a wide page; or
 // a link's reach not its frame.
 const measureLinks = `(() => {
   const out = [], list = document.querySelector('[data-floe-part=links]'), rows = [...list.children];
@@ -52,6 +52,7 @@ const measureLinks = `(() => {
     if (title && !title.getClientRects()[1]) {
       const t = title.getBoundingClientRect(), edge = parseFloat(c.borderTopWidth), above = t.top - f.top - edge, below = f.bottom - edge - t.bottom;
       if (Math.abs(above - below) > 1) out.push('row ' + i + ': the title ' + above + ' below the frame\'s top, ' + below + ' above its bottom');
+      if (t.height > 0.85 * parseFloat(getComputedStyle(title).fontSize)) out.push('row ' + i + ': the title ' + t.height + ' tall, not cut to its letters (a line box holds them low)');
     }
     if (a.getAttribute('href').startsWith('http') && !a.querySelector('.out')) out.push('row ' + i + ': no ↗ out of floe');
     const reach = document.createRange();
