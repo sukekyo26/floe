@@ -357,3 +357,29 @@ func TestCodeOfRefuses(t *testing.T) {
 		}
 	}
 }
+
+// A link goes out of floe when its URL names a scheme or a host, and only a pull request of github.com is named for
+// itself; a URL that cannot be read is a path of floe's, as its href is drawn as written.
+func TestLinkTo(t *testing.T) {
+	t.Parallel()
+
+	for url, want := range map[string]linkPlace{
+		"/a/tspec-reset/":                                {Kind: "here", Name: ""},
+		"docs/release-checklist.html":                    {Kind: "here", Name: ""},
+		"%zz":                                            {Kind: "here", Name: ""},
+		"https://github.com/acme/web/pull/412":           {Kind: "web", Name: "PR #412"},
+		"https://GitHub.com/acme/web/pull/412/files":     {Kind: "web", Name: "PR #412"},
+		"https://github.com/acme/web/pull/new":           {Kind: "web", Name: "github.com"},
+		"https://github.com/acme/web/issues/77":          {Kind: "web", Name: "github.com"},
+		"https://gitlab.example.com/acme/web/pull/412":   {Kind: "web", Name: "gitlab.example.com"},
+		"https://cheatsheetseries.owasp.org/cheatsheets": {Kind: "web", Name: "cheatsheetseries.owasp.org"},
+		"https://wiki.example.com:8080/":                 {Kind: "web", Name: "wiki.example.com"},
+		"//cdn.example.com/x":                            {Kind: "web", Name: "cdn.example.com"},
+		"https:/x":                                       {Kind: "web", Name: "https"},
+		"mailto:support@example.com":                     {Kind: "mail", Name: ""},
+	} {
+		if got := linkTo(url); got != want {
+			t.Errorf("linkTo(%q) = %+v, want %+v", url, got, want)
+		}
+	}
+}
