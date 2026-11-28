@@ -1,2 +1,8 @@
-/* Scraps of a handwritten notebook: ruled paper, marker strokes for states, sticky notes for cards and
-   frames drawn round by hand, in a rounded face */
+/* A section's head is highlighted: a broad orange marker stroke under the lower 65% of its words. A head in a band is
+   plain, a band's words in its face's colour; a subsection's head takes a thinner yellow stroke */
+section > h2 {
+  width: fit-content; max-width: 100%; padding: 0 0.4rem; color: var(--on-face, var(--fg));
+  background: linear-gradient(transparent 35%, var(--nb-marker) 35%);
+}
+[data-floe-look~=band] section > h2 { background: none; color: inherit; }
+section > h3 { color: var(--on-face, var(--fg)); background: linear-gradient(transparent 70%, var(--nb-yellow) 70%) left / fit-content no-repeat; }

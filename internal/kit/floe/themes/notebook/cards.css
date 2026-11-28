@@ -1,14 +1,3 @@
-/* The panel of a card, on plain paper */
-.card { position: relative; background: var(--surface); }
-:scope.numbered > .card::before { content: none; }
-/* Options are sticky notes, each held by a strip of tape over its top, within a card's padding (defaults.css's two variables) */
-:scope.numbered > .card {
-  border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face);
-  --floe-shadow-color: var(--nb-stick-shadow);
-}
-:scope.numbered > .card:nth-child(3n + 2) { --face: var(--nb-stick-2); }
-:scope.numbered > .card:nth-child(3n) { --face: var(--nb-stick-3); }
-:scope.numbered > .card::before {
-  content: ""; position: absolute; top: -8px; left: 50%; width: 84px; height: 22px; margin-left: -42px;
-  background: var(--nb-tape);
-}
+/* Options: numbered sheets, the number circled in marker */
+:scope.numbered > .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); --floe-shadow-color: var(--shadow); }
+:scope.numbered > .card::before { background: var(--nb-marker); border-radius: var(--nb-round); color: var(--fg); font-weight: 800; }
