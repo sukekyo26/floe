@@ -481,7 +481,6 @@ var messagesJA = map[string]string{
 	// The descriptions of floe's themes the management page shows
 	"theme_about_app":          "アプリの画面：青みがかった灰色の背景、やわらかい影で浮いた白いカード、ラズベリー色の差し色",
 	"theme_about_aurora":       "すりガラス越しの夜明けの空：紫の濃淡のにじみ、くもった白の面、すみれ色の差し色と細い光の線",
-	"theme_about_blueprint":    "方眼紙に青いインク、セクションの区切り線もそのインク",
 	"theme_about_cyber":        "夜の街の端末：ガンメタルの地、虹の縁と切り落とした角のホログラムの箱、緑と黄の光",
 	"theme_about_default":      "floe 標準のテーマで、どのテーマもこれを元にする：暖かみのある灰色の背景、細い枠の白い面、青緑の差し色",
 	"theme_about_editorial":    "墨と黄の雑誌：節は黄の帯から始まり、カードと数の上に短い黄の罫、数は大きく太い字",

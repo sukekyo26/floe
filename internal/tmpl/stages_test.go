@@ -136,7 +136,7 @@ func TestNames(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
-	themes := "app, aurora, blueprint, cyber, default, editorial, ink, notebook, pebble, retro, soft, swiss, washi"
+	themes := "app, aurora, cyber, default, editorial, ink, notebook, pebble, retro, soft, swiss, washi"
 	for _, tt := range []struct {
 		name, data string
 		o          tmpl.Options

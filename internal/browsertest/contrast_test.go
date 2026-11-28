@@ -57,7 +57,7 @@ const colours = `
 // background colours of the element and those around it laid one over another on the root's, each faded by
 // the opacity over it, as the text is. It tells a line for each below 4.5:1, 3:1 for large text (24px,
 // or 18.66px bold), as WCAG AA asks.
-// LIMIT: a ground of an image or a gradient (blueprint's squares, aurora's wash) counts as the colour under it, the
+// LIMIT: a ground of an image or a gradient (notebook's rules, aurora's wash) counts as the colour under it, the
 // ground is that of the elements around in the document, not of one positioned under the text, an opacity fades
 // each ground on its own rather than the group, and a diagram's text, in SVG, is not measured. aurora's text on its
 // wash and its glass is so measured on --bg alone: its palette was worked out by hand on the darkest colour of the

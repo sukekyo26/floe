@@ -1,4 +1,4 @@
-$ floe check app.yaml aurora.yaml blueprint.yaml cyber.yaml default.yaml editorial.yaml ink.yaml notebook.yaml pebble.yaml retro-adr.yaml retro.yaml soft.yaml swiss.yaml washi.yaml
+$ floe check app.yaml aurora.yaml cyber.yaml default.yaml editorial.yaml ink.yaml notebook.yaml pebble.yaml retro-adr.yaml retro.yaml soft.yaml swiss.yaml washi.yaml
 exit 0
 $ floe render --out-dir $TMP/pages/app.yaml app.yaml
 exit 0
@@ -8,10 +8,6 @@ $ floe render --out-dir $TMP/pages/aurora.yaml aurora.yaml
 exit 0
 --- stdout
 $TMP/pages/aurora.yaml/aurora.html
-$ floe render --out-dir $TMP/pages/blueprint.yaml blueprint.yaml
-exit 0
---- stdout
-$TMP/pages/blueprint.yaml/blueprint.html
 $ floe render --out-dir $TMP/pages/cyber.yaml cyber.yaml
 exit 0
 --- stdout
@@ -56,12 +52,11 @@ $ floe render --out-dir $TMP/pages/washi.yaml washi.yaml
 exit 0
 --- stdout
 $TMP/pages/washi.yaml/washi.html
-$ floe render --out-dir $TMP/together app.yaml aurora.yaml blueprint.yaml cyber.yaml default.yaml editorial.yaml ink.yaml notebook.yaml pebble.yaml retro-adr.yaml retro.yaml soft.yaml swiss.yaml washi.yaml
+$ floe render --out-dir $TMP/together app.yaml aurora.yaml cyber.yaml default.yaml editorial.yaml ink.yaml notebook.yaml pebble.yaml retro-adr.yaml retro.yaml soft.yaml swiss.yaml washi.yaml
 exit 0
 --- stdout
 $TMP/together/app.html
 $TMP/together/aurora.html
-$TMP/together/blueprint.html
 $TMP/together/cyber.html
 $TMP/together/default.html
 $TMP/together/editorial.html
