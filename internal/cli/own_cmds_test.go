@@ -230,7 +230,7 @@ func TestListShow(t *testing.T) {
 		}
 		return strings.TrimSuffix(string(b), "\n")
 	}
-	allThemes := "app, aurora, blueprint, brutal, cyber, default, editorial, empty, ink, mine, notebook, pebble, retro, soft, swiss, washi"
+	allThemes := "app, aurora, blueprint, cyber, default, editorial, empty, ink, mine, notebook, pebble, retro, soft, swiss, washi"
 	for _, tt := range []struct {
 		args []string
 		code int
@@ -295,7 +295,7 @@ func TestListShow(t *testing.T) {
 		{[]string{"theme", "show", "mine", "code.css"}, 0, func(out string) bool { return out == ":scope { color: red; }\n" }, ""},
 		{[]string{"theme", "show", "empty"}, 0, func(out string) bool { return out == "empty\nwhere: "+filepath.Join(themes, "empty")+"\n" }, ""},
 		{[]string{"theme", "show", "empty", "x.css"}, 1, func(out string) bool { return out == "" }, `floe: empty has no file "x.css" (its files: )` + "\n"},
-		{[]string{"theme", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: there is no theme "nope"; use ` + allThemes + "\n"},
+		{[]string{"theme", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown theme "nope"; use ` + allThemes + "\n"},
 	} {
 		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
 			t.Parallel()

@@ -35,7 +35,7 @@ func TestAPISettings(t *testing.T) {
 		t.Fatal(err)
 	}
 	theme := func(name string) store.SettingsEdit { return store.SettingsEdit{Theme: &name, TaskMode: nil} }
-	want(t, e.write(t, http.MethodPut, "/api/settings", theme("nope")), http.StatusBadRequest, `there is no theme \"nope\"; use app, aurora,`)
+	want(t, e.write(t, http.MethodPut, "/api/settings", theme("nope")), http.StatusBadRequest, `there is no theme \"nope\" (from the page`)
 	want(t, e.write(t, http.MethodPut, "/api/settings", theme("")), http.StatusBadRequest, `there is no theme \"\"`)
 	// Nothing to change changes nothing
 	want(t, e.do(t, http.MethodPut, "/api/settings", `{}`, "Origin", origin, "Content-Type", "application/json"), http.StatusOK, `{}`)
@@ -66,7 +66,7 @@ func TestAPIPickTheme(t *testing.T) {
 	e := newEnv(t)
 	want(t, e.publish(t, "d", report, nil), http.StatusCreated, `"slug":"d"`)
 	const path = "/api/pages/d/theme"
-	want(t, e.write(t, http.MethodPut, path, server.ThemePick{Theme: "nope"}), http.StatusBadRequest, `there is no theme \"nope\"; use app, aurora,`)
+	want(t, e.write(t, http.MethodPut, path, server.ThemePick{Theme: "nope"}), http.StatusBadRequest, `there is no theme \"nope\" (from the page`)
 	unknown := e.do(t, http.MethodPut, path, `{"theme": "ink", "x": 1}`, "Origin", origin, "Content-Type", "application/json")
 	want(t, unknown, http.StatusBadRequest, `unknown object member name "x"`)
 	want(t, e.write(t, http.MethodPut, "/api/pages/none/theme", server.ThemePick{Theme: "ink"}), http.StatusNotFound, "not found")

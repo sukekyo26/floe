@@ -7,7 +7,7 @@ import (
 )
 
 // nestingPage draws a card of stats and the cards HTML nests so: in cards, in a panel, in an element of an empty
-// look, in an element that takes cards and the panel, and in a part's box that takes cards. In brutal, a note and a
+// look, in an element that takes cards and the panel, and in a part's box that takes cards. In app, a note and a
 // code in a note's box, and in the stacks of details and tabs; and Markdown's h4 and hr in a note and in details,
 // a part of one's own whose box is a <figure> with no margins of its own, in a note's box; and an item of entries that
 // holds parts, and one of parts alone.

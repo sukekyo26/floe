@@ -222,7 +222,7 @@ func TestOwnTheme(t *testing.T) {
 	}
 	publish(t, s, dw, "created.yaml", report(""), nil, store.Options{})
 	publish(t, s, dw, "both.yaml", report("washi"), nil, store.Options{})
-	if err := s.PickTheme(t.Context(), dw, "data", "brutal"); err != nil {
+	if err := s.PickTheme(t.Context(), dw, "data", "soft"); err != nil {
 		t.Fatal(told(err, root))
 	}
 	home := filepath.Dir(root)

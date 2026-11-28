@@ -235,7 +235,8 @@ func TestPublishCreatedTheme(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
-	if got := told(err, root); !strings.HasPrefix(got, `floe: there is no theme "gone"; use app, aurora,`) {
+	// The mistake names where a page's theme comes from, the default set on the management page among them
+	if got := told(err, root); keyOf(err) != "tmpl_unknown_theme" || !strings.Contains(got, "default theme set on the management page") {
 		t.Errorf("a new page in a default gone: told %s", got)
 	}
 	publish(t, s, dw, "d.yaml", report("washi"), nil, store.Options{})
