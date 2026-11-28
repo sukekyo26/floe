@@ -120,7 +120,7 @@ const measureContrastAt = `(() => {` + contrastBody + `return JSON.stringify({ s
 // focus draws no ring, on it or around it. The page's tab must have the focus (SetFocusEmulationEnabled) for a focus to
 // be :focus-visible.
 // LIMIT: a ring 2px wide over two grounds is measured on the one under the middle of its line (the edge of the
-// border 3px wide under brutal's heading of code is not), and one low at fewer than half its points passes. The round
+// border 3px wide under a heading of code is not), and one low at fewer than half its points passes. The round
 // corners of a box clipping a ring are not seen, nor a scrollbar under a ring, which the test's Chrome hides. A box
 // with overflow counts as clipping what is in it though it is not the containing block of one placed absolutely, and an
 // outline an element draws without the focus (washi's .card) counts as its ring.

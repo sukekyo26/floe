@@ -147,7 +147,7 @@ var messagesEN = map[string]string{
 	// tmpl: the template and the theme a data file names
 	"tmpl_no_template":   "name the template at the top level, like template: report (templates: %s)",
 	"tmpl_unknown":       `unknown template "%s"; use %s`,
-	"tmpl_unknown_theme": `there is no theme "%s"; use %s`,
+	"tmpl_unknown_theme": `there is no theme "%s" (from the page's theme:, --theme, the theme picked for the page or the default theme set on the management page); use %s`,
 
 	// draw: the page drawn
 	"draw_select_text":  "the page drawn from this file has <%s> inside a <select>, which may hold no element whose content is read as text, nor svg or math: move it out of the <select>",
@@ -382,6 +382,7 @@ var messagesEN = map[string]string{
 	"cli_wants_spec":             "a diagram spec (.yaml)",
 	"cli_wants_spec_or_data":     "a diagram spec or a data file (.yaml)",
 	"cli_unknown_part":           `unknown part "%s"; use %s`,
+	"cli_unknown_theme":          `unknown theme "%s"; use %s`,
 	"cli_unknown_file":           `%s has no file "%s" (its files: %s)`,
 	"cli_new_exists":             "there is something of this name here already: pick another name, or remove it",
 	"cli_new_no_dir":             "there is no default directory, as %s is not an absolute path; set %s to an absolute path",
@@ -491,7 +492,6 @@ var messagesEN = map[string]string{
 	"theme_about_app":          "An app's screen: cool grey ground, white cards raised by soft shadows, a raspberry accent",
 	"theme_about_aurora":       "A dawn sky behind frosted glass: a wash of violets, surfaces of clouded white, a violet accent and fine lines of light",
 	"theme_about_blueprint":    "Blue ink on squared paper, its sections ruled in the ink",
-	"theme_about_brutal":       "Black on cream, flat primaries, its sections ruled thick",
 	"theme_about_cyber":        "A street terminal at night: a gunmetal ground, hologram boxes with a rainbow edge and cut corners, green and yellow light",
 	"theme_about_default":      "floe's own, which every theme starts from: a warm grey ground, white surfaces in thin frames, a teal accent",
 	"theme_about_editorial":    "A magazine in ink and yellow: sections open on yellow bands, a short yellow bar over cards and figures, large heavy figures",

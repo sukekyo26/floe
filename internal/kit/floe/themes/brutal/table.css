@@ -1,2 +1,0 @@
-:scope { --table-head-bg: var(--brutal-head-bg); --table-head-fg: var(--brutal-head-fg); --table-rule: 2px solid var(--fg); }
-:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); font-weight: 900; }

@@ -141,7 +141,7 @@ var messagesJA = map[string]string{
 	// tmpl: データファイルが指すテンプレートとテーマ
 	"tmpl_no_template":   "最上位に template: report のようにテンプレートを指定してください（テンプレート: %s）",
 	"tmpl_unknown":       "知らないテンプレート「%s」です。使えるのは %s です",
-	"tmpl_unknown_theme": "テーマ「%s」はありません。使えるのは %s です",
+	"tmpl_unknown_theme": "テーマ「%s」はありません（ページの theme:、--theme、管理ページでページに選んだテーマ、管理ページの設定の既定のテーマのどれかから来ています）。使えるのは %s です",
 
 	// draw: 描いたページ
 	"draw_select_text":  "このファイルを描いたページの <select> の中に <%s> があります。<select> の中には、中身を字として読む要素も svg・math も置けません。<select> の外へ出してください",
@@ -371,6 +371,7 @@ var messagesJA = map[string]string{
 	"cli_wants_spec":             "図の spec（.yaml）",
 	"cli_wants_spec_or_data":     "図の spec かデータファイル（.yaml）",
 	"cli_unknown_part":           `部品 "%s" はありません。%s から選んでください`,
+	"cli_unknown_theme":          `テーマ "%s" はありません。%s から選んでください`,
 	"cli_unknown_file":           `%s にファイル "%s" はありません（ファイル: %s）`,
 	"cli_new_exists":             "ここにはこの名前のものがもうあります。別の名前にするか、それを消してください",
 	"cli_new_no_dir":             "%s が絶対パスでないので、既定のディレクトリがありません。%s に絶対パスを設定してください",
@@ -480,7 +481,6 @@ var messagesJA = map[string]string{
 	"theme_about_app":          "アプリの画面：青みがかった灰色の背景、やわらかい影で浮いた白いカード、ラズベリー色の差し色",
 	"theme_about_aurora":       "すりガラス越しの夜明けの空：紫の濃淡のにじみ、くもった白の面、すみれ色の差し色と細い光の線",
 	"theme_about_blueprint":    "方眼紙に青いインク、セクションの区切り線もそのインク",
-	"theme_about_brutal":       "クリーム色に黒、平塗りの原色、セクションの区切り線は太い",
 	"theme_about_cyber":        "夜の街の端末：ガンメタルの地、虹の縁と切り落とした角のホログラムの箱、緑と黄の光",
 	"theme_about_default":      "floe 標準のテーマで、どのテーマもこれを元にする：暖かみのある灰色の背景、細い枠の白い面、青緑の差し色",
 	"theme_about_editorial":    "墨と黄の雑誌：節は黄の帯から始まり、カードと数の上に短い黄の罫、数は大きく太い字",
