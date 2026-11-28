@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "prd",
+  "description": "Product requirements: what is built, why, and how it is known to be done. The background, goals with their measures, the scope with its actors, functional and non-functional requirements by priority, each with the acceptance criteria that verify it, constraints, a glossary, open questions, and sections of your own. How it is built belongs to a tech-spec.",
+  "type": "object",
+  "properties": {
+    "status": { "type": "string", "minLength": 1, "description": "Where it stands, such as Draft or Agreed, over the title" },
+    "version": { "type": "string", "minLength": 1, "description": "The document's version, such as 0.3" },
+    "owner": { "type": "string", "minLength": 1, "description": "Who wrote it or owns it" },
+    "date": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1, "description": "A sentence or two under the title; a line of Markdown" },
+    "related": { "$ref": "floe:///parts/links.json", "description": "Documents it leads to or answers to, such as the tech-spec and the design that meet it" },
+    "background": { "type": "string", "minLength": 1, "format": "markdown", "description": "What is wrong today, and why it is worth building" },
+    "goals": {
+      "type": "array", "minItems": 1,
+      "description": "Under the title, each measure large over its goal",
+      "items": {
+        "type": "object",
+        "properties": {
+          "what": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+          "measure": { "type": "string", "minLength": 1, "description": "How it is measured, short, such as from 900 a month to 200; a line of Markdown" }
+        },
+        "required": ["what"],
+        "additionalProperties": false
+      }
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "in": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "What the system does; a line of Markdown" } },
+        "out": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "What it leaves out, though one might expect it; a line of Markdown" } }
+      },
+      "required": ["in", "out"],
+      "additionalProperties": false
+    },
+    "actors": {
+      "type": "array", "minItems": 1,
+      "description": "Who uses the system, drawn beside the scope",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1, "description": "What they do with it; a line of Markdown" }
+        },
+        "required": ["name", "role"],
+        "additionalProperties": false
+      }
+    },
+    "functional": {
+      "type": "array", "minItems": 1,
+      "description": "Each a card in the lane of its priority, its acceptance criteria under it",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^FR-[0-9]+$", "description": "FR-1, FR-2 and on, each once" },
+          "title": { "type": "string", "minLength": 1, "description": "What it lets someone do; a line of Markdown" },
+          "text": { "type": "string", "minLength": 1, "description": "More of it; a line of Markdown" },
+          "priority": { "enum": ["must", "should", "could"] },
+          "actor": { "type": "string", "minLength": 1, "description": "One of the actors' names" },
+          "acceptance": { "$ref": "#/$defs/acceptance" }
+        },
+        "required": ["id", "title", "priority"],
+        "additionalProperties": false
+      }
+    },
+    "nonfunctional": {
+      "type": "array", "minItems": 1,
+      "description": "Each a card in the lane of its priority, its acceptance criteria under it",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^NFR-[0-9]+$", "description": "NFR-1, NFR-2 and on, each once" },
+          "kind": { "enum": ["performance", "availability", "security", "usability", "operations", "compatibility"] },
+          "title": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+          "target": { "type": "string", "minLength": 1, "description": "The value to meet, short, such as p95 under 2 s" },
+          "priority": { "enum": ["must", "should", "could"] },
+          "acceptance": { "$ref": "#/$defs/acceptance" }
+        },
+        "required": ["id", "kind", "title", "priority"],
+        "additionalProperties": false
+      }
+    },
+    "constraints": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "What the work must keep to; a line of Markdown" } },
+    "glossary": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": { "type": "string", "minLength": 1 },
+          "meaning": { "type": "string", "minLength": 1, "description": "A line of Markdown" }
+        },
+        "required": ["term", "meaning"],
+        "additionalProperties": false
+      }
+    },
+    "open": {
+      "type": "array", "minItems": 1,
+      "description": "Questions not answered yet; the options are weighed in a tech-spec or a design",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+          "by": { "type": "string", "minLength": 1, "description": "Who answers it" }
+        },
+        "required": ["question"],
+        "additionalProperties": false
+      }
+    },
+    "more": {
+      "type": "array", "minItems": 1,
+      "description": "Sections of your own after the rest, each a heading over parts",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": { "type": "string", "minLength": 1 },
+          "parts": { "type": "array", "items": { "$ref": "floe:///parts/any.json" } }
+        },
+        "required": ["heading"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["background", "goals", "scope", "actors", "functional"],
+  "additionalProperties": false,
+  "$defs": {
+    "acceptance": {
+      "type": "array", "minItems": 1,
+      "description": "The acceptance criteria that verify the requirement, numbered AC1, AC2 and on under it; one that verifies two requirements is written under both. A requirement without them is marked so",
+      "items": {
+        "type": "object",
+        "properties": {
+          "given": { "type": "string", "minLength": 1, "description": "What holds before; a line of Markdown" },
+          "when": { "type": "string", "minLength": 1, "description": "What someone does; a line of Markdown" },
+          "then": { "type": "string", "minLength": 1, "description": "What is expected to come of it; a line of Markdown" }
+        },
+        "required": ["when", "then"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

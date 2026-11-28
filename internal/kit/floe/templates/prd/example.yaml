@@ -1,0 +1,113 @@
+# Product requirements: what is built, why, and how it is known to be done. Each requirement holds the acceptance
+# criteria that verify it; one that verifies two requirements is written under both. How it is built belongs to a
+# tech-spec. The optional sections are drawn only when written; sections of your own go in more.
+template: prd
+lang: en
+title: 'Password reset'
+status: 'In review'
+version: '0.3'
+owner: 'Accounts team'
+date: 2030-05-14
+summary: 'Members who forget their password sign back in by a link in an email, without asking support.'
+related:
+  - { title: 'Tech spec: reset links and tokens', url: 'docs/password-reset-spec.html', text: 'How it is built' }
+  - { title: 'Design: the reset screens', url: '/a/password-reset-design/', text: 'Screens and wording' }
+background: |
+  Today a member who forgets their password can only **ask support**. Support checks who they are and sends a
+  temporary password, which takes a day on average.
+
+  Last month 30% of support requests, about 900, were this, and some members stopped using the service meanwhile.
+goals:
+  - { what: 'Fewer support requests about forgotten passwords', measure: '900 a month → under 200' }
+  - { what: 'Members back in sooner', measure: '1 day → under 10 min' }
+scope:
+  in:
+    - 'Starting a reset from the sign-in screen'
+    - 'An email with a link that works once'
+    - 'A screen to choose a new password'
+    - 'A notice that the password changed'
+    - 'Support''s history of resets'
+  out:
+    - 'Checking who someone is by SMS or phone'
+    - 'Changing the registered email'
+    - 'Signing in without a password, such as passkeys'
+actors:
+  - { name: 'Member', role: 'Forgets their password and signs back in by themselves' }
+  - { name: 'Support agent', role: 'Points members to the reset and checks its history' }
+  - { name: 'Operator', role: 'Watches the number of resets and signs of abuse' }
+functional:
+  - id: FR-1
+    title: 'Start a reset from the sign-in screen'
+    priority: must
+    actor: 'Member'
+    acceptance:
+      - { given: 'A member who cannot sign in', when: 'they enter their registered email and send it', then: 'an email with a reset link arrives within 5 minutes' }
+  - id: FR-2
+    title: 'Send a link that works once to the registered email'
+    priority: must
+    actor: 'Member'
+    acceptance:
+      - { given: 'A member who cannot sign in', when: 'they enter their registered email and send it', then: 'an email with a reset link arrives within 5 minutes' }
+      - { when: 'someone enters an email that is not registered', then: 'the screen shows the **same** words as for a registered one, and no email is sent' }
+  - id: FR-3
+    title: 'Choose a new password from the link and stay signed in'
+    text: 'Sessions on other devices end'
+    priority: must
+    actor: 'Member'
+    acceptance:
+      - { given: 'A member signed in on another device too', when: 'they choose a new password from the link', then: 'they are signed in, and the other session ends' }
+  - id: FR-4
+    title: 'Tell the member by email that the password changed'
+    priority: should
+    actor: 'Member'
+    acceptance:
+      - { when: 'a member changes their password', then: 'a notice arrives at their email' }
+  - { id: FR-5, title: 'See a member''s history of resets', priority: should, actor: 'Support agent' }
+  - { id: FR-6, title: 'See the number of resets by month', priority: could, actor: 'Operator' }
+nonfunctional:
+  - id: NFR-1
+    kind: performance
+    title: 'The email arrives soon after it is sent'
+    target: 'under 5 min'
+    priority: must
+    acceptance:
+      - { given: 'A member who cannot sign in', when: 'they enter their registered email and send it', then: 'an email with a reset link arrives within 5 minutes' }
+  - id: NFR-2
+    kind: security
+    title: 'A link ends soon and works once'
+    target: '30 min, once'
+    priority: must
+    acceptance:
+      - { given: 'A member with a reset link', when: 'they open it a second time, or 31 minutes after it was sent', then: 'the screen says the link has ended and offers to send another' }
+  - id: NFR-3
+    kind: security
+    title: 'The screens never tell whether an email is registered'
+    priority: must
+    acceptance:
+      - { when: 'someone enters an email that is not registered', then: 'the screen shows the **same** words as for a registered one, and no email is sent' }
+  - id: NFR-4
+    kind: availability
+    title: 'Works at night too'
+    target: '99.9% a month'
+    priority: should
+  - id: NFR-5
+    kind: usability
+    title: 'Every step works on a phone'
+    target: '360px wide'
+    priority: should
+    acceptance:
+      - { when: 'a member goes through every step on a phone 360px wide', then: 'nothing scrolls sideways' }
+constraints:
+  - 'Emails go out through the mail provider in use today'
+  - 'Members'' data stays in today''s database'
+  - 'It ships in the release at the end of June'
+glossary:
+  - { term: 'Reset link', meaning: 'The link in the email to a screen that sets a new password, good for one use' }
+  - { term: 'Notice', meaning: 'The email that tells a member their password changed, with the time and the device' }
+open:
+  - { question: 'May members with two-step sign-in reset by the email link alone?', by: 'Security team' }
+  - { question: 'How long is the history of resets (FR-5) kept?', by: 'Support lead' }
+more:
+  - heading: 'Release plan'
+    parts:
+      - text: 'It goes to 5% of members first, then to everyone after a week without a rise in support requests.'

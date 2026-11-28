@@ -1,0 +1,3 @@
+# The lanes of priority each list has a requirement in, so that a section draws no empty lane
+fr_lanes: 'filter(["must", "should", "could"], let p = #; any(functional, .priority == p))'
+nfr_lanes: 'filter(["must", "should", "could"], let p = #; any(nonfunctional ?? [], .priority == p))'
