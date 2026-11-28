@@ -213,7 +213,7 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	open := func() {
 		t.Helper()
 		openPageThemes(b, "p")
-		b.until("the cards", "document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 13")
+		b.until("the cards", "document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 12")
 	}
 	// The icon seen at the head of the modal
 	const icon = "[...document.querySelectorAll('#settings [data-testid=modal-head] svg')].filter((e) => e.getClientRects().length).map((e) => e.dataset.testid).join()"

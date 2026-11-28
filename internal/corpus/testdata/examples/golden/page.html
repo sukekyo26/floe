@@ -276,7 +276,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    screen's height and by max-height (how far it may grow), with the diagram centred in it. It paints its own ground,
    --bg, the one what hides the lines under it (a label's box, a hollow end or dot) is painted: CSS cannot read the
    ground outside it. Its colour is --fg, for raw's currentColor */
-/* LIMIT: the ground is flat, so a theme's pattern on the page (aurora's, notebook's, blueprint's) does not run through a
+/* LIMIT: the ground is flat, so a theme's pattern on the page (aurora's, notebook's) does not run through a
    diagram, and a fragment of floe diagram render on another page paints default's --bg, a light box on a dark page
    (its docs tell to set --bg on the roots); to let the ground through, cut the lines under what hides them (a mask)
    instead of painting one */

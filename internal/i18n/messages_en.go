@@ -492,7 +492,6 @@ var messagesEN = map[string]string{
 	// The descriptions of floe's themes the management page shows, in English as each theme.yaml has it (TestThemeAbouts)
 	"theme_about_app":          "An app's screen: cool grey ground, white cards raised by soft shadows, a raspberry accent",
 	"theme_about_aurora":       "A dawn sky behind frosted glass: a wash of violets, surfaces of clouded white, a violet accent and fine lines of light",
-	"theme_about_blueprint":    "Blue ink on squared paper, its sections ruled in the ink",
 	"theme_about_cyber":        "A street terminal at night: a gunmetal ground, hologram boxes with a rainbow edge and cut corners, green and yellow light",
 	"theme_about_default":      "floe's own, which every theme starts from: a warm grey ground, white surfaces in thin frames, a teal accent",
 	"theme_about_editorial":    "A magazine in ink and yellow: sections open on yellow bands, a short yellow bar over cards and figures, large heavy figures",
