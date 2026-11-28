@@ -15,7 +15,7 @@ runs:
         path: ~/.floe-tools/just
         key: just-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.just }}
     - if: steps.cache.outputs.cache-hit != 'true'
-      uses: taiki-e/install-action@25f51f6b1bf4e18876107cece836f4f77ac17c8c # v2.90.7
+      uses: taiki-e/install-action@893d6ee8d714b6c7dfe2bcd94e5759e9a7958a7e # v2.90.10
       with:
         tool: just@${{ steps.version.outputs.just }}
     - if: steps.cache.outputs.cache-hit != 'true'
