@@ -1,0 +1,35 @@
+/* The colours and faces are the theme's palette; the page lays them out: a head of the date and who attended, what
+   came of the meeting (decided and actions) side by side, then the topics in order, in the column every template
+   centres its page in.
+   LIMIT: decided and actions sit side by side while each has 20rem; a width where they wrap is not looked at */
+body { line-height: 1.75; padding-block: 0 4rem; }
+.people { display: flex; flex-wrap: wrap; gap: 0.3rem 0.5rem; align-items: baseline; font-size: 0.92rem; }
+.people .label { font-weight: 800; margin-right: 0.2rem; }
+.people .label:not(:first-child) { margin-left: 0.8rem; }
+.who { border: 1px solid currentColor; border-radius: var(--radius-pill); padding: 0 0.6rem; }
+.who.off { opacity: 0.75; border-style: dashed; }
+main { display: grid; gap: 2rem; padding-block: 2rem; }
+main h2 { font-size: 1.15rem; }
+.count { font-family: var(--mono); font-size: 0.85rem; color: var(--on-face, var(--muted)); margin-left: 0.3rem; }
+.outcome { display: grid; grid-template-columns: minmax(min(20rem, 100%), 2fr) minmax(min(20rem, 100%), 3fr); gap: 1rem; align-items: start; }
+.outcome section { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.6rem; }
+.decided > li::before { content: "✓"; content: "✓" / ""; color: var(--good); }
+.owner, .due { white-space: nowrap; }
+.due { font-family: var(--mono); }
+tr.done td { color: var(--muted); }
+.topics { display: grid; gap: var(--floe-room); }
+.topics h3 { font-size: 1.02rem; }
+.next { border-top: var(--rule); padding-top: 1rem; }
+main > section { display: grid; gap: var(--floe-room); }
+@media (max-width: 800px) {
+  .outcome { grid-template-columns: 1fr; }
+}
+/* The head: a calendar's leaf of the day beside the title, the kind and place above it, who attended under it */
+.head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1.6rem; align-items: center; padding-block: 2.4rem 1.6rem; border-bottom: 1px solid var(--line); }
+.leaf { display: grid; justify-items: center; width: 7.5rem; border: 2px solid var(--fg); border-radius: var(--radius-small); overflow: hidden; }
+.leaf .month { width: 100%; text-align: center; font-family: var(--mono); font-size: 0.8rem; padding: 0.2rem; border-bottom: 2px solid var(--fg); }
+.leaf .day { font-family: var(--mono); font-size: 3rem; font-weight: 800; line-height: 1.2; }
+.leaf .hours { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); padding-bottom: 0.3rem; }
+.info { display: grid; gap: 0.4rem; justify-items: start; }
+.head h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; line-height: 1.3; }
+.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; color: var(--muted); }
