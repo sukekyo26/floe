@@ -306,7 +306,9 @@ body { margin: 0; }
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: one record on a sheet, the panel of the
-   theme, in a column as wide as prose.
+   theme, in a column as wide as prose. The decision and the alternatives lie on the surface, the consequences on
+   their tone's soft colour, so that they stand off default's grey sheet. Not --quiet: links on it fall short of AA in
+   brutal and swiss.
    LIMIT: the consequences sit side by side while each has 14rem; a width where they wrap is not looked at */
 body { padding-block: 2.5rem 4rem; line-height: 1.85; }
 :scope { --column-width: var(--text-width); }
@@ -317,12 +319,13 @@ header h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
 .deciders { color: var(--muted); font-size: 0.9rem; }
 section { display: grid; gap: var(--floe-room); }
 section > h2 { font-size: 1.1rem; }
-.decision { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
+.decision { border-left: 4px solid var(--accent); border-radius: var(--radius-small); background: var(--surface); padding: var(--floe-pad-block) var(--floe-pad-inline); }
 .alternatives { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
-.alternatives li { border: 1px dashed var(--line); border-radius: var(--radius-small); padding: 0.5rem 0.9rem; }
+.alternatives li { border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); padding: 0.5rem 0.9rem; }
 .alternatives .title { font-weight: 700; }
 .alternatives :is(.title, .why) { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
+.consequences > div { border-radius: var(--radius-small); background: var(--tone-soft); padding: var(--floe-pad-block) var(--floe-pad-inline); }
 .consequences h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; }
 }
 }
