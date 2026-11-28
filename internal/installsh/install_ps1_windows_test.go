@@ -1531,7 +1531,7 @@ func testPathPS1(t *testing.T, shell string, install func(*testing.T, *ghRelease
 			if err != nil {
 				t.Fatal(err)
 			}
-			run := strings.Replace(shown, "irm https://floe-3cf.pages.dev/install.ps1 | iex",
+			run := strings.Replace(shown, "irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex",
 				"Get-Content -Raw -LiteralPath '"+strings.ReplaceAll(script, "'", "''")+"' | Invoke-Expression", 1)
 			if l.file == strings.Contains(shown, "irm ") {
 				t.Errorf("the line is not of the form it was run in: %s", shown)
