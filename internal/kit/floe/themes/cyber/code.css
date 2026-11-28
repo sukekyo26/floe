@@ -1,2 +1,2 @@
-:scope { border: 1px solid var(--line); --code-head-bg: var(--accent-soft); --code-head-fg: var(--accent); }
+:scope { border: 1px solid var(--line); --floe-shadow-color: var(--shadow); --code-head-bg: var(--accent-soft); --code-head-fg: var(--accent); }
 :scope .lang { background: var(--cyber-glow); color: var(--on-fill); font-weight: 800; }

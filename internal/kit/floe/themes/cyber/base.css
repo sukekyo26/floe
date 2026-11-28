@@ -12,7 +12,8 @@ section > h2::before {
 section > h2::after {
   content: "" / ""; flex: 1; height: 14px;
   background: var(--cyber-barcode) left center / 120px 100% no-repeat,
-    linear-gradient(90deg, #5cff86, #d4ff5a, #ffd43d, #ff9a6b, #ff6fbd, transparent) 130px center / calc(100% - 130px) 2px no-repeat;
+    linear-gradient(90deg, #4dff86, #d8ff4a, #ffe234, #ff9450, #ff5ec9, transparent) 130px center / calc(100% - 130px) 2px no-repeat;
+  filter: var(--cyber-halo);
 }
 /* In a band the head is plain: a band's words are its face's colour, its heads unmarked */
 [data-floe-look~=band] section > h2 { display: block; color: inherit; text-shadow: none; }

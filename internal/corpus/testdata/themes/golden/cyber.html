@@ -206,7 +206,7 @@ blockquote > * + * { margin-top: 0.6rem; }
   --accent-fill: #2cf05f; --good-fill: #a6f03a; --warn-fill: #ffd43d; --bad-fill: #ff7a93;
   --chart-1: #5cff86; --chart-2: #ffd65a; --chart-3: #ff8fa0; --chart-4: #b9ff6a;
   --code-bg: #161d1b; --code-fg: #dcffe4; --code-prompt: #2cf05f; --code-add: #8ff0b4; --code-del: #ffc6c3;
-  --on-fill: #0e1410; --shadow: rgb(44 240 95 / 0.35);
+  --on-fill: #0e1410; --shadow: rgb(54 255 108 / 0.4);
   --display: var(--mono);
   --rule: none;
   --radius: 0; --radius-small: 0; --radius-pill: 0;
@@ -214,8 +214,10 @@ blockquote > * + * { margin-top: 0.6rem; }
   --floe-shadow-x: 0; --floe-shadow-y: 0; --floe-shadow-blur: 12px; --floe-shadow-spread: 0;
   /* Its own lights: a green for lines and cut edges, a yellow for labels and barcodes, a pink for the other cut edge, the
      dark of a terminal's band */
-  --cyber-glow: #2cf05f; --cyber-yellow: #ffd43d; --cyber-pink: #ff6fbd; --cyber-ink: #161e1b;
-  --cyber-rainbow: linear-gradient(90deg, #5cff86, #d4ff5a, #ffd43d, #ff9a6b, #ff6fbd);
+  --cyber-glow: #36ff6c; --cyber-yellow: #ffe234; --cyber-pink: #ff5ec9; --cyber-ink: #161e1b;
+  --cyber-rainbow: linear-gradient(90deg, #4dff86, #d8ff4a, #ffe234, #ff9450, #ff5ec9);
+  /* A faint halo round a line of light, never round words */
+  --cyber-halo: drop-shadow(0 0 3px rgb(54 255 108 / 0.45));
   --cyber-barcode: repeating-linear-gradient(90deg, var(--cyber-yellow) 0 2px, transparent 2px 4px, var(--cyber-yellow) 4px 5px,
     transparent 5px 9px, var(--cyber-yellow) 9px 12px, transparent 12px 14px, var(--cyber-yellow) 14px 15px, transparent 15px 19px);
   /* What a hologram box's cut corners show: the page's ground, a band's face in a band, a box's face in a box */
@@ -255,7 +257,8 @@ section > h2::before {
 section > h2::after {
   content: "" / ""; flex: 1; height: 14px;
   background: var(--cyber-barcode) left center / 120px 100% no-repeat,
-    linear-gradient(90deg, #5cff86, #d4ff5a, #ffd43d, #ff9a6b, #ff6fbd, transparent) 130px center / calc(100% - 130px) 2px no-repeat;
+    linear-gradient(90deg, #4dff86, #d8ff4a, #ffe234, #ff9450, #ff5ec9, transparent) 130px center / calc(100% - 130px) 2px no-repeat;
+  filter: var(--cyber-halo);
 }
 /* In a band the head is plain: a band's words are its face's colour, its heads unmarked */
 [data-floe-look~=band] section > h2 { display: block; color: inherit; text-shadow: none; }
@@ -654,7 +657,7 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 1px solid var(--line); --code-head-bg: var(--accent-soft); --code-head-fg: var(--accent); }
+:scope { border: 1px solid var(--line); --floe-shadow-color: var(--shadow); --code-head-bg: var(--accent-soft); --code-head-fg: var(--accent); }
 :scope .lang { background: var(--cyber-glow); color: var(--on-fill); font-weight: 800; }
 }
 }
@@ -751,7 +754,7 @@ blockquote {
 /* A terminal's band for the head, its words in light green over a line of green; each row numbered in its first cell.
    The frame stays (a table is always framed) and the corners are not cut: the head and the rows paint over them */
 :scope {
-  border: 2px solid var(--cyber-glow); background: var(--surface); counter-reset: cyber-row;
+  border: 2px solid var(--cyber-glow); background: var(--surface); counter-reset: cyber-row; --floe-shadow-color: var(--shadow);
   --table-head-bg: var(--cyber-ink); --table-head-fg: #c8ffd4; --table-rule: 1px solid var(--line);
 }
 :scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); font-family: var(--mono); font-weight: 700; border-bottom: 3px solid var(--cyber-glow); }
