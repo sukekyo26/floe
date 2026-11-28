@@ -208,8 +208,9 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 :scope {
-  /* default's own, here and not in its palette, which lies under every theme's */
-  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* default's own, here and not in its palette, which lies under every theme's. Light, so that what lies straight on
+     it reads; under 30% its edge melts into the page's ground */
+  --default-panel: color-mix(in srgb, var(--line) 30%, var(--bg));
   /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and the radius rule follows the

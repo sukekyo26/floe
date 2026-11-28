@@ -34,6 +34,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the template `adr` reading as one grey sheet under the theme `default`: the grey of `default`'s panels is lighter, on every page drawn in `default` (the panels of `runbook`, `handoff`, a `panel`, cards and the rest), and in `adr` the decision and the alternatives lie on tiles of the surface and the consequences on their tone's soft colour, in every theme.
 - Fix the rows of the search and of Add a page in the management page hiding a link's path when what is under the title does not fit: a long project or the task a page is on ran past the row and out of the modal, the path squeezed to nothing; the line now goes on to a line of its own as the list's rows do, a pill wider than the line is cut at its end with "…", and the path keeps its room.
 - Fix the pills on the line under a row's title in the management page running past that line when their names are long: a tag, a project, a task or a kind wider than the line ran under the row's buttons or out of the row (a task's even on a wide screen), and is now cut at its end with "…".
 - Fix the head of a task's page in the management page growing wider than its column when the project's name is long, putting Edit and the family card's Add out of the window: the project's pill is cut at its end with "…" instead.
