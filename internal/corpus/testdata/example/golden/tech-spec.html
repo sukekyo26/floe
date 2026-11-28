@@ -233,16 +233,16 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.looks.depth0 {
-@scope ([data-floe-look~="band"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A band filled with the accent, a face (base.css): its text, links, code and focus ring in the colour on a fill */
-:scope { --face: var(--accent); --on-face: var(--on-fill); background: var(--face); color: var(--on-face); }
-/* A part on a ground of its own (a panel, a note) sets its text's colour with it; one of none draws in the band's,
-   its tone told by its word alone (a pill of a theme that gives it no ground), as in any face.
-   LIMIT: in a part of one's own that takes this look (looks: [band]), base.css takes the band's face away from what the
-   part holds, so tabs' titles and rings and a link's ring there are in their own colours, not the band's.
-   LIMIT: a theme whose faces let what is under them through (aurora's glass) lets the accent through them too, where
-   the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="cell"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (defaults.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
+}
 }
 }
 </style>
@@ -261,19 +261,210 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.looks.depth2 {
-@scope ([data-floe-look~="marked"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
-   --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
-   code flows as one */
-:scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
-:scope > li::before { line-height: 1; font-weight: 800; }
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Always dark, as code in an editor is; the language stands at the right of the heading. A face (base.css) whose
+   root is the part's, set on what it holds too, which base.css starts afresh: a scrolling block's ring in its colour */
+:scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
+/* What a part that takes code's look reads, set here with their values rather than read with a fallback, so that it
+   copies no number: the room at a line's sides (and the copy button's after it), and the colour of faint text, a
+   line's of the colour it is in (currentColor is resolved where the variable is read).
+   LIMIT: the heading's faint colour is made at the root from --code-head-fg there, so the file name does not follow
+   a colour a theme gives the heading itself, by a rule or by --code-head-fg on figcaption; make it in the heading
+   from currentColor if a theme comes to do so. */
+:scope {
+  --floe-code-pad: 1.1rem; --floe-code-room: var(--floe-code-pad);
+  --floe-code-faint: color-mix(in srgb, currentColor 70%, transparent);
+  --floe-code-head-faint: color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent);
+  display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
+  border-radius: var(--radius); overflow: hidden; color-scheme: dark;
+  background: var(--face); color: var(--on-face);
+  font-family: var(--mono);
+}
+/* A theme sets the heading's ground and colour by --code-head-bg and --code-head-fg, and the colours of a diff's
+   counts on it by --code-head-add and --code-head-del */
+:scope figcaption {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem var(--floe-code-pad); font-size: var(--floe-text-small);
+  background: var(--code-head-bg, color-mix(in srgb, var(--code-fg) 5%, transparent)); color: var(--code-head-fg, var(--code-fg));
+  border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
+}
+/* On screen it scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT); on paper its lines
+   fold (base.css's pre), each as wide as the box. Its lines hold the room at its sides */
+:scope pre {
+  margin: 0; padding: 0.95rem 0; background: none; border: 0; border-radius: 0; color: inherit;
+  font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
+}
+@media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
+:scope .file { color: var(--floe-code-head-faint); }
+/* The title and the file fold under each other, the language staying at the right: it has a shape of its own, which a
+   row that folds may not draw by place.
+   LIMIT: .names, .file, .lang, .lines, .mark and .numbered reach a part that takes this look too, its text of those names
+   drawn so unsaid; name them for code alone if one comes to use them for its own. */
+:scope .names { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; min-width: 0; }
+:scope .names > .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
+:scope .lang {
+  flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
+  background: var(--code-prompt); color: var(--code-bg);
+}
+/* A block, so that the code's last line break draws no empty line; no padding at its sides, which its line's rule sets */
+:scope pre > code { display: block; font: inherit; color: inherit; background: none; padding-block: 0; border-radius: 0; }
+/* Each line (an element pre holds) is as wide as the longest line, with the room at its sides: scrolled to the end, a
+   line keeps it after it.
+   LIMIT: a part that takes this look and writes a line's padding drops this room, its rule written after this one;
+   text pre holds outside an element has no room, and one inline among it has room around it. Lines are elements, and
+   a part whose lines differ takes the rule of class lines below, as diff does, or moves the room onto them by these variables; nothing checks it. Make this
+   rule outweigh a part's if one comes to write a line's padding by mistake. */
+:scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
+@media print { :scope pre > * { width: auto; } }
+/* Lines each an element in one code of class lines (code's and diff's): each paints its ground to the end of the longest
+   line, so the room moves from the code onto each. An element beside them is a hidden word, left out of a selection
+   as it is of what the button copies.
+   LIMIT: Safari takes only -webkit-user-select, and the browser tests run in Chrome alone, so nothing measures it there. */
+:scope pre > .lines { padding-inline: 0; }
+:scope .lines { --floe-code-gutter: 0px; }
+:scope .lines > :not(.floe-hidden) { display: block; padding-inline: calc(var(--floe-code-pad) + var(--floe-code-gutter)) var(--floe-code-room); }
+:scope .lines > .floe-hidden { -webkit-user-select: none; user-select: none; }
+/* A border, which no setting of print or forced colours takes off as it does a ground; its width comes off the room, so
+   that a marked line's text stays in line */
+:scope .lines > .mark {
+  border-inline-start: 3px solid var(--code-prompt); padding-inline-start: calc(var(--floe-code-pad) + var(--floe-code-gutter) - 3px);
+  background: color-mix(in srgb, var(--code-prompt) 16%, transparent);
+}
+/* A number is a counter, in no text copied or selected. --digits and the count's start are the part.html's. It hangs in
+   the room left of the line, whose width it takes off by its margin: a tab counts from the line's start, and what a
+   line folds to on paper stands right of the number. Same weight as .lines and after it, which sets the room to 0.
+   LIMIT: the number scrolls with the code; keep it at the left if readers come to lose it, on a ground of its own.
+   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes.
+   LIMIT: on paper, a line that starts with a long word with no space (a URL, minified code) leaves its number alone on
+   the first row, as the number is inline-block; all of it reads. Print is seldom used: hang the number if it matters. */
+:scope .numbered { --floe-code-gutter: calc((var(--digits) + 2) * 1ch); }
+:scope .numbered > :not(.floe-hidden) { counter-increment: line; }
+:scope .numbered > :not(.floe-hidden)::before {
+  content: counter(line); content: counter(line) / counter(line);
+  display: inline-block; width: calc(var(--digits) * 1ch); margin-inline: calc(-1 * var(--floe-code-gutter)) 2ch; text-align: end;
+  color: var(--floe-code-faint);
+}
+:scope .numbered > .mark::before { color: inherit; font-weight: 700; }
+/* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
+   it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
+   Where it draws the button, a line keeps the button's room after it: scrolled to the end, a line ends left of the
+   button; a short one fills the code as before. Printed, with the button hidden, the room is the code's own padding.
+   LIMIT: before it is scrolled to the end, a long first line runs under the button; scroll it to read that part. Leaving
+   it clear would push the code down by a line, short code too.
+   LIMIT: the room is kept after the longest line, though the button covers the first line alone: code whose longest
+   line comes within it (about 43px) of the width scrolls though no line would run under the button, as CSS cannot pad
+   the first line alone. If that comes to matter, give the button a line of its own above the code. */
+:scope > figcaption { grid-row: 1; }
+:scope > pre, :scope > .floe-copy { grid-row: 2; grid-column: 1; }
+:scope > .floe-copy { justify-self: end; align-self: start; margin: var(--floe-copy-gap); }
+:scope:has(> .floe-copy) { --floe-code-room: max(var(--floe-code-pad), var(--floe-copy-room)); }
+/* A scrolling block's ring on the part's root, inside its edge: the root, round, clips what lies outside the block, and
+   the root's own ring lies over the block, its edges and its scrollbar, round at the root's corners. A copy button lies
+   inside the root by --floe-copy-gap, clear of it.
+   LIMIT: what was faded by opacity, which Chrome could paint over the ring, is faded by its colour now; that nothing
+   draws over the ring is not measured. */
+:scope > pre:focus-visible { outline: none; }
+:scope:has(> pre:focus-visible) { outline: 2px solid var(--on-face); outline-offset: -2px; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="diagram"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The frame clips what it zooms. It takes a finger's pan and pinch only while it may zoom (can-zoom): one that may
+   not leaves the page to pinch */
+.floe-zoom { position: relative; overflow: hidden; }
+.floe-zoom.can-zoom { touch-action: pan-y; }
+.floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
+.floe-zoom.zoomed:active { cursor: grabbing; }
+/* How it is used, under the frame while the keyboard is on it: over the frame it would hide what is moved there, and a low
+   frame would clip it.
+   LIMIT: what is under the frame moves down while it shows, not the frame. Lay it over them if that comes to mislead.
+   LIMIT: in a fragment of floe diagram render, without defaults.css's steps of small text, the line and the toolbar take the
+   size of the page around, larger than here: under the frame, it still reads whole. Give the fragment the steps if one is too large */
+.floe-zoom-hint { display: none; margin-top: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; color: var(--muted); }
+@media screen { .floe-zoom.can-zoom:focus-visible + .floe-zoom-hint { display: block; } }
+/* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
+.floe-zoom > img { display: block; max-width: 100%; height: auto; transform-origin: 0 0; }
+.floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
+/* display: flex above wins over the browser's [hidden] */
+.floe-zoom-tools[hidden] { display: none; }
+/* Buttons do nothing on paper */
+@media print { .floe-zoom-tools { display: none; } }
+/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
+.floe-zoom-tools button {
+  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
+  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
+  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
+}
+.floe-zoom-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.floe-zoom-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="diagram"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
+   set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
+/* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
+   screen's height and by max-height (how far it may grow), with the diagram centred in it. It paints its own ground,
+   --bg, the one what hides the lines under it (a label's box, a hollow end or dot) is painted: CSS cannot read the
+   ground outside it. Its colour is --fg, for raw's currentColor */
+/* LIMIT: the ground is flat, so a theme's pattern on the page (aurora's, notebook's, blueprint's) does not run through a
+   diagram, and a fragment of floe diagram render on another page paints default's --bg, a light box on a dark page
+   (its docs tell to set --bg on the roots); to let the ground through, cut the lines under what hides them (a mask)
+   instead of painting one */
+.floe-zoom { width: 100%; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); }
+/* What has no tone draws in its shape's own colours, written after var(): the diagram's root holds no tone, unlike
+   a part's box, and what has one (data-floe-tone) takes its colours */
+.dg { --tone: initial; --tone-soft: initial; position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
+.dg text { dominant-baseline: central; }
+.dg .main { fill: var(--fg); font-size: 13px; font-weight: 700; }
+.dg .sub { fill: var(--muted); font-size: 12px; }
+.dg .code { font-family: var(--mono); font-size: 12px; }
+.dg .box rect, .dg .box path { fill: var(--tone-soft, var(--surface)); stroke: var(--tone, var(--line)); stroke-width: 1.2; }
+.dg .box[data-floe-tone=bad] text { fill: var(--tone); }
+.dg .table .bg { fill: var(--surface); }
+.dg .table .head { fill: var(--tone-soft, var(--surface)); }
+.dg .table .outline { fill: none; stroke: var(--tone, var(--line)); stroke-width: 1.2; }
+.dg .table .sep { stroke: var(--line); }
+.dg .cell { fill: var(--fg); }
+.dg .type { fill: var(--muted); font-size: 12px; }
+/* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
+.dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.dg .frame.accent rect { stroke: var(--accent); }
+.dg .frame rect.icon-ground { fill: var(--bg); stroke: none; }
+.dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
+.dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
+.dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }
+.dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.dg .edge.dashed { stroke-dasharray: 5 4; }
+.dg .edge.bold { stroke-width: 3; }
+/* An edge's ends take its colour (context-stroke). Without it, --muted stays */
+.dg .mk-fill { fill: var(--muted); fill: context-stroke; }
+.dg .mk-hollow { fill: var(--bg); stroke: var(--muted); stroke: context-stroke; stroke-width: 1.2; }
+.dg .mk-line { fill: none; stroke: var(--muted); stroke: context-stroke; stroke-width: 1.5; }
+.dg .dot { fill: var(--tone, var(--muted)); stroke: var(--tone, var(--muted)); }
+.dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
+.dg .bar { fill: var(--tone, var(--muted)); }
+/* An icon of lines (lucide) is a mask over currentColor, which only the color of its <use> reaches */
+.dg use.icon { color: var(--tone, var(--fg)); }
+.dg .axis { stroke: var(--muted); stroke-width: 1.2; }
+.dg .grid { stroke: var(--line); }
+.dg .venn { fill: var(--tone-soft, var(--accent-soft)); fill-opacity: 0.6; stroke: var(--tone, var(--accent)); stroke-width: 1.5; }
+.dg .label-bg { fill: var(--bg); }
+.dg .label { fill: var(--fg); font-size: 12px; }
+.dg .label.strong { font-size: 13px; font-weight: 700; }
+.dg .lifeline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
+.dg .divider { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 12 6; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
    any parts.
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
@@ -299,6 +490,73 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
 .card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, unnumbered */
+:scope { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+:scope > div { padding-block: var(--floe-row-pad); }
+:scope dt { font-size: var(--floe-text-small); color: var(--muted); }
+:scope dd { margin: 0; font-weight: 600; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each link a small frame on a line, wrapping: where it goes, its title underlined as a link is, and ↗ for one that
+   leaves floe; a few words beside the frame. The frame is the link, so that its reach and ring are the whole of it.
+   It has no ground of its own, not to stand out as a button: its colours come from a face's text colour on the root,
+   where base.css has not yet taken the face away from what the box holds, as tabs' do.
+   LIMIT: the URL itself is not shown, so a printed page tells only the host or docs. Print it under the frame if pages
+   come to be read on paper */
+:scope {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline;
+  --links-title: var(--on-face, var(--fg)); --links-to: var(--on-face, var(--accent));
+  --links-words: var(--on-face, var(--muted)); --links-line: var(--on-face, var(--line));
+}
+:scope > li { display: flex; flex-wrap: wrap; gap: 0 0.5rem; align-items: baseline; min-width: 0; }
+:scope a {
+  display: inline-flex; gap: 0.45rem; align-items: baseline; min-width: 0; max-width: 100%;
+  border: 1px solid var(--links-line); border-radius: var(--radius-small); padding: 0.4rem 0.55rem;
+  color: var(--links-title); text-decoration: none; outline-color: var(--links-to); line-height: 1.3;
+}
+:scope a:hover { border-color: var(--links-to); }
+/* Its words cut to the capitals' top and the baseline, so that the padding centres them in the frame: a line box holds
+   Japanese letters low, and they looked so */
+/* LIMIT: a browser without text-box (Firefox before 154) keeps the line box: the words sit a little low and a frame of
+   one line is some 37px tall. Drop the line-height of 1.3 when every browser cuts the words */
+:scope a > * { text-box: trim-both cap alphabetic; }
+:scope .title { font-weight: 700; min-width: 0; text-decoration: underline 1px; text-underline-offset: 0.2em; }
+:scope a:hover .title { text-decoration-thickness: 2px; }
+:scope .to { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--links-to); white-space: nowrap; }
+:scope .out { font-size: var(--floe-text-small); color: var(--links-to); }
+:scope .text { font-size: var(--floe-text-aside); color: var(--links-words); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="marked"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
+   --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
+   code flows as one */
+:scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
+:scope > li::before { line-height: 1; font-weight: 800; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth2 {
+@scope ([data-floe-look~="marked"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
+   --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
+   code flows as one */
+:scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
+:scope > li::before { line-height: 1; font-weight: 800; }
 }
 }
 </style>
@@ -347,7 +605,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
@@ -358,7 +616,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.looks.depth0 {
-@scope ([data-floe-look~="rows"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="rows"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
@@ -431,6 +689,35 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
+   its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
+@media screen { :scope { overflow-x: auto; contain: inline-size; } }
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
+@media screen {
+  :scope :is(th, td):not(.num) { min-width: 7em; }
+  /* A num column's heading wraps as long as it needs, but not a character a line */
+  :scope th.num { min-width: 6em; }
+}
+:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
+/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
+/* LIMIT: Safari is not seen to paint a row's background once across it; if it paints it in each cell, a gradient starts
+   again in each column there (aurora's line). Measure it on darwin when a head comes to rely on it more */
+:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
+/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
+   --table-rule (none for no rule) */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+}
+}
+</style>
+<style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
@@ -481,6 +768,14 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="cell"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
@@ -490,7 +785,16 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { padding: var(--default-pad); --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); --code-head-bg: none; }
+:scope figcaption { border: 0; padding: 0.3rem 0.6rem 0.5rem; }
+:scope pre { background: var(--code-ground); border-radius: var(--default-inner); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
 :scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
@@ -507,7 +811,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
@@ -515,7 +819,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.looks.depth0 {
-@scope ([data-floe-look~="rows"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="rows"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
@@ -540,6 +844,19 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
 :scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }
 :scope > :only-child { border-radius: var(--default-inner); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { padding: var(--default-pad); --table-head-bg: none; }
+:scope table { border-collapse: separate; border-spacing: 0; }
+:scope tbody td { background: var(--surface); --quiet: var(--default-panel); }
+:scope tbody tr:first-child td:first-child { border-top-left-radius: var(--default-inner); }
+:scope tbody tr:first-child td:last-child { border-top-right-radius: var(--default-inner); }
+:scope tbody tr:last-child td:first-child { border-bottom-left-radius: var(--default-inner); }
+:scope tbody tr:last-child td:last-child { border-bottom-right-radius: var(--default-inner); }
 }
 }
 </style>
@@ -584,105 +901,65 @@ body { margin: 0; }
 <style>
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
-/* The colours and faces are the theme's palette; the page lays them out: a head, a band of the conclusion, and the
-   body beside its contents, each in the column every template centres its page in.
-   LIMIT: the body falls to one column under 800px; a width just over it is not looked at */
-body { line-height: 1.8; padding-block: 0 4rem; }
-.head { padding-block: 2.5rem 1.6rem; border-bottom: var(--rule); }
-.head .floe-column { display: grid; gap: 0.5rem; justify-items: start; }
-.head h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
-.byline { display: flex; flex-wrap: wrap; gap: 0 1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
-.status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: var(--radius-small); }
-.summary { color: var(--muted); font-size: 1.05rem; }
-.verdict { padding-block: 1.4rem 1.6rem; }
-.verdict h2 { font-size: 0.8rem; letter-spacing: 0.15em; margin-bottom: 0.4rem; }
-.verdict ol { gap: 0.7rem; }
+/* A spec sheet: the contents in a rail on the left; the head, the conclusion in a frame, then the sections, and the
+   work grouped as Build and Ship.
+   LIMIT: the rail goes above the body under 900px; a width just over it is not looked at */
+body { line-height: 1.8; padding-block: 2rem 4rem; }
+.sheet { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 3rem; }
+.rail { position: sticky; top: 1.5rem; align-self: start; display: grid; gap: 1rem; padding-right: 1.5rem; border-right: 1px solid var(--line); }
+main { display: grid; gap: 2.6rem; align-content: start; min-width: 0; }
+/* The head: the kind as a small line over a large title with room above it, the summary, then the fields in two
+   columns of a fixed face between a fine rule and a double rule */
+.head { display: grid; gap: 0.7rem; padding-top: 1.2rem; }
+.kindline { font-family: var(--mono); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.2em; color: var(--accent); }
+.head h1 { font-size: clamp(2rem, 4.8vw, 2.8rem); line-height: 1.2; }
+.summary { font-size: 1.1rem; color: var(--muted); }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem 2rem; font-size: 0.85rem; margin-top: 0.6rem; padding-block: 0.8rem; border-top: 1px solid var(--fg); border-bottom: 3px double var(--fg); }
+.fields > div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 0.8rem; align-items: baseline; }
+.fields .wide { grid-column: 1 / -1; }
+.fields dt { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+.fields dd { margin: 0; }
+/* The conclusion without a fill: a frame in the accent, the picks in it */
+.verdict { padding: var(--floe-pad-block) var(--floe-pad-inline); border: 2px solid var(--accent); border-radius: var(--radius); display: grid; gap: 0.6rem; }
+.verdict h2 { font-size: 0.8rem; letter-spacing: 0.15em; color: var(--on-face, var(--accent)); }
+.verdict ol { display: grid; gap: 0.8rem; }
 .verdict li { display: grid; gap: 0.1rem; }
 .verdict .question { font-size: 0.9rem; }
-.verdict .pick { font-size: 1.4rem; line-height: 1.4; }
-.verdict .undecided { color: color-mix(in srgb, currentColor 80%, transparent); }
-.body { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 2.5rem; padding-block: 2rem; }
-main { display: grid; gap: 2.2rem; align-content: start; }
-main section { display: grid; gap: var(--floe-room); }
-main > section > h2 { font-size: 1.25rem; padding-left: var(--floe-heading-start, 0.7rem); border-left: var(--floe-heading-edge, 4px solid var(--accent)); }
-/* The question is set as the text around it is, not as the headings are */
-.decision > h3 { margin-top: 0.4rem; font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
-.non-goals { color: var(--muted); }
-aside { position: sticky; top: 1rem; align-self: start; }
-@media (max-width: 800px) {
-  .body { grid-template-columns: 1fr; }
-  aside { position: static; grid-row: 1; }
+.verdict .pick { font-size: 1.35rem; line-height: 1.4; }
+.verdict .why { font-size: 0.9rem; color: var(--muted); }
+.block { display: grid; gap: var(--floe-room); }
+.block > h2 { font-size: 1.3rem; }
+.block > h3, .decision > h3 { font-size: 1.05rem; }
+.goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1.5rem; }
+.goals h3 { font-size: 0.95rem; }
+.yes > li::before { content: "→"; content: "→" / ""; color: var(--accent); }
+.no-goals > li::before { content: "×"; content: "×" / ""; color: var(--muted); }
+.no-goals { color: var(--muted); }
+.decision { display: grid; gap: var(--floe-room); }
+/* The group's rule is its heading's, not the section's: a framed section would hold the shadows of the parts in it */
+.group { display: grid; gap: 1.6rem; }
+.grouphead { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.3em; padding-top: 1rem; border-top: 4px solid var(--fg); }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: 1rem; }
+.card { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.5rem; align-content: start; }
+.card h3 { font-size: 1rem; }
+.by { display: block; color: var(--muted); font-size: 0.88rem; }
+@media (max-width: 900px) {
+  .sheet { grid-template-columns: 1fr; }
+  .rail { position: static; border-right: 0; padding-right: 0; border-bottom: 1px solid var(--line); padding-bottom: 1rem; }
 }
-@media print {
-  .body { grid-template-columns: minmax(0, 1fr); }
-}
+@media (max-width: 760px) { .fields { grid-template-columns: 1fr; } }
 }
 }
 </style>
 </head>
 <body>
-<header class="head">
-<div class="floe-column">
-<p class="byline"><span>Platform team</span><span>2030-05-14</span></p>
-<h1 id="send-notifications-through-a-queue">Send notifications through a queue</h1>
-<p class="status">In review</p>
-<p class="summary">Notifications leave the web request and go out from a queue, so that a slow mail server never slows a page.</p>
-</div>
-</header>
-<section class="verdict" data-floe-look="band" aria-labelledby="conclusion">
-<div class="floe-column">
-<h2 id="conclusion">Conclusion</h2>
-<ol>
-<li><span class="question">Which queue</span><strong class="pick">A table in the database we have</strong><span class="why">It needs no new service to run, and the load is well within what the database takes</span></li>
-<li><span class="question">How to try a failed <code>send</code> again</span><strong class="pick undecided">Undecided</strong></li>
-</ol>
-</div>
-</section>
-<div class="floe-column body">
-<main>
-<section><h2 id="background">Background</h2><div data-floe-markdown=""><p>Today a notification is sent <strong>inside the web request</strong> that causes it: saving a comment sends its email before the
-page answers. When the mail provider is slow, so is the page, and a provider outage turns into failed saves.</p>
-<p>Last month 2% of comment saves took over five seconds, all of them waiting on the mail provider.</p></div></section>
-<section><h2 id="goals">Goals</h2><ul><li>A page answers without waiting for any notification</li><li>A notification that fails is tried again, and none is lost</li><li>Email, push and chat go out the same way</li></ul></section>
-<section><h2 id="non-goals">Non-goals</h2><ul class="non-goals"><li>Changing what the notifications say</li><li>A user&#39;s settings of which notifications they get</li></ul></section>
-<section><h2 id="decisions">Options</h2>
-<section class="decision" aria-labelledby="question-0"><h3 id="question-0">Which queue</h3>
-<div class="numbered" data-floe-part="options">
-<div class="card option pick" data-floe-look="panel"><div class="title">A table in the database we have <span data-floe-part="cell">Recommended</span></div><div class="body"><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>No new service to run or watch</span></li><li class="pro"><span><span class="floe-hidden">Pro: </span>Written in the same transaction as the comment</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Polling adds load to the database</span></li></ul></div></div>
-<div class="card option" data-floe-look="panel"><div class="title">A message broker</div><div class="body"><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Made for this, and scales further</span></li><li class="con"><span><span class="floe-hidden">Con: </span>A new service to run, watch and back up</span></li></ul></div></div>
-</div>
-</section>
-<section class="decision" aria-labelledby="question-1"><h3 id="question-1">How to try a failed <code>send</code> again</h3>
-<div class="numbered" data-floe-part="options">
-<div class="card option" data-floe-look="panel"><div class="title">Back off exponentially</div><div class="body"><div data-floe-text=""><p>1 minute, then 2, 4 and on, up to a day.</p></div></div></div>
-<div class="card option" data-floe-look="panel"><div class="title">A fixed delay</div><div class="body"><div data-floe-text=""><p>Every 5 minutes, up to 50 times.</p></div></div></div>
-</div>
-</section>
-</section>
-<section><h2 id="decided">Decided</h2><ul data-floe-look="rows" class="decided"><li>A notification is written to the queue in the same transaction as what causes it</li><li>Workers take at most <code>20</code> notifications at a time</li><li>A notification still failing after a day is kept, marked <strong>dead</strong>, for a person to look at</li></ul></section>
-<section><h2 id="impact">Impact</h2>
-<div data-floe-look="table"><table>
-<thead><tr><th scope="col">Area</th><th scope="col">Effect</th></tr></thead>
-<tbody>
-<tr><td>Web app</td><td>Writes to the queue instead of sending; answers faster</td></tr>
-<tr><td>Database</td><td>A new table <code>notifications</code>, polled by the workers</td></tr>
-<tr><td>Operations</td><td>Two worker processes to deploy and watch</td></tr>
-</tbody>
-</table></div>
-</section>
-<section><h2 id="more-0">Rollout</h2>
-<ol data-floe-part="steps">
-<li class="todo"><strong>Write to the queue and send in the request</strong><div data-floe-text=""><p>Both ways for a week, comparing what goes out.</p></div></li>
-<li class="todo"><strong>Send from the workers only</strong></li>
-<li class="todo"><strong>Remove the sending from the web app</strong></li>
-</ol>
-</section>
-</main>
-<aside>
+<div class="floe-column sheet">
+<aside class="rail">
+
 <nav data-floe-look="toc" aria-label="Contents"><p class="title" aria-hidden="true">Contents</p>
-<ul>
+<ul><li><a href="#conclusion">Conclusion</a></li>
 <li><a href="#background">Background</a></li>
-<li><a href="#goals">Goals</a></li><li><a href="#non-goals">Non-goals</a></li><li><a href="#decisions">Options</a></li><li><a href="#decided">Decided</a></li><li><a href="#impact">Impact</a></li><li><a href="#more-0">Rollout</a></li>
+<li><a href="#solution">Proposed solution</a></li><li><a href="#decisions">Options</a></li><li><a href="#build">Build</a></li><li><a href="#ship">Ship</a></li><li><a href="#risks">Risks</a></li><li><a href="#more-0">Glossary</a></li>
 </ul>
 </nav><script>(function contents() {
   const nav = document.currentScript.previousElementSibling;
@@ -740,6 +1017,335 @@ page answers. When the mail provider is slow, so is the page, and a provider out
   addEventListener('resize', later);
 })(null);</script>
 </aside>
+<main>
+<header class="head">
+<p class="kindline"><span>Tech spec</span></p>
+<h1 id="send-notifications-through-a-queue">Send notifications through a queue</h1><p class="summary">Notifications leave the web request and go out from a queue, so that a slow mail server never slows a page.</p>
+<dl class="fields"><div><dt>Status</dt><dd><span data-floe-part="cell" data-floe-tone="accent">In review</span></dd></div><div><dt>Date</dt><dd>2030-05-14</dd></div><div><dt>Owner</dt><dd>Platform team</dd></div><div><dt>Reviewers</dt><dd>Security team, Operations</dd></div><div class="wide"><dt>Related</dt><dd><ul data-floe-part="links">
+<li><a href="docs/notifications-prd.html"><span class="to">docs</span><span class="title">Requirements: notifications that never slow a page</span></a><span class="text">What this meets</span></li>
+<li><a href="/a/outage-march/"><span class="to">docs</span><span class="title">Outage report of March</span></a><span class="text">Saves failed for 20 minutes</span></li>
+</ul></dd></div>
+</dl>
+</header>
+<section class="verdict" aria-labelledby="conclusion">
+<h2 id="conclusion">Conclusion</h2>
+<ol>
+<li><span class="question">Which queue</span><strong class="pick">A table in the database we have</strong><span class="why">It needs no new service to run, and the load is well within what the database takes</span></li>
+<li><span class="question">How to try a failed <code>send</code> again</span><strong class="pick undecided">Undecided</strong></li>
+</ol>
+</section>
+<section class="block"><h2 id="background">Background</h2><div data-floe-markdown=""><p>Today a notification is sent <strong>inside the web request</strong> that causes it: saving a comment sends its email before the
+page answers. When the mail provider is slow, so is the page, and a provider outage turns into failed saves.</p>
+<p>Last month 2% of comment saves took over five seconds, all of them waiting on the mail provider.</p></div>
+<div class="goals">
+<div><h3 id="goals">Goals</h3><ul data-floe-look="marked" class="yes"><li><span>A page answers without waiting for any notification</span></li><li><span>A notification that fails is tried again, and none is lost</span></li><li><span>Email, push and chat go out the same way</span></li></ul></div><div><h3 id="non-goals">Non-goals</h3><ul data-floe-look="marked" class="no-goals"><li><span>Changing what the notifications say</span></li><li><span>A user&#39;s settings of which notifications they get</span></li></ul></div>
+</div>
+</section>
+<section class="block"><h2 id="solution">Proposed solution</h2><div data-floe-markdown=""><p>The web app writes each notification to a table <code>notifications</code> in the same transaction as what causes it, and
+answers at once. Two worker processes poll the table, send what is due and mark it sent, trying a failed one again
+with a growing delay. Email, push and chat are three senders behind one interface.</p></div><div class="figure"><div data-floe-part="diagram"><script>(function zoomable({ words, frame: frameClass, tools: toolsClass }) {
+  const MAX = 4;
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = words[lang] || words[lang.split('-')[0]] || words.en;
+  const setup = (wrap) => {
+    if (wrap.dataset.zoomable) return;
+    const first = wrap.firstElementChild;
+    const svg = first?.localName === 'svg' ? first : null;
+    const img = first?.localName === 'img' ? first : null;
+    if (!svg && !img) return;
+    if (img && !img.complete) {
+      wrap.dataset.zoomable = 'pending';
+      const again = () => {
+        delete wrap.dataset.zoomable;
+        setup(wrap);
+      };
+      img.addEventListener('load', again, { once: true });
+      img.addEventListener('error', again, { once: true });
+      return;
+    }
+    const [W, H] = svg ? (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number).slice(2) : [img.naturalWidth, img.naturalHeight];
+    if (!(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    if (img) img.draggable = false;
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    let printing = false;
+    let offered;
+    const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
+    const min = () => Math.min(fit(), 1);
+    const shrunk = () => (svg ? Math.min(wrap.offsetWidth / W, wrap.offsetHeight / H) : fit()) < 1;
+    const tools = document.createElement('div');
+    tools.className = toolsClass;
+    tools.hidden = true;
+    for (const [k, text, label] of [
+      ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
+      ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+    const title = wrap.hasAttribute('title'), described = wrap.hasAttribute('aria-describedby');
+    const hint = document.createElement('div');
+    hint.className = `${frameClass}-hint`;
+    hint.id = `${frameClass}-hint-${document.querySelectorAll(`.${hint.className}`).length}`;
+    hint.textContent = msg.zoom_hint;
+    wrap.after(hint);
+
+    const offer = (can) => {
+      if (can === offered) return;
+      offered = can;
+      const focused = wrap.contains(document.activeElement) || tools.contains(document.activeElement);
+      tools.hidden = !can;
+      wrap.classList.toggle('can-zoom', can);
+      wrap.tabIndex = can ? 0 : -1;
+      if (can) {
+        wrap.setAttribute('role', 'group');
+        wrap.setAttribute('aria-label', msg.zoom_frame);
+        if (!described) wrap.setAttribute('aria-describedby', hint.id);
+        if (!title) wrap.title = msg.zoom_hint;
+      } else {
+        wrap.removeAttribute('role');
+        wrap.removeAttribute('aria-label');
+        if (!described) wrap.removeAttribute('aria-describedby');
+        if (!title) wrap.removeAttribute('title');
+        if (focused) wrap.focus();
+      }
+    };
+    const show = (x, y, w, h) => {
+      if (svg) {
+        svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+        return;
+      }
+      if (fitted || printing) {
+        img.style.transform = '';
+        img.style.borderColor = '';
+        return;
+      }
+      const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
+      img.style.borderColor = 'transparent';
+      img.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+    };
+
+    const render = () => {
+      if (printing) {
+        show(0, 0, W, H);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      show(cx - vw / 2, cy - vh / 2, vw, vh);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      offer(!fitted || shrunk());
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    wrap.addEventListener('wheel', (e) => {
+      if (!offered || (!e.ctrlKey && !e.metaKey)) return;
+      e.preventDefault();
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      if (!offered || e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    wrap.addEventListener('keydown', (e) => {
+      if (!offered || e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom. Click or Tab to the figure, then + - 0 to zoom in, out and fit. Drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチで拡大。クリックか Tab で図を選ぶと + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom" style="aspect-ratio: 723.6 / 88; max-height: min(85vh, 108px)"><svg viewBox="0 0 723.6 88" class="dg" role="img" aria-label="The web app writes each notification to a table, and workers send it from there"><defs><marker id="dg1-8aaac4_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><path d="M116,44 H186" class="edge" marker-end="url(#dg1-8aaac4_arrow)"></path><path d="M314,44 H376.8" class="edge" marker-end="url(#dg1-8aaac4_arrow)"></path><path d="M472.8,44 H535.6" class="edge" marker-end="url(#dg1-8aaac4_arrow)"></path><g class="box"><rect x="20" y="20" width="96" height="48" rx="8"></rect><text x="68" y="44" text-anchor="middle" class="main">Web app</text></g><g class="box"><rect x="186" y="20" width="128" height="48" rx="8"></rect><text x="250" y="35.5" text-anchor="middle" class="main">Database</text><text x="250" y="52.5" text-anchor="middle" class="sub">notifications</text></g><g class="box"><rect x="376.8" y="20" width="96" height="48" rx="8"></rect><text x="424.8" y="44" text-anchor="middle" class="main">Workers</text></g><g class="box"><rect x="535.6" y="20" width="168" height="48" rx="8"></rect><text x="619.6" y="44" text-anchor="middle" class="main">Mail, push, chat</text></g><rect x="128" y="35" width="46" height="18" class="label-bg"></rect><text x="151" y="44" text-anchor="middle" class="label">write</text><rect x="326" y="35" width="38.8" height="18" class="label-bg"></rect><text x="345.4" y="44" text-anchor="middle" class="label">poll</text><rect x="484.8" y="35" width="38.8" height="18" class="label-bg"></rect><text x="504.2" y="44" text-anchor="middle" class="label">send</text></svg></div></div></div>
+</section>
+<section class="block"><h2 id="decisions">Options</h2>
+<section class="decision" aria-labelledby="q-0"><h3 id="q-0">Which queue</h3><div class="numbered" data-floe-part="options">
+<div class="card option pick" data-floe-look="panel"><div class="title">A table in the database we have <span data-floe-part="cell">Recommended</span></div><div class="body"><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>No new service to run or watch</span></li><li class="pro"><span><span class="floe-hidden">Pro: </span>Written in the same transaction as the comment</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Polling adds load to the database</span></li></ul></div></div>
+<div class="card option" data-floe-look="panel"><div class="title">A message broker</div><div class="body"><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Made for this, and scales further</span></li><li class="con"><span><span class="floe-hidden">Con: </span>A new service to run, watch and back up</span></li></ul></div></div>
+</div></section>
+<section class="decision" aria-labelledby="q-1"><h3 id="q-1">How to try a failed <code>send</code> again</h3><div class="numbered" data-floe-part="options">
+<div class="card option" data-floe-look="panel"><div class="title">Back off exponentially</div><div class="body"><div data-floe-text=""><p>1 minute, then 2, 4 and on, up to a day.</p></div></div></div>
+<div class="card option" data-floe-look="panel"><div class="title">A fixed delay</div><div class="body"><div data-floe-text=""><p>Every 5 minutes, up to 50 times.</p></div></div></div>
+</div></section><h3 id="decided">Decided</h3><ul data-floe-look="rows" class="decided"><li>A notification is written to the queue in the same transaction as what causes it</li><li>Workers take at most <code>20</code> notifications at a time</li><li>A notification still failing after a day is kept, marked <strong>dead</strong>, for a person to look at</li></ul>
+</section>
+<section class="group"><h2 id="build" class="grouphead">Build</h2><section class="block"><h3 id="data">Data</h3><div data-floe-part="table"><table>
+<thead><tr><th scope="col">Column</th><th scope="col">Type</th><th scope="col">Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>id</code></td><td>bigint</td><td>The notification</td></tr>
+<tr><td><code>channel</code></td><td>text</td><td><code>email</code>, <code>push</code> or <code>chat</code></td></tr>
+<tr><td><code>due_at</code></td><td>timestamp</td><td>When to try it next</td></tr>
+<tr><td><code>state</code></td><td>text</td><td><code>waiting</code>, <code>sent</code> or <code>dead</code></td></tr>
+</tbody>
+</table></div></section><section class="block"><h3 id="interfaces">Interfaces</h3><figure data-floe-part="code"><figcaption><span class="lang">go</span></figcaption><pre><code class="lines"><span data-floe-copy="">type Sender interface {
+</span><span data-floe-copy="">	Send(ctx context.Context, n Notification) error
+</span><span data-floe-copy="">}
+</span></code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></section><section class="block"><h3 id="impact">Impact</h3>
+<div data-floe-look="table"><table><thead><tr><th scope="col">Area</th><th scope="col">Effect</th></tr></thead>
+<tbody><tr><td>Web app</td><td>Writes to the queue instead of sending; answers faster</td></tr><tr><td>Database</td><td>A new table <code>notifications</code>, polled by the workers</td></tr><tr><td>Operations</td><td>Two worker processes to deploy and watch</td></tr></tbody></table></div></section>
+</section>
+<section class="group"><h2 id="ship" class="grouphead">Ship</h2>
+<div class="pair"><section data-floe-look="panel" class="card"><h3 id="security-and-privacy">Security and privacy</h3><ul><li>A notification holds no password or token: the link in it is made when it is sent</li><li>Rows older than 30 days are deleted</li></ul></section><section data-floe-look="panel" class="card"><h3 id="testing">Testing</h3><ul><li>A worker stopped mid-send sends the notification once more, never twice to a person</li><li>A load test of 10 times last month&#39;s peak</li></ul></section>
+</div><section class="block"><h3 id="rollout">Rollout</h3><ol data-floe-part="steps">
+<li class="todo"><strong>Write to the queue and send in the request</strong><div data-floe-text=""><p>Both ways for a week, comparing what goes out.</p></div></li>
+<li class="todo"><strong>Send from the workers only</strong><div data-floe-text=""><p>Turning the flag off goes back to sending in the request.</p></div></li>
+<li class="todo"><strong>Remove the sending from the web app</strong></li>
+</ol></section><section class="block"><h3 id="monitoring">Monitoring</h3><ul><li>The oldest waiting notification: someone is told past 10 minutes</li><li>Notifications marked <strong>dead</strong> in a day: someone is told past 5</li></ul></section>
+</section>
+<section class="block"><h2 id="risks">Risks</h2>
+<div data-floe-look="table"><table><thead><tr><th scope="col">Risks</th><th scope="col">Mitigation</th></tr></thead>
+<tbody><tr><td>Polling slows the database at peak</td><td>An index on <code>due_at</code>, and workers that wait longer when nothing is due</td></tr><tr><td>A provider takes the same mail twice</td><td></td></tr></tbody></table></div><h3 id="open-questions">Open questions</h3><ol><li>Do chat notifications need their own rate limit?<span class="by">Answers: Operations</span></li></ol>
+</section>
+<section class="block"><h2 id="more-0">Glossary</h2>
+<dl data-floe-part="facts">
+<div class="card" data-floe-look="panel"><dt>Dead</dt><dd>A notification still failing after a day, kept for a person to look at</dd></div>
+<div class="card" data-floe-look="panel"><dt>Due</dt><dd>A notification whose next try has come</dd></div>
+</dl>
+</section>
+</main>
 </div>
 
 

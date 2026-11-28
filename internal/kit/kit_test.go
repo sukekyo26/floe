@@ -889,7 +889,7 @@ func TestShapes(t *testing.T) {
 		"template report":     "eyebrow,lang,lead,sections,template,theme,title,toc",
 		"template runbook":    "caution,lang,more,needs,owner,rollback,steps,summary,template,theme,title,updated",
 		"template slides":     "direction,lang,slides,subtitle,template,theme,title",
-		"template tech-spec":  "background,date,decided,decisions,goals,impact,lang,more,non_goals,owner,status,summary,template,theme,title",
+		"template tech-spec":  "background,data,date,decided,decisions,diagram,goals,impact,interfaces,lang,monitoring,more,non_goals,open,owner,related,reviewers,risks,rollout,security,solution,status,summary,template,testing,theme,title",
 		"section html":        "html",
 	}
 	k := floe(t)
