@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" font-family="sans-serif">
+<rect width="1280" height="800" rx="12" fill="#ffffff" stroke="#c9c6bf" stroke-width="2"/>
+<rect x="0" y="0" width="1280" height="64" rx="12" fill="#eceae5"/>
+<text x="40" y="40" font-size="18" fill="#55534e">Sign in</text>
+<rect x="0" y="64" width="560" height="736" fill="#dcebec"/>
+<circle cx="280" cy="380" r="110" fill="#c3dde0"/><rect x="230" y="350" width="100" height="80" rx="10" fill="#1d6670"/><path d="M250 350 v-30 a30 30 0 0 1 60 0 v30" stroke="#1d6670" stroke-width="12" fill="none"/>
+<text x="680" y="230" font-size="32" fill="#22211f" font-weight="700">Forgot your password?</text>
+<rect x="680" y="262" width="460" height="10" rx="5" fill="#e2e0db"/><rect x="680" y="284" width="380" height="10" rx="5" fill="#e2e0db"/>
+<text x="680" y="350" font-size="15" fill="#55534e">Your email</text>
+<rect x="680" y="364" width="460" height="56" rx="10" fill="#ffffff" stroke="#8a877f" stroke-width="2"/>
+<text x="700" y="399" font-size="17" fill="#8a877f">name@example.com</text>
+<rect x="680" y="450" width="460" height="56" rx="10" fill="#1d6670"/>
+<text x="910" y="485" font-size="18" fill="#fff" text-anchor="middle" font-weight="700">Send the link</text>
+<text x="680" y="550" font-size="16" fill="#1d6670">Back to sign in</text>
+</svg>
