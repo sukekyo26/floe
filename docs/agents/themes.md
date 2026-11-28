@@ -83,13 +83,13 @@ floe sets these on `:root` in its lowest layer, under every palette. Set them on
 
 ### Section headings
 
-The templates `report` and `design` read these on a section's heading, for the sides their `page.css` sets, which win over a theme's `base.css`; floe sets none. Set them on `:scope` in `base.css`, and the other sides on `section > h2` there.
+The templates `report` and `tech-spec` read these on a section's heading, for the sides their `page.css` sets, which win over a theme's `base.css`; floe sets none. Set them on `:scope` in `base.css`, and the other sides on `section > h2` there.
 
 | Variable | Read in | What it changes | Without it |
 |---|---|---|---|
 | `--floe-heading-top` | `report` | The padding above the heading | `1.3rem` |
-| `--floe-heading-start` | `design` | The padding between the heading's left line and its words | `0.7rem` |
-| `--floe-heading-edge` | `design` | The heading's left line, a border | `4px solid var(--accent)` |
+| `--floe-heading-start` | `tech-spec` | The padding between the heading's left line and its words | `0.7rem` |
+| `--floe-heading-edge` | `tech-spec` | The heading's left line, a border | `4px solid var(--accent)` |
 
 ### Part variables
 
@@ -124,7 +124,7 @@ Each item gives the action, then the reason in parentheses.
 
 ### Page and column
 
-- Leave `--column-width` to the template's `page.css` (a theme that sets it in its palette widens the column only of a template that sets none: report, design, handoff and postmortem; adr's and runbook's `page.css` win over it, and so does a report's with contents, `main:has(> .body) { --column-width: 100%; }`; floe does not check it).
+- Leave `--column-width` to the template's `page.css` (a theme that sets it in its palette widens the column only of a template that sets none: report, tech-spec, handoff and postmortem; adr's and runbook's `page.css` win over it, and so does a report's with contents, `main:has(> .body) { --column-width: 100%; }`; floe does not check it).
 
 ### Colours
 

@@ -1,6 +1,6 @@
 # Templates
 
-A template is the page a data file is drawn into: a directory that says what the data file may hold, how the page is laid out and what goes with it. A data file names its template with `template:` (`floe guide` tells how to write a data file). floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). This doc says what each file holds, what `page.html` can use, what `page.css` reaches, how a template uses parts, looks and the palette, and what `floe template check` refuses. For a part of your own, see `floe part guide`; for a theme, `floe theme guide`.
+A template is the page a data file is drawn into: a directory that says what the data file may hold, how the page is laid out and what goes with it. A data file names its template with `template:` (`floe guide` tells how to write a data file). floe's templates are `report`, `tech-spec`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). This doc says what each file holds, what `page.html` can use, what `page.css` reaches, how a template uses parts, looks and the palette, and what `floe template check` refuses. For a part of your own, see `floe part guide`; for a theme, `floe theme guide`.
 
 In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its templates are in `.floe/templates`, and without it floe reads and writes your own.
 
@@ -145,7 +145,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 ### The column
 
 - floe starts every page with no margin on the body. An element of the class `floe-column` (`<main class="floe-column">`) is centred in a column `--column-width` wide, within `--page-pad` each side. Both stop at the parts' boxes, like `page.css`, and `page.css` wins over them even with selectors of less specificity.
-- Set `--column-width` in the template's `page.css`, to any length (`:scope { --column-width: 40rem; }`) or to the palette's `--text-width`, which `adr` and `runbook` do for a page of one column (`:scope { --column-width: var(--text-width); }`). A theme's palette that sets it widens the column of a template that sets none (`report`, `design`, `handoff` and `postmortem`), but not of a `report` with contents, whose `page.css` sets `--column-width: 100%` on screen (`@media screen { main:has(> .body) { --column-width: 100%; } }`).
+- Set `--column-width` in the template's `page.css`, to any length (`:scope { --column-width: 40rem; }`) or to the palette's `--text-width`, which `adr` and `runbook` do for a page of one column (`:scope { --column-width: var(--text-width); }`). A theme's palette that sets it widens the column of a template that sets none (`report`, `tech-spec`, `handoff` and `postmortem`), but not of a `report` with contents, whose `page.css` sets `--column-width: 100%` on screen (`@media screen { main:has(> .body) { --column-width: 100%; } }`).
 - floe sets no font size, so the page's text takes the size its reader's browser sets.
 
 These lines of `report`'s `page.css` lay out its column (`<main class="floe-column">`):

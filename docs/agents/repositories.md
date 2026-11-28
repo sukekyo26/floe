@@ -60,7 +60,7 @@ Both are required, and any other key is refused.
 
 Run these at the repository's root, where `.git` is: `floe repository new` makes the repository where it runs.
 
-1. Make the setting, the directory of the documents and a template (with floe's templates alone, as `template: design`, leave out `template new`):
+1. Make the setting, the directory of the documents and a template (with floe's templates alone, as `template: tech-spec`, leave out `template new`):
 
 ```sh
 floe repository new docs/specs

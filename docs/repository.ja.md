@@ -53,7 +53,7 @@ mkdir -p docs/specs
 floe repository template new api-spec
 ```
 
-`floe repository new` は `documents` のディレクトリを作らないので、`mkdir` で作ります。floe のテンプレートだけを使うなら（`template: design`）、`template new` は要りません。[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き（そこに出るコマンドには、頭に `floe repository` を付けます。`floe repository template check`）、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: design`）も名指せます。
+`floe repository new` は `documents` のディレクトリを作らないので、`mkdir` で作ります。floe のテンプレートだけを使うなら（`template: tech-spec`）、`template new` は要りません。[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き（そこに出るコマンドには、頭に `floe repository` を付けます。`floe repository template check`）、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: tech-spec`）も名指せます。
 
 ## 描く・確かめる
 
