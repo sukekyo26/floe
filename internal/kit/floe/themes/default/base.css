@@ -2,7 +2,7 @@
 :scope {
   /* default's own, here and not in its palette, which lies under every theme's. Light, so that what lies straight on
      it reads; under 30% its edge melts into the page's ground */
-  --default-panel: color-mix(in srgb, var(--line) 30%, var(--bg));
+  --default-panel: color-mix(in srgb, var(--line) 37%, var(--bg));
   /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and the radius rule follows the
