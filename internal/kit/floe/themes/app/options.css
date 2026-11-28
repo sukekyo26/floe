@@ -1,4 +1,3 @@
-/* Options are plans to pick from: each number a grey disc, the advised one ringed in raspberry with its number filled */
+/* Options are plans to pick from: each number a grey disc, the advised one's number filled in raspberry */
 :scope.numbered > .option::before { border-radius: 50%; background: var(--app-chip); color: var(--fg); font-weight: 800; }
-.option.pick { outline-width: 2.5px; }
 :scope.numbered > .option.pick::before { background: var(--accent); color: var(--on-fill); }

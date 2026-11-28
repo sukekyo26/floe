@@ -123,7 +123,7 @@ const measureContrastAt = `(() => {` + contrastBody + `return JSON.stringify({ s
 // border 3px wide under a heading of code is not), and one low at fewer than half its points passes. The round
 // corners of a box clipping a ring are not seen, nor a scrollbar under a ring, which the test's Chrome hides. A box
 // with overflow counts as clipping what is in it though it is not the containing block of one placed absolutely, and an
-// outline an element draws without the focus (app's option picked) counts as its ring.
+// outline an element draws without the focus counts as its ring.
 // It leaves low, each line by the part (or the element) it is in, and seen, the elements it focused.
 const ringsBody = colours + partOfJS + `
   const low = new Map();

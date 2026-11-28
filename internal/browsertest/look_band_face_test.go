@@ -37,9 +37,9 @@ var bandText = "lang: en\ntemplate: mine\ntitle: Band\ntext: |\n  A [link](https
 	"  > A quote with [a link](https://example.com/) and `code`.\n\n  ```\n  fenced" + strings.Repeat(" wide", 60) + "\n  ```\n" +
 	"words: \"## Said\\n\\nA text with [a link](https://example.com/) and `code`.\"\n"
 
-// bandHeld is parts in a band that hold Markdown: details holding a heading, and options, one of them picked.
+// bandHeld is parts in a band that hold Markdown: details holding a heading, and a card of options.
 var bandHeld = "details: { title: Held, open: true, parts: [{ text: \"## Held\\n\\nIn details.\" }] }\n" +
-	"options: [{ title: Card, text: \"A card's text.\" }, { title: Taken, pick: Advised, text: Picked. }]\n"
+	"options: [{ title: Card, text: \"A card's text.\" }]\n"
 
 // bandParts is parts in a band: a note with a title, a link and a line's code, a table with a link in its heading and as wide
 // as to scroll, and code as wide as to scroll.
@@ -61,8 +61,7 @@ var bandColours = "bars: [{ label: Copied, value: 40, of: 100, unit: pages }]\n"
 // measureBand finds what the band draws wrong: a note with no ground of its own or not
 // in the page's text colour, a line's code without its frame (a shadow every code has, seen only in a face) or code in
 // a fenced block with one, a text not in the band's text colour or its heading marked, a heading in details marked, a
-// card with no ground of its own or in the band's text colour, a picked option whose ring reaches past the card's frame
-// (onto the band, where it melts), and a picked tab whose ground is not 3:1 off the band's.
+// card with no ground of its own or in the band's text colour, and a picked tab whose ground is not 3:1 off the band's.
 // What it looks for and does not find is amiss too, so that a change of the page's shape fails rather than passes.
 // It returns {seen, amiss}: the things it measured, and for each wrong the part (or what is missing) and how.
 const measureBand = `(() => {` + colours + `
@@ -102,13 +101,6 @@ const measureBand = `(() => {` + colours + `
     if (!p) push('cards', 'none found: a card\'s p');
     else if (getComputedStyle(p).color === band) push('cards', 'a card: in the band\'s text colour');
   }
-  // The ring of the picked option lies within the card's frame, on the card's own ground.
-  const pick = find('options', 'header .option.pick');
-  if (pick) {
-    const s = getComputedStyle(pick), frame = Math.max(...['Top', 'Right', 'Bottom', 'Left'].map((side) => parseFloat(s['border' + side + 'Width'])));
-    const width = parseFloat(s.outlineWidth), offset = parseFloat(s.outlineOffset);
-    if (-offset < width + frame) push('options', 'the picked one: its ring ' + width + 'px at ' + offset + 'px reaches past a frame of ' + frame + 'px');
-  }
   // The picked tab is told from the others and from the band: its ground stands 3:1 off the band's.
   const picked = find('tabs', 'header [data-floe-part="tabs"] > label:has(:checked)');
   if (picked) {
@@ -144,8 +136,7 @@ func bandPage(t *testing.T, s *site, slug, data string) {
 }
 
 const lookBandFaceFix = "draw a part in a band in the colours of the band's face: a part on a ground of its own in the page's " +
-	"text colour, one of none in the band's; frame a line's code alone; mark no heading; ring a picked option within its card's frame; " +
-	"set the picked tab 3:1 off the band"
+	"text colour, one of none in the band's; frame a line's code alone; mark no heading; set the picked tab 3:1 off the band"
 
 // lookBandFace draws Markdown, pills and parts a template places in the look band, in every theme (bandPages), as
 // measureBand measures: a part on a ground of its own is in the page's text colour and one of none in the band's,

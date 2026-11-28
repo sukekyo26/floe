@@ -136,8 +136,7 @@ Each item gives the action, then the reason in parentheses.
 - Give a shadow with `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` in `palette.css`, `--floe-shadow-color` on the element that casts it (`.card { --floe-shadow-color: var(--fg); }` in `cards.css`, where the cards are inside the root) and `--floe-inset` for one within the box (floe's base writes `box-shadow` from them).
 - Do not write `box-shadow` on a part's box, a look's element or a blockquote (it is written over floe's and drops the shadow and the inset).
 - Keep what a box draws outside itself within `--floe-room` (a shadow, a pseudo-element standing out or an outline that reaches further meets the next box or the page's edge; a shadow reaches blur + spread + its offset towards a side, and a tilt or a scale reaches further the bigger the box).
-- Draw a decoration on a box that has a focus ring or a selected option (the cards of `options`) with `--floe-inset` or `::before`, as in `.card { --floe-inset: inset 0 0 0 2px var(--surface); }` in `cards.css` (the ring is an `outline`, and takes the place of one a theme writes).
-- Keep the frame of an `options` card within 2px (floe draws the ring of the selected option 4px in, on the card's own ground, so that it does not melt into a band; a thicker frame is covered by it).
+- Draw a decoration on a box that has a focus ring with `--floe-inset` or `::before`, as in `.card { --floe-inset: inset 0 0 0 2px var(--surface); }` in `cards.css` (the ring is an `outline`, and takes the place of one a theme writes).
 - Leave the space between parts to `--floe-room` (floe sets it on `:root`; a `gap` on the root of `cards.css` or `tabs.css` changes it).
 - Do not write a word in a `content` string; use symbols (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 
