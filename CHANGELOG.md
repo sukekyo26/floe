@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-28
+
 ### Added
 
 - Add floe's template `design`, a design spec of screens: each screen in a section of its own, its images on a computer and a phone (`pc`, `phone`, one at least) on a dotted canvas with what it is for, its notes numbered in red and its states as cards; and optional users, a screen flow, colours and type drawn as samples, components, the words on the screens, accessibility, open questions and related documents (the part `links`). Point at the design files by `related` and keep exports of the screens beside the data file; the example's images are in the template's `assets/`.
@@ -198,7 +200,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/sukekyo26/floe/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/sukekyo26/floe/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/sukekyo26/floe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sukekyo26/floe/compare/v0.2.0...v0.3.0

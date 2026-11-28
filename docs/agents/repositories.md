@@ -44,7 +44,7 @@ docs/specs/
 ### .floe/repository.yaml
 
 ```yaml
-version: '0.4.0'
+version: '0.5.0'
 documents:
   - 'docs/specs'
 ```

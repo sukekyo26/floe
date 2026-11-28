@@ -6,7 +6,7 @@ import "runtime/debug"
 // Version is bumped in lockstep with the repository-root VERSION file so that
 // `go install` builds (which skip the justfile's ldflags) report the release
 // too. `just build` overrides it at link time with -X.
-var Version = "0.4.0"
+var Version = "0.5.0"
 
 // String is the version floe prints: Version, with the commit go stamped into a build of a checkout after a "+".
 // Release builds pass -buildvcs=false, so they print Version alone.
