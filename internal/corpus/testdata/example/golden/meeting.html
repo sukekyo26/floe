@@ -1,0 +1,508 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Weekly sync: the member site redesign</title>
+<style>
+@layer floe.defaults, floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
+@layer floe.looks.boxes, floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways on screen instead, as a table does, keeps its words whole there, and folds its lines on paper.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line unless what holds it sets --floe-pill-wrap: normal, still overflows.
+   Give such a part a layout for narrow screens, as keys has */
+/* Print keeps every ground, the page's too, as the screen draws it: a light text on a fill would be lost on white
+   paper. The prefixed name is for a Chromium before 136, as a VS Code's may be.
+   LIMIT: no test fails without the prefixed name, as the Chrome of the tests reads both */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+/* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
+   its own outside the box of its Markdown: smaller than every heading of a template it stands under, the least of which
+   is 1.1rem (adr's sections, runbook's steps), and smaller by level, h4 to h6 as h3.
+   LIMIT: h1 is as large as a question of tech-spec (1.05rem) over it, in an option's card, which the card tells apart */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.05em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) :is(h3, h4, h5, h6) { font-size: 0.95em; }
+p, ul, ol { margin: 0; }
+/* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
+h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+/* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
+   --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
+   its own) and the focus ring in it take them, as the accent and its soft ground would sink into the fill. What a part
+   holds draws on the part's own ground, without them, nor a --floe-pill-wrap set around the part; the part's box stays
+   in the face, its ring too. An element that paints a light ground of its own (a panel, a note) sets its text's colour
+   with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
+   no ground of its own writes it as var(--on-face, …) */
+:where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
+   its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
+   its blocks; empty Markdown draws no box. page.css reaches in a template's box, to arrange it, not in a
+   text's. What a quote or a list holds is spaced below.
+   LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
+   what it holds, and page.css stops at the part's box there; floe's templates place none so */
+[data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
+a { color: var(--on-face, var(--accent)); }
+/* LIMIT: a part draws a ring of focus or a pick by outline on its box (options' cards): a theme that draws a
+   decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
+   or ::before */
+:focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
+/* What a browser draws in its own monospace stays the page's size: with no font size set on the page, a browser sizes
+   monospace alone from 13px, and the same named twice from the page's */
+kbd, samp, tt { font-family: monospace, monospace; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
+/* On screen, a box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that
+   a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writes
+   overflow-x: auto with it, under @media screen. On paper, where what scrolls is not read, nothing scrolls: pre folds
+   its lines, and a part that scrolls on screen folds what it holds within the paper's width.
+   LIMIT: what folds no word on paper (a table's heads and cells, a column of numbers or of pills, a tree's note and its
+   depth, a field's name, a finding's level) reaches past the paper when its longest words are wider, and Chrome prints
+   the whole page smaller. In a grid's column of a fixed least width (cards side by side, columns) it reaches past its
+   card or column instead, over the next or out of the theme's frame, the page no wider until it reaches past the paper
+   there, when the whole page prints smaller again.
+   LIMIT: a box a grid's item holds (cards', or columns' long code or table), sent on to the next page at a page's end,
+   leaves the item as short as before, and what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
+   LIMIT: such a box shrinks to its border and padding (code's pre, which leaves its padding to its lines, to its border
+   alone) on screen where its content sets the width; give the place a width if floe places one so.
+   Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
+   or fit-content, a table's cell of auto width, justify-items or justify-self start in a grid, an item of a flex row
+   on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so: tree's list
+   is fit-content on screen but holds no box that scrolls. chart, keys and timeline (container-type: inline-size, to lay
+   out by their own width) shrink so in such a place too, to their padding */
+pre {
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
+  padding: 0.9rem 1rem; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+@media screen { pre { overflow-x: auto; contain: inline-size; } }
+@media print { pre { white-space: pre-wrap; overflow-wrap: break-word; } }
+pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (a block that scrolls): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
+   the room a part leaves around it and what text keeps clear of it at its right are defaults.css's alone: a part that
+   lies text under it keeps --floe-copy-room after its longest line, as code does */
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+/* Text a screen reader reads that the page does not show: the copy button's status, and .floe-hidden, the words that
+   tell what a mark of CSS means (a step done, a pro, a file added), which the mark itself is not read for (/ "").
+   It stands at the corner of what places it, or the page's, so that where its text would run widens no page.
+   LIMIT: text selected on the page and copied takes these words too; add user-select: none if that comes to matter.
+   LIMIT: a phone's screen reader (VoiceOver, TalkBack) moves its highlight onto the box it reads, so at each hidden word
+   the page may jump to that corner; floe's pages are read in a desktop's browser. Place each beside its text (its
+   ancestor positioned) if a phone's screen reader comes to be used */
+.floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, columns, a column's
+   title and parts, cards) floe leaves --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+   side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
+   shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
+   --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
+   none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
+   LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestLookRule/shadow-cast measures, no rule refuses.
+   LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
+   --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
+   leave the part's box */
+@property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
+@property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+[data-floe-part], [data-floe-look], blockquote {
+  box-shadow:
+    var(--floe-shadow-x, 0px) var(--floe-shadow-y, 0px) var(--floe-shadow-blur, 0px) var(--floe-shadow-spread, 0px) var(--floe-shadow-color),
+    var(--floe-inset);
+}
+}
+</style>
+<style>
+@layer floe.defaults {
+/* The defaults of the variables floe sets on the page's root, in floe.defaults, the lowest layer, under every palette,
+   as default's palette lies under every theme's: a theme that sets one on :scope in its palette.css or base.css wins
+   over it. Only a plain :root's --floe-* are here, without !important nor an at-rule (TestLintRule/defaults-root): a
+   style here would lose to whatever a theme writes, and !important turns the order of the layers round */
+/* A pill's corners round no more than 3/4 of its line, more than half its height on one line (half a line, its
+   padding and frame) and less on two: a pill of one line stays round at both ends, and one that wraps is a label.
+   LIMIT: a line box over about 1.3 lines (a fallback face of letters, kana or emoji) leaves a one-line pill straight sides.
+   Only the faces of the tests are measured */
+:root { --floe-pill-end: 0.75lh; }
+/* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
+   rows, and the look table and facts take it. floe's themes leave it as it is, so that rows are as tall in every theme */
+:root { --floe-row-pad: 0.4rem; }
+/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
+   sides of a row of the look rows. floe's themes leave it as it is and pad no box; a theme's frame around a box pads the
+   element it paints inside by it (default's tree) */
+:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
+/* The copy button's size, the room a part leaves around it and what text keeps clear of it at its right (base.css
+   draws the button, and keeps no room on paper, over the palette).
+   LIMIT: --floe-copy-room set in a theme's base.css, a layer over base.css's print, holds on paper too */
+:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
+/* The space between parts that stand one after another, which a box's shadow reaches no further than (base.css) */
+:root { --floe-room: 0.75rem; }
+/* The small text of parts, in two steps: small (a pill, a chip, a ring's number, a key, a table's heading, a term, a
+   date, a count, a note beside a value) and an aside, a little larger (a card's or a step's words, a note's title, a
+   tab's name, a value's unit). The text of code (code's lines, a tree's names, code in a pill) follows code's size
+   instead, and a diagram's, in its SVG, the diagram's units.
+   LIMIT: in rem, small text in large text (a slide's heading, swiss's large quote) is no larger */
+:root { --floe-text-small: 0.8rem; --floe-text-aside: 0.9rem; }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:scope {
+  --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
+  /* A quiet ground within a box of the surface: a table's head, a bar's track, a keycap.
+     LIMIT: one melting into its box's ground is seen, not measured; a theme that paints a box near it sets it there */
+  --quiet: color-mix(in srgb, var(--line) 45%, var(--surface));
+  --chart-1: #008fa3; --chart-2: #c2660a; --chart-3: #6157d9; --chart-4: #c8366f;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #b5e05a; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  /* The column a template centres its page in: its width, without the pad each side of it */
+  --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+:scope {
+  /* default's own, here and not in its palette, which lies under every theme's. Light, so that what lies straight on
+     it reads; under 30% its edge melts into the page's ground */
+  --default-panel: color-mix(in srgb, var(--line) 30%, var(--bg));
+  /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
+     corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
+     LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and the radius rule follows the
+     corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
+  /* A quote's ground, and the quiet ground within it, the other way round: the panel's on the page and on a face of the
+     surface, the surface in a panel; each box that turns --quiet turns them with it */
+  --default-quote: var(--default-panel); --default-quote-quiet: var(--surface);
+  --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
+}
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) {
+blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
+blockquote::before { content: "“"; content: "“" / ""; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="cell"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (defaults.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (defaults.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
+}
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="marked"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
+   --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
+   code flows as one */
+:scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
+:scope > li::before { line-height: 1; font-weight: 800; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="numbered"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Items of a list numbered in rings, a line joining each to the next: each item is a row (marks: joined), which floe
+   lays out. An item's ring takes one of three forms: by default a ring of the line's colour; data-floe-mark="ring"
+   rings it in its tone, its own or around it; data-floe-mark="solid" fills it and the line from it in that tone.
+   LIMIT: text written straight in an item breaks into a grid item a run, as an element of it does: write an item's
+   text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
+   child's bottom.
+   LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand.
+   LIMIT: what takes the look and sets its rings' colours over ::before or ::after, rather than by the tone and
+   data-floe-mark, is not refused: told apart from writing a ring's content (a tick) it is not, by the CSS's words */
+:scope { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-reset: floe-step; }
+:scope > li { counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
+:scope > li:last-child { padding-bottom: 0.2rem; }
+:scope > li > * + * { margin-top: 0.15rem; }
+:scope > li::before {
+  content: counter(floe-step); content: counter(floe-step) / counter(floe-step); border-radius: 50%; font-size: var(--floe-text-small); font-weight: 700; line-height: 1;
+  background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
+}
+:scope > li::after { border-radius: 999px; background: var(--line); }
+:scope > li:where([data-floe-mark="ring"])::before { background: var(--tone-soft); color: var(--tone); box-shadow: inset 0 0 0 1.5px var(--tone); }
+:scope > li:where([data-floe-mark="solid"])::before { background: var(--tone); color: var(--on-fill); box-shadow: none; }
+:scope > li:where([data-floe-mark="solid"])::after { background: var(--tone); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="table"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="table"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
+   its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
+@media screen { :scope { overflow-x: auto; contain: inline-size; } }
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
+@media screen {
+  :scope :is(th, td):not(.num) { min-width: 7em; }
+  /* A num column's heading wraps as long as it needs, but not a character a line */
+  :scope th.num { min-width: 6em; }
+}
+:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
+/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
+/* LIMIT: Safari is not seen to paint a row's background once across it; if it paints it in each cell, a gradient starts
+   again in each column there (aurora's line). Measure it on darwin when a head comes to rely on it more */
+:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
+/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
+   --table-rule (none for no rule) */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="cell"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="table"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="table"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { padding: var(--default-pad); --table-head-bg: none; }
+:scope table { border-collapse: separate; border-spacing: 0; }
+:scope tbody td { background: var(--surface); --quiet: var(--default-panel); }
+:scope tbody tr:first-child td:first-child { border-top-left-radius: var(--default-inner); }
+:scope tbody tr:first-child td:last-child { border-top-right-radius: var(--default-inner); }
+:scope tbody tr:last-child td:first-child { border-bottom-left-radius: var(--default-inner); }
+:scope tbody tr:last-child td:last-child { border-bottom-right-radius: var(--default-inner); }
+}
+}
+</style>
+<style>
+@layer floe.marks {
+:where([data-floe-look~="marked"] > li, [data-floe-look~="numbered"] > li) {
+  position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+}
+:where([data-floe-look~="marked"] > li, [data-floe-look~="numbered"] > li) > * { grid-column: text; align-self: first baseline; }
+:where([data-floe-look~="marked"] > li, [data-floe-look~="numbered"] > li)::before {
+  anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+:where([data-floe-look~="numbered"] > li):not(:last-child)::after {
+  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px;
+}
+}
+</style>
+<style>
+@layer floe.page.defaults {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+body { margin: 0; }
+.floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+/* The colours and faces are the theme's palette; the page lays them out: a head of the date and who attended, what
+   came of the meeting (decided and actions) side by side, then the topics in order, in the column every template
+   centres its page in.
+   LIMIT: decided and actions sit side by side while each has 20rem; a width where they wrap is not looked at */
+body { line-height: 1.75; padding-block: 0 4rem; }
+/* Who attended and who was absent, each a row of names after its label, the two side by side while they fit */
+.people { display: flex; flex-wrap: wrap; gap: 0.3rem 1.3rem; font-size: 0.92rem; }
+.people p { display: flex; flex-wrap: wrap; gap: 0.3rem 0.5rem; align-items: baseline; }
+.people b { font-weight: 800; }
+.who { border: 1px solid currentColor; border-radius: var(--radius-pill); padding: 0 0.6rem; }
+.who.off { opacity: 0.75; border-style: dashed; }
+main { display: grid; gap: 2rem; padding-block: 2rem; }
+main section > h2 { font-size: 1.15rem; }
+.count { font-family: var(--mono); font-size: 0.85rem; color: var(--on-face, var(--muted)); margin-left: 0.3rem; }
+.outcome { display: grid; grid-template-columns: minmax(min(20rem, 100%), 2fr) minmax(min(20rem, 100%), 3fr); gap: 1rem; align-items: start; }
+.outcome section { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--floe-room); }
+.decided > li::before { content: "✓"; content: "✓" / ""; color: var(--good); }
+.owner, .due { white-space: nowrap; }
+.due { font-family: var(--mono); }
+tr.done td { color: var(--muted); }
+.topics { display: grid; gap: var(--floe-room); }
+/* As large as the least heading of a template, so that a heading in its text stays under it (base.css) */
+.topics li > h3 { font-size: 1.1rem; }
+.next { border-top: var(--rule); padding-top: 1rem; }
+main > section { display: grid; gap: var(--floe-room); }
+@media (max-width: 800px) {
+  .outcome { grid-template-columns: 1fr; }
+}
+/* The head: a calendar's leaf of the day beside the title, the kind and place above it, who attended under it */
+.head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1.6rem; align-items: center; padding-block: 2.4rem 1.6rem; border-bottom: 1px solid var(--line); }
+.leaf { display: flex; flex-direction: column; align-items: center; width: 7.5rem; border: 2px solid var(--fg); border-radius: var(--radius-small); overflow: hidden; }
+.leaf .month { width: 100%; text-align: center; font-family: var(--mono); font-size: 0.8rem; padding: 0.2rem; border-bottom: 2px solid var(--fg); }
+.leaf .day { font-family: var(--mono); font-size: 3rem; font-weight: 800; line-height: 1.2; }
+.leaf .hours { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); padding-bottom: 0.3rem; }
+.info { display: grid; gap: 0.4rem; justify-items: start; }
+.head h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; line-height: 1.3; }
+.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; color: var(--muted); }
+}
+}
+</style>
+</head>
+<body>
+<header class="floe-column head">
+<p class="leaf"><span class="month">2030-05</span><span class="day">14</span><span class="hours"> 10:00-11:00</span></p>
+<div class="info">
+<p class="when"><span class="kind" data-floe-part="cell">Minutes</span><span>Room B and a video call</span></p>
+<h1 id="weekly-sync-the-member-site-redesign">Weekly sync: the member site redesign</h1>
+<div class="people"><p><b>Attended</b><span class="who">Sam (chair)</span><span class="who">Alex</span><span class="who">Jordan</span><span class="who">Taylor (notes)</span></p><p><b>Absent</b><span class="who off">Morgan</span></p></div>
+</div>
+</header>
+<main class="floe-column">
+<div class="outcome">
+<section data-floe-look="panel"><h2 id="decided">Decided <span class="count">3</span></h2>
+<ul data-floe-look="marked" class="decided"><li><span>The launch stays on <strong>June 3</strong></span></li><li><span>The home screen goes ahead with option B, the news at the top</span></li><li><span>The old contact form stays for a month after the launch, then goes</span></li></ul>
+</section>
+<section data-floe-look="panel"><h2 id="actions">Action items <span class="count">Done 1 / 4</span></h2>
+<div data-floe-look="table"><table>
+<thead><tr><th scope="col">Action</th><th scope="col">Owner</th><th scope="col">Due</th></tr></thead>
+<tbody>
+<tr><td>Redraw option B of the home screen at a phone&#39;s width</td><td class="owner">Jordan</td><td class="due">2030-05-17</td></tr>
+<tr><td>Write the notice shown on the old contact form for its last month</td><td class="owner">Alex</td><td class="due">2030-05-21</td></tr>
+<tr class="done"><td><span data-floe-part="cell" data-floe-tone="good">Done</span> Measure the slow pages and list the five slowest</td><td class="owner">Taylor</td><td class="due">2030-05-21</td></tr>
+<tr><td>Tell Morgan what was decided and ask whether the launch date suits them</td><td class="owner">Sam</td><td class="due">2030-05-15</td></tr>
+</tbody>
+</table></div>
+</section>
+</div>
+<section class="topics"><h2 id="topics">Discussed</h2>
+<ol data-floe-look="numbered">
+<li><h3 id="last-weeks-actions">Last week&#39;s actions</h3><div data-floe-markdown=""><p>Three of the four are done. Replacing the images moves to next week, as the photos have not arrived.</p></div></li>
+<li><h3 id="two-options-for-the-home-screen">Two options for the home screen</h3><div data-floe-markdown=""><p>We compared option A (a large photo at the top) with option B (the news at the top).</p>
+<ul>
+<li>Most questions to support come from people who missed a notice, so B should bring them down</li>
+<li>A looks better, but the photos take work to prepare</li>
+</ul>
+<p>We chose option B.</p></div></li>
+<li><h3 id="the-launch-date">The launch date</h3><div data-floe-markdown=""><p>Moving it later came up, but the campaign&#39;s date is fixed, so the launch stays on June 3. If it slips, rebuilding the contact form waits until after the launch.</p></div></li>
+</ol>
+</section>
+<p class="next"><b>Next meeting:</b> Tuesday 2030-05-21, 10:00, the same room</p>
+</main>
+
+
+</body></html>

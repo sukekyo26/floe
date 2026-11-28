@@ -1,0 +1,2 @@
+# How many actions are done, beside the heading
+actions_done: 'count(actions ?? [], .done == true)'

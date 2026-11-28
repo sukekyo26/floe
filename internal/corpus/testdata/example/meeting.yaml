@@ -1,0 +1,30 @@
+template: meeting
+lang: en
+title: 'Weekly sync: the member site redesign'
+date: '2030-05-14 10:00-11:00'
+place: 'Room B and a video call'
+attendees: ['Sam (chair)', 'Alex', 'Jordan', 'Taylor (notes)']
+absent: ['Morgan']
+decided:
+  - 'The launch stays on **June 3**'
+  - 'The home screen goes ahead with option B, the news at the top'
+  - 'The old contact form stays for a month after the launch, then goes'
+actions:
+  - { what: 'Redraw option B of the home screen at a phone''s width', owner: 'Jordan', due: '2030-05-17' }
+  - { what: 'Write the notice shown on the old contact form for its last month', owner: 'Alex', due: '2030-05-21' }
+  - { what: 'Measure the slow pages and list the five slowest', owner: 'Taylor', due: '2030-05-21', done: true }
+  - { what: 'Tell Morgan what was decided and ask whether the launch date suits them', owner: 'Sam', due: '2030-05-15' }
+topics:
+  - title: 'Last week''s actions'
+    text: 'Three of the four are done. Replacing the images moves to next week, as the photos have not arrived.'
+  - title: 'Two options for the home screen'
+    text: |
+      We compared option A (a large photo at the top) with option B (the news at the top).
+
+      - Most questions to support come from people who missed a notice, so B should bring them down
+      - A looks better, but the photos take work to prepare
+
+      We chose option B.
+  - title: 'The launch date'
+    text: 'Moving it later came up, but the campaign''s date is fixed, so the launch stays on June 3. If it slips, rebuilding the contact form waits until after the launch.'
+next: 'Tuesday 2030-05-21, 10:00, the same room'

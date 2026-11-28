@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "meeting",
+  "description": "Minutes of a meeting, what came of it first: the date, who attended, what was decided, the actions each with an owner and a due date, what was talked about, the next meeting, and sections of your own.",
+  "type": "object",
+  "properties": {
+    "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}", "description": "When it was held, starting with the day as 2030-05-14, such as 2030-05-14 10:00-11:00" },
+    "place": { "type": "string", "minLength": 1, "description": "A room or a call" },
+    "attendees": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "absent": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "decided": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" }
+    },
+    "actions": {
+      "type": "array", "minItems": 1,
+      "description": "What someone is to do after the meeting",
+      "items": {
+        "type": "object",
+        "properties": {
+          "what": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+          "owner": { "type": "string", "minLength": 1, "description": "The one person or team who does it" },
+          "due": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "The day it is due, as 2030-05-21" },
+          "done": { "type": "boolean", "description": "Done since; left out, not yet" }
+        },
+        "required": ["what", "owner", "due"],
+        "additionalProperties": false
+      }
+    },
+    "topics": {
+      "type": "array", "minItems": 1,
+      "description": "What was talked about, in order",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+          "text": { "type": "string", "minLength": 1, "format": "markdown", "description": "What was said" }
+        },
+        "required": ["title"],
+        "additionalProperties": false
+      }
+    },
+    "next": { "type": "string", "minLength": 1, "description": "The next meeting; a line of Markdown" },
+    "more": {
+      "type": "array", "minItems": 1,
+      "description": "Sections of your own after the rest, each a heading over parts",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": { "type": "string", "minLength": 1 },
+          "parts": { "type": "array", "items": { "$ref": "floe:///parts/any.json" } }
+        },
+        "required": ["heading"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["date", "attendees", "topics"],
+  "additionalProperties": false
+}
