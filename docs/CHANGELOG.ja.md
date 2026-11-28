@@ -6,6 +6,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-28
+
 ### 追加
 
 - 追加：floe のテンプレート `design`（画面のデザイン仕様書）。画面ごとに 1 つの段を使い、PC とスマホの画像（`pc`・`phone`。どちらか 1 つ以上）を点の方眼の上に置き、何のための画面か・赤い番号の仕様メモ・状態のカードを並べる。任意で、対象ユーザー、画面遷移、見本で描くカラーとタイポグラフィ、コンポーネント、UI テキスト、アクセシビリティ、未決事項、関連文書（部品 `links`）を書ける。デザインのファイルは `related` で指し、画面の書き出しはデータファイルの横に置く。見本の画像はテンプレートの `assets/` にある。
@@ -198,7 +200,8 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：ページの CSP とサンドボックス。ページの script を floe のものだけにする。
 - 追加：`floe licenses`。floe と、floe に入っているもののライセンスを出す。
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/sukekyo26/floe/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/sukekyo26/floe/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/sukekyo26/floe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sukekyo26/floe/compare/v0.2.0...v0.3.0

@@ -21,13 +21,13 @@ docs/specs/
 `.floe/repository.yaml`, which `floe repository new` writes:
 
 ```yaml
-version: '0.4.0'
+version: '0.5.0'
 documents:
   - 'docs/specs'
 ```
 
 - `floe repository` finds the repository by this file, from any directory in it, looking up no higher than the directory that holds `.git`. Its commands read the templates, parts and themes in `.floe/` alone, whatever is in `~/.config/floe` or the `FLOE_*_DIR` settings, and they use no server and no store. A directory of `.floe/` that is not there is none: no `.gitkeep` is needed.
-- `version` is the version of floe that draws the pages. Another floe refuses the repository before it reads anything else, telling both versions. A floe built from its source has a `+` and a commit after its version (`0.4.0+67f6e156bc78`), and the part before the `+` is compared: such a floe between two releases may draw a page otherwise, which the check then tells as a page not drawn again.
+- `version` is the version of floe that draws the pages. Another floe refuses the repository before it reads anything else, telling both versions. A floe built from its source has a `+` and a commit after its version (`0.5.0+67f6e156bc78`), and the part before the `+` is compared: such a floe between two releases may draw a page otherwise, which the check then tells as a page not drawn again.
 - `documents` are the directories of the documents, from the root, `/`-separated, without `./` before or `/` after (`docs/specs`). Every `.yaml` and `.yml` under them is a document, in folders too, but not under a name that starts with a dot, nor under a link to a directory (name that directory in `documents` instead). An HTML file with no data file is left alone, so a page written by hand can be kept there; so is a page whose data file was deleted, which the check does not find.
 - floe reads and writes nothing out of the repository but the icon sets of `floe icons`: a page, a data file or a directory of `.floe/` that is a link out of it is refused, and so is a file in a directory of `.floe/` that is a link out of that directory.
 - floe leaves out of a linked folder the names that start with a dot, so that `.floe/` is not listed beside the pages.
@@ -94,7 +94,7 @@ jobs:
       - uses: 'actions/checkout@v7'
       - name: 'Install floe'
         run: |
-          curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.4.0/install.sh | FLOE_VERSION=0.4.0 sh
+          curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.5.0/install.sh | FLOE_VERSION=0.5.0 sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: 'Check the documents'
         run: 'floe repository check'
@@ -107,7 +107,7 @@ version: 0.2
 phases:
   install:
     commands:
-      - 'curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.4.0/install.sh | FLOE_VERSION=0.4.0 FLOE_INSTALL_DIR=/usr/local/bin sh'
+      - 'curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.5.0/install.sh | FLOE_VERSION=0.5.0 FLOE_INSTALL_DIR=/usr/local/bin sh'
   build:
     commands:
       - 'floe repository check'

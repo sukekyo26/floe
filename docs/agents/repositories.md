@@ -44,14 +44,14 @@ docs/specs/
 ### .floe/repository.yaml
 
 ```yaml
-version: '0.4.0'
+version: '0.5.0'
 documents:
   - 'docs/specs'
 ```
 
 | Key | What it is | How to write it |
 |---|---|---|
-| `version` | The version of floe that draws the pages: another floe refuses the repository before it reads anything else | What `floe --version` prints before any `+`, as a string. A floe built from its source (`0.4.0+<commit>`) is taken, and may draw a page otherwise: draw the pages with a release |
+| `version` | The version of floe that draws the pages: another floe refuses the repository before it reads anything else | What `floe --version` prints before any `+`, as a string. A floe built from its source (`0.5.0+<commit>`) is taken, and may draw a page otherwise: draw the pages with a release |
 | `documents` | The directories whose `.yaml` and `.yml`, in folders too, are the documents | One or more, from the root, `/`-separated, without `./`, a last `/` or `..` (`docs/specs`). `floe repository new` does not make them. Not read: a name that starts with a dot, or a link to a directory, and what is under them (name that directory here instead) |
 
 Both are required, and any other key is refused.
