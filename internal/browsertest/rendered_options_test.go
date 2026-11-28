@@ -78,7 +78,7 @@ const measureOptions = `(() => {
 // optionsWidths: options' rows holding parts keep their room by --cards-gap and --floe-room (measureOptions); the cards on a line start their parts
 // and their words at one height, a small picture keeps its size and its box is not stretched to the row's, a card of
 // parts alone ends at them, a card holding parts goes whole to the next page on paper (measureOptionsLook); and a
-// theme's number on a card, in the rows or laid out of them (pebble's number, washi's seal), stands as far below the
+// theme's number on a card, in the rows or laid out of them (pebble's number), stands as far below the
 // card's top on a card holding parts as on a card of options without parts (across, it stands by the card's width).
 func TestRenderedOptions(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)

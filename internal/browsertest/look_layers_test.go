@@ -166,12 +166,12 @@ func lookLayers(t *testing.T, s *site) measured {
 	m.expect("brand", got, "rgb(1, 2, 3) | rgb(1, 2, 3) | rgb(4, 5, 6)")
 
 	// A part of one's own takes the panel's look by its part.yaml: floe's washi styles it by the panel's file (its
-	// surface and double rules).
+	// surface, with no frame).
 	open("own-sheet", "template: report\nlang: en\ntheme: washi\nsections:\n  - parts:\n"+
 		"      - html: <div data-floe-part=\"sheet\">mine</div>\n", "[data-floe-part=sheet]")
 	got = b.eval(`(() => { const s = getComputedStyle(document.querySelector('[data-floe-part=sheet]'));
 		return s.backgroundColor + ' ' + s.borderTopStyle })()`)
-	m.expect("own sheet", got, "rgb(247, 241, 227) double")
+	m.expect("own sheet", got, "rgb(255, 253, 249) none")
 
 	// A card takes the panel's look without being a part's box, a layer under the parts': options and default's
 	// cards.css keep it a face of the surface on the panel of default, the nearer scope though.

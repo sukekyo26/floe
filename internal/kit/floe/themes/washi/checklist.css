@@ -1,0 +1,2 @@
+/* A thing done stamped with a round vermilion seal */
+:scope > li.done::before { background: var(--washi-shu); color: var(--on-fill); border-radius: 50%; font-size: var(--floe-text-small); }

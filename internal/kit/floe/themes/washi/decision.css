@@ -1,0 +1,3 @@
+/* A broad vermilion stroke down its left and a large title */
+.card { background: linear-gradient(var(--washi-shu), color-mix(in srgb, var(--washi-shu) 75%, transparent) 80%, transparent) left / 8px 100% no-repeat, var(--surface); }
+:scope .card > .title { font-size: 1.45rem; letter-spacing: 0.04em; }

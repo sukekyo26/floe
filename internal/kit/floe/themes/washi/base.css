@@ -1,2 +1,5 @@
-/* Sumi and vermilion printed on washi, in a Mincho face: tables closed by double rules, states and notes as
-   seals, cards marked with a seal of their number, and quotes ruled in vermilion */
+/* Sumi and vermilion on washi, in a Mincho face. A brush stroke across, in vermilion, thinning out to the right, is a
+   head's; a stroke down the left, thinning out downwards, tells the kind of a box; a vermilion seal marks a thing */
+section > h2 { padding-bottom: 0.5rem; letter-spacing: 0.06em;
+  background: linear-gradient(90deg, var(--on-face, var(--washi-shu)) 0 3.5rem, color-mix(in srgb, var(--on-face, var(--washi-shu)) 60%, transparent) 40%, transparent 95%) left bottom / 100% 5px no-repeat; }
+section > h3 { padding-bottom: 0.2rem; background: linear-gradient(90deg, var(--on-face, var(--washi-shu)) 0 1.6rem, transparent 1.6rem) left bottom / 100% 3px no-repeat; }

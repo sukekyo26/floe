@@ -1,8 +1,5 @@
-:scope {
-  background: var(--surface); color: var(--fg); border: 0; border-top: 2px solid var(--tone);
-  --floe-mark: 2rem; --floe-mark-gap: 0.75rem;
-}
-/* The seal holds the note's own mark of its tone */
-:scope::before { border-radius: var(--radius-small); background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
-.title { letter-spacing: 0.1em; }
-:scope code { background: var(--face, color-mix(in srgb, var(--fg) 6%, transparent)); }
+/* The tone's pale face, a stroke of the tone down its left, its sign written large in the tone */
+:scope { color: var(--fg); border: 0; --floe-mark: 1.6rem; --floe-mark-gap: 0.7rem;
+  background: linear-gradient(var(--tone), color-mix(in srgb, var(--tone) 70%, transparent) 70%, transparent) left / 6px 100% no-repeat, var(--tone-soft); }
+:scope::before { background: none; color: var(--tone); font-size: 1.45rem; font-weight: 900; }
+.title { color: var(--tone); }

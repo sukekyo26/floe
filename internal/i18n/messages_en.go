@@ -502,7 +502,7 @@ var messagesEN = map[string]string{
 	"theme_about_retro":        "The nineties' screens: a light grey page, white boxes with raised edges, grey buttons, a navy title bar over each section, a teal accent, square corners",
 	"theme_about_soft":         "Peach and plum, soft: faces float without frames on a pale peach ground, sections open on round peach bands, the titles of figures and a decision's state and date on round pills",
 	"theme_about_swiss":        "Red and black in print, in a grotesque face, its sections ruled heavy",
-	"theme_about_washi":        "Sumi, indigo and vermilion on washi, in a Mincho face, its sections ruled double",
+	"theme_about_washi":        "Sumi and vermilion on washi, in a Mincho face: heads under a vermilion brush stroke, boxes as white sheets, the kind of a box in a stroke down its left, and what is marked in a vermilion seal",
 	"ui_settings":              "Settings",
 	"ui_theme_load_failed":     "Failed to load the themes: %s",
 	"ui_theme_own_broken":      "A theme can be chosen once your own parts, themes and templates are fixed",

@@ -1,4 +1,2 @@
-:scope {
-  background: var(--surface); color: var(--fg);
-  border: 0; border-top: var(--washi-frame) var(--fg); border-bottom: var(--washi-frame) var(--fg);
-}
+/* A sheet of white washi without a frame, lifted off the ground */
+:scope { background: var(--surface); color: var(--fg); border: 0; --floe-shadow-color: var(--shadow); }
