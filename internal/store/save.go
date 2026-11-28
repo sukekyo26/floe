@@ -253,7 +253,8 @@ func (s *Store) Themes(slug string, o Owner, opts Options, file string, src []by
 	prev := s.ReadMeta(slug)
 	replacing, _ := checkOwner(slug, prev, o, opts.Force) //nolint:errcheck // told by settle, as above
 	if prev != nil && !replacing {
-		return DrawThemes{Theme: drawTheme(prev, opts.GivenTheme(), writtenTheme(file, src)), Default: "", Seen: prev.Theme}, nil
+		theme := drawTheme(prev, opts.GivenTheme(), writtenTheme(file, src))
+		return DrawThemes{Theme: theme, Default: "", Seen: prev.Theme}, nil
 	}
 	set, err := s.ReadSettings()
 	return DrawThemes{Theme: opts.GivenTheme(), Default: set.Theme, Seen: ""}, err
