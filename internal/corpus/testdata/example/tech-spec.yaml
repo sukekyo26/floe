@@ -102,3 +102,9 @@ risks:
   - { risk: 'A provider takes the same mail twice' }
 open:
   - { question: 'Do chat notifications need their own rate limit?', by: 'Operations' }
+more:
+  - heading: Glossary
+    parts:
+      - facts:
+          - { name: 'Dead', value: 'A notification still failing after a day, kept for a person to look at' }
+          - { name: 'Due', value: 'A notification whose next try has come' }

@@ -61,10 +61,10 @@
 {{- range $i, $d := .}}
 <section class="decision" aria-labelledby="q-{{$i}}"><h3 id="q-{{$i}}">{{markdownLine $d.question}}</h3>{{$d.options}}</section>
 {{- end}}
-{{- with $.Data.decided}}<h3>{{word "decided"}}</h3><ul data-floe-look="rows">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul>{{end}}
+{{- with $.Data.decided}}<h3>{{word "decided"}}</h3><ul data-floe-look="rows" class="decided">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul>{{end}}
 </section>
 {{- else}}{{with .Data.decided}}
-<section class="block"><h2 id="decided">{{word "decided"}}</h2><ul data-floe-look="rows">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
+<section class="block"><h2 id="decided">{{word "decided"}}</h2><ul data-floe-look="rows" class="decided">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
 {{- end}}{{end}}
 {{- if or .Data.data .Data.interfaces .Data.impact}}
 <section class="group"><h2 id="build" class="grouphead">{{word "build"}}</h2>

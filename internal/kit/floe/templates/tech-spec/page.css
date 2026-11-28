@@ -28,8 +28,9 @@ main { display: grid; gap: 2.6rem; align-content: start; min-width: 0; }
 .no-goals > li::before { content: "×"; content: "×" / ""; color: var(--muted); }
 .no-goals { color: var(--muted); }
 .decision { display: grid; gap: var(--floe-room); }
-.group { display: grid; gap: 1.6rem; padding-top: 1rem; border-top: 4px solid var(--fg); }
-.grouphead { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.3em; }
+/* The group's rule is its heading's, not the section's: a framed section would hold the shadows of the parts in it */
+.group { display: grid; gap: 1.6rem; }
+.grouphead { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.3em; padding-top: 1rem; border-top: 4px solid var(--fg); }
 .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: 1rem; }
 .card { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.5rem; align-content: start; }
 .card h3 { font-size: 1rem; }

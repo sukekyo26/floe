@@ -464,6 +464,48 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
+@scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
+   any parts.
+   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
+/* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too; a
+   theme sets it on the :scope of its cards.css */
+:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
+.card {
+  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
+}
+/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
+.card { --face: initial; --on-face: initial; }
+/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
+   sets --floe-mark: auto on :scope.numbered and no background. A theme's decoration of a card lies over its padding and takes no room.
+   LIMIT: whether a decoration keeps off the text is seen, not measured
+   LIMIT: the number's --floe-mark on the root reaches what a card holds, a theme's auto too: a mark of one's own that
+   reads it, not set on its own root, draws at no size there. floe's marks set their own; floe part guide asks it */
+:scope.numbered { --floe-mark: 1.75rem; }
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
+  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
+  background: var(--accent-soft); color: var(--accent); font-size: var(--floe-text-small); font-weight: 700;
+}
+/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
+.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, unnumbered */
+:scope { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+:scope > div { padding-block: var(--floe-row-pad); }
+:scope dt { font-size: var(--floe-text-small); color: var(--muted); }
+:scope dd { margin: 0; font-weight: 600; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Each link a small frame on a line, wrapping: where it goes, its title underlined as a link is, and ↗ for one that
    leaves floe; a few words beside the frame. The frame is the link, so that its reach and ring are the whole of it.
@@ -515,37 +557,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    code flows as one */
 :scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
 :scope > li::before { line-height: 1; font-weight: 800; }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
-   any parts.
-   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
-/* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too; a
-   theme sets it on the :scope of its cards.css */
-:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
-.card {
-  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
-}
-/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
-.card { --face: initial; --on-face: initial; }
-/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
-   sets --floe-mark: auto on :scope.numbered and no background. A theme's decoration of a card lies over its padding and takes no room.
-   LIMIT: whether a decoration keeps off the text is seen, not measured
-   LIMIT: the number's --floe-mark on the root reaches what a card holds, a theme's auto too: a mark of one's own that
-   reads it, not set on its own root, draws at no size there. floe's marks set their own; floe part guide asks it */
-:scope.numbered { --floe-mark: 1.75rem; }
-:scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
-  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
-  background: var(--accent-soft); color: var(--accent); font-size: var(--floe-text-small); font-weight: 700;
-}
-/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
-.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 }
 }
 </style>
@@ -783,7 +794,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
 :scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
@@ -920,8 +931,9 @@ main { display: grid; gap: 2.6rem; align-content: start; min-width: 0; }
 .no-goals > li::before { content: "×"; content: "×" / ""; color: var(--muted); }
 .no-goals { color: var(--muted); }
 .decision { display: grid; gap: var(--floe-room); }
-.group { display: grid; gap: 1.6rem; padding-top: 1rem; border-top: 4px solid var(--fg); }
-.grouphead { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.3em; }
+/* The group's rule is its heading's, not the section's: a framed section would hold the shadows of the parts in it */
+.group { display: grid; gap: 1.6rem; }
+.grouphead { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.3em; padding-top: 1rem; border-top: 4px solid var(--fg); }
 .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: 1rem; }
 .card { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.5rem; align-content: start; }
 .card h3 { font-size: 1rem; }
@@ -961,7 +973,7 @@ main { display: grid; gap: 2.6rem; align-content: start; min-width: 0; }
 <nav data-floe-look="toc" aria-label="Contents"><p class="title" aria-hidden="true">Contents</p>
 <ul><li><a href="#conclusion">Conclusion</a></li>
 <li><a href="#background">Background</a></li>
-<li><a href="#solution">Proposed solution</a></li><li><a href="#decisions">Options</a></li><li><a href="#build">Build</a></li><li><a href="#ship">Ship</a></li><li><a href="#risks">Risks</a></li>
+<li><a href="#solution">Proposed solution</a></li><li><a href="#decisions">Options</a></li><li><a href="#build">Build</a></li><li><a href="#ship">Ship</a></li><li><a href="#risks">Risks</a></li><li><a href="#more-0">Glossary</a></li>
 </ul>
 </nav><script>(function contents() {
   const nav = document.currentScript.previousElementSibling;
@@ -1249,7 +1261,7 @@ with a growing delay. Email, push and chat are three senders behind one interfac
 <section class="decision" aria-labelledby="q-1"><h3 id="q-1">How to try a failed <code>send</code> again</h3><div class="numbered" data-floe-part="options">
 <div class="card option" data-floe-look="panel"><div class="title">Back off exponentially</div><div class="body"><div data-floe-text=""><p>1 minute, then 2, 4 and on, up to a day.</p></div></div></div>
 <div class="card option" data-floe-look="panel"><div class="title">A fixed delay</div><div class="body"><div data-floe-text=""><p>Every 5 minutes, up to 50 times.</p></div></div></div>
-</div></section><h3 id="decided">Decided</h3><ul data-floe-look="rows"><li>A notification is written to the queue in the same transaction as what causes it</li><li>Workers take at most <code>20</code> notifications at a time</li><li>A notification still failing after a day is kept, marked <strong>dead</strong>, for a person to look at</li></ul>
+</div></section><h3 id="decided">Decided</h3><ul data-floe-look="rows" class="decided"><li>A notification is written to the queue in the same transaction as what causes it</li><li>Workers take at most <code>20</code> notifications at a time</li><li>A notification still failing after a day is kept, marked <strong>dead</strong>, for a person to look at</li></ul>
 </section>
 <section class="group"><h2 id="build" class="grouphead">Build</h2><section class="block"><h3 id="data">Data</h3><div data-floe-part="table"><table>
 <thead><tr><th scope="col">Column</th><th scope="col">Type</th><th scope="col">Meaning</th></tr></thead>
@@ -1340,6 +1352,12 @@ with a growing delay. Email, push and chat are three senders behind one interfac
 <section class="block"><h2 id="risks">Risks</h2>
 <div data-floe-look="table"><table><thead><tr><th scope="col">Risks</th><th scope="col">Mitigation</th></tr></thead>
 <tbody><tr><td>Polling slows the database at peak</td><td>An index on <code>due_at</code>, and workers that wait longer when nothing is due</td></tr><tr><td>A provider takes the same mail twice</td><td></td></tr></tbody></table></div><h3 id="open-questions">Open questions</h3><ol><li>Do chat notifications need their own rate limit?<span class="by">Answers: Operations</span></li></ol>
+</section>
+<section class="block"><h2 id="more-0">Glossary</h2>
+<dl data-floe-part="facts">
+<div class="card" data-floe-look="panel"><dt>Dead</dt><dd>A notification still failing after a day, kept for a person to look at</dd></div>
+<div class="card" data-floe-look="panel"><dt>Due</dt><dd>A notification whose next try has come</dd></div>
+</dl>
 </section>
 </main>
 </div>
