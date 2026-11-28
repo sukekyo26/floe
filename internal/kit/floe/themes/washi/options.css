@@ -2,5 +2,5 @@
 :scope.numbered { --floe-mark: 1.6rem; }
 :scope.numbered > .option::before { border-radius: var(--radius-small); background: var(--washi-sumi); color: var(--surface); font-weight: 700; font-size: var(--floe-text-small); }
 :scope.numbered > .option.pick::before { background: var(--washi-shu); color: var(--on-fill); }
-.option.pick { background: linear-gradient(90deg, var(--washi-shu), color-mix(in srgb, var(--washi-shu) 55%, transparent) 75%, transparent) top / 100% 5px no-repeat, var(--surface); }
+.option.pick { background-image: linear-gradient(90deg, var(--washi-shu), color-mix(in srgb, var(--washi-shu) 55%, transparent) 75%, transparent); background-position: top; background-size: 100% 5px; background-repeat: no-repeat; }
 .option.pick > .title > [data-floe-part=cell] { background: var(--washi-shu); border-color: var(--washi-shu); color: var(--on-fill); }

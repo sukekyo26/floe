@@ -1,0 +1,3 @@
+/* The one to take on a clear light red, plainer off a white card than the accent's soft colour; its red and green
+   text darker on it, to read 4.5:1 (AA) */
+.option.pick { background-color: #fdd8db; --accent: #c4000d; --good: #256a34; }

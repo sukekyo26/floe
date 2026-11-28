@@ -1,3 +1,7 @@
+/* The one to take on a ground of its own, the accent's soft colour; a line's code in it on the surface, as code's own
+   ground is that colour too */
+.option.pick { background-color: var(--accent-soft); }
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text, their signs as the look marked places them */
 .option .points { gap: 0.2rem; }

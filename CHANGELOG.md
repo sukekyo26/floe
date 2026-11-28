@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The part `options` no longer rings the advised option; its `pick` badge (and the theme's own mark of it) shows it. The ring melted into a band in most themes and lay over `washi`'s vermilion stroke.
+- The part `options` shows the advised option by its tile's ground instead of a ring: the accent's soft colour (`--accent-soft`), a light blue green in `default`, a light red in `swiss` (its red and green text a little darker there), a lighter pink in `app` and a lighter green in `cyber`, beside its `pick` badge and the theme's own mark of it. The ring melted into a band in most themes and lay over `washi`'s vermilion stroke.
 
 ## [0.5.0] - 2026-11-28
 

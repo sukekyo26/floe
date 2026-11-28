@@ -459,6 +459,10 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The one to take on a ground of its own, the accent's soft colour; a line's code in it on the surface, as code's own
+   ground is that colour too */
+.option.pick { background-color: var(--accent-soft); }
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text, their signs as the look marked places them */
 .option .points { gap: 0.2rem; }
@@ -663,8 +667,9 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The option taken is drawn round in thick orange marker */
-.option.pick { --floe-inset: inset 0 0 0 4px var(--nb-marker); }
+/* The option taken is drawn round in thick orange marker, on the accent's soft colour as the part sets it: this
+   theme's cards.css paints a card's ground by a rule as specific as this, over the part's */
+:scope.numbered > .option.pick { --floe-inset: inset 0 0 0 4px var(--nb-marker); background-color: var(--accent-soft); }
 }
 }
 </style>

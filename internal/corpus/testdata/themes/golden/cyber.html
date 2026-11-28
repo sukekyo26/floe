@@ -481,6 +481,10 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The one to take on a ground of its own, the accent's soft colour; a line's code in it on the surface, as code's own
+   ground is that colour too */
+.option.pick { background-color: var(--accent-soft); }
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text, their signs as the look marked places them */
 .option .points { gap: 0.2rem; }
@@ -697,7 +701,9 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-.option.pick { --floe-inset: inset 0 0 0 2px var(--cyber-glow); --floe-shadow-color: var(--shadow); background: var(--accent-soft); }
+/* The one to take on a green a little lighter than the accent's soft colour, which is the band's own ground here; no
+   lighter, for its muted text to read 4.5:1 (AA) */
+.option.pick { --floe-inset: inset 0 0 0 2px var(--cyber-glow); --floe-shadow-color: var(--shadow); background-color: #2a613a; }
 }
 }
 </style>

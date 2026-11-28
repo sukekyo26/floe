@@ -527,6 +527,10 @@ blockquote { padding: var(--floe-pad-block) var(--floe-pad-inline); background: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The one to take on a ground of its own, the accent's soft colour; a line's code in it on the surface, as code's own
+   ground is that colour too */
+.option.pick { background-color: var(--accent-soft); }
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text, their signs as the look marked places them */
 .option .points { gap: 0.2rem; }
@@ -747,6 +751,15 @@ blockquote { padding: var(--floe-pad-block) var(--floe-pad-inline); background: 
 /* A note is a box like the rest; its tone is told by a small raised square, as an old dialog's sign */
 :scope { background: var(--surface); border: 1px solid; border-color: var(--rt-edge); --floe-inset: var(--rt-up); }
 :scope::before { border-radius: 0; border: 2px solid; border-color: color-mix(in srgb, var(--tone) 35%, var(--surface)) color-mix(in srgb, var(--tone) 60%, var(--fg)) color-mix(in srgb, var(--tone) 60%, var(--fg)) color-mix(in srgb, var(--tone) 35%, var(--surface)); font-size: var(--floe-text-aside); font-weight: 900; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The one to take on the accent's soft colour, as the part sets it: this theme's cards.css paints a card's ground
+   over the part's */
+.option.pick { background-color: var(--accent-soft); }
 }
 }
 </style>

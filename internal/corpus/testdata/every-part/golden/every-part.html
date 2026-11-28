@@ -1849,6 +1849,10 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The one to take on a ground of its own, the accent's soft colour; a line's code in it on the surface, as code's own
+   ground is that colour too */
+.option.pick { background-color: var(--accent-soft); }
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text, their signs as the look marked places them */
 .option .points { gap: 0.2rem; }
@@ -1890,6 +1894,10 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth3 {
 @scope ([data-floe-part="options"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The one to take on a ground of its own, the accent's soft colour; a line's code in it on the surface, as code's own
+   ground is that colour too */
+.option.pick { background-color: var(--accent-soft); }
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text, their signs as the look marked places them */
 .option .points { gap: 0.2rem; }
@@ -2735,6 +2743,22 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 /* A line's code on the tile takes its quiet ground, as the tile would melt into it */
 :scope code { background: var(--quiet); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The one to take on a light blue green, the clearest off a white card whose green + still reads 4.5:1 on it (AA) */
+.option.pick { background-color: #d3ebee; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth3 {
+@scope ([data-floe-part="options"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The one to take on a light blue green, the clearest off a white card whose green + still reads 4.5:1 on it (AA) */
+.option.pick { background-color: #d3ebee; }
 }
 }
 </style>
