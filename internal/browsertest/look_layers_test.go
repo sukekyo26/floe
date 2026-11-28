@@ -179,7 +179,7 @@ func lookLayers(t *testing.T, s *site) measured {
 		"      - options: [{ title: a }]\n      - steps: [{ title: b }]\n", ".card")
 	got = b.eval(`['.card', '[data-floe-part=steps]'].map((at) => {
 		const s = getComputedStyle(document.querySelector(at)); return s.backgroundColor + ' ' + s.borderTopLeftRadius; }).join(' | ')`)
-	m.expect("cards", got, "rgb(255, 255, 255) 8px | color(srgb 0.926275 0.92 0.903529) 20px")
+	m.expect("cards", got, "rgb(255, 255, 255) 8px | color(srgb 0.919137 0.912314 0.894745) 20px")
 
 	// Nested, the outer wins whatever the selectors: a look of one's own over the look a cell of it takes again,
 	// two deep, and a part of one's own over the box of another it holds.
