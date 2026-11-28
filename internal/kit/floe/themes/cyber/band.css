@@ -1,0 +1,2 @@
+/* A band is the dark green of a terminal's screen, not the bright accent, with light words and a rainbow along its foot */
+:scope { --face: var(--accent-soft); --on-face: var(--fg); --cyber-around: var(--face); background: var(--cyber-rainbow) left bottom / 100% 3px no-repeat, var(--face); }

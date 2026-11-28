@@ -1,0 +1,21 @@
+/* A section's head is a terminal's line: //01 in yellow, the words in green with a faint green and pink shift, a
+   barcode and a rainbow running out to the right. The rule over a section is none (--rule), the head draws its own */
+:scope { counter-reset: cyber-section; --floe-heading-start: 0; --floe-heading-edge: none; }
+section > h2 {
+  display: flex; align-items: center; gap: 0.6rem; counter-increment: cyber-section;
+  font-family: var(--mono); color: var(--accent); text-shadow: 1px 1px rgb(92 255 134 / 0.6), -1px -1px rgb(255 111 189 / 0.55);
+}
+section > h2::before {
+  content: "//" counter(cyber-section, decimal-leading-zero); content: "//" counter(cyber-section, decimal-leading-zero) / counter(cyber-section, decimal-leading-zero);
+  color: var(--cyber-yellow);
+}
+section > h2::after {
+  content: "" / ""; flex: 1; height: 14px;
+  background: var(--cyber-barcode) left center / 120px 100% no-repeat,
+    linear-gradient(90deg, #4dff86, #d8ff4a, #ffe234, #ff9450, #ff5ec9, transparent) 130px center / calc(100% - 130px) 2px no-repeat;
+  filter: var(--cyber-halo);
+}
+/* In a band the head is plain: a band's words are its face's colour, its heads unmarked */
+[data-floe-look~=band] section > h2 { display: block; color: inherit; text-shadow: none; }
+[data-floe-look~=band] section > h2::before, [data-floe-look~=band] section > h2::after { content: none; }
+section > h3 { font-family: var(--mono); color: var(--on-face, var(--accent)); }
