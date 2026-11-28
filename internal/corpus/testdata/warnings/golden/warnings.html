@@ -23,11 +23,12 @@
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 /* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
-   its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
-   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem), and 1.1em as large as
-   adr's (and near postmortem's), its h2 told from them by nothing; lower them if that matters */
-:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
-:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
+   its own outside the box of its Markdown: smaller than every heading of a template it stands under, the least of which
+   is 1.1rem (adr's sections, runbook's steps), and smaller by level, h4 to h6 as h3.
+   LIMIT: h1 is as large as a question of tech-spec (1.05rem) over it, in an option's card, which the card tells apart */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.05em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) :is(h3, h4, h5, h6) { font-size: 0.95em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -207,8 +208,9 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 :scope {
-  /* default's own, here and not in its palette, which lies under every theme's */
-  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* default's own, here and not in its palette, which lies under every theme's. Light, so that what lies straight on
+     it reads; under 30% its edge melts into the page's ground */
+  --default-panel: color-mix(in srgb, var(--line) 37%, var(--bg));
   /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and the radius rule follows the
@@ -279,6 +281,21 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @scope ([data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The grey tray holds what opens on a tile of the surface: the body's ::before, over its padding to --default-pad from
+   the tray's edges and reaching up into the title's padding, under the title and its ring (the details is a stacking
+   context and the tile is below all it holds), so that the title still takes the clicks there */
+:scope { isolation: isolate; }
+:scope > div { position: relative; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope > div::before {
+  content: ""; position: absolute; z-index: -1; inset: calc(var(--default-pad) - var(--floe-pad-block)) var(--default-pad) var(--default-pad);
+  background: var(--surface); border-radius: var(--default-inner);
+}
 }
 }
 </style>

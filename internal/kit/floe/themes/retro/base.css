@@ -1,1 +1,14 @@
-/* The seventies: three stripes of orange, mustard and olive under headings and on the faces, round fat corners */
+/* A section opens under a title bar, the old window's navy run to blue, its words white and bold. The bar paints a
+   ground of its own, so it sets its face; its pad is the one room the theme makes, as editorial's band: words on a
+   ground need it off the ground's edge, and its end holds the close box */
+:scope { --floe-heading-top: 0.3rem; --floe-heading-start: 0.7rem; --floe-heading-edge: none; }
+section:not([data-floe-look]) > h2 {
+  position: relative; padding: var(--floe-heading-top) 2.6rem 0.3rem var(--floe-heading-start);
+  --face: var(--rt-navy); --on-face: var(--on-fill); background: var(--face); background-image: var(--rt-bar); color: var(--on-face);
+  font-size: 1.25rem; font-weight: 700;
+}
+/* The bar's close box at its top right, a small raised button of grey with its cross; the cross is drawn, not read */
+section:not([data-floe-look]) > h2::after {
+  content: "×"; content: "×" / ""; position: absolute; top: 0.35rem; right: 0.6rem; box-sizing: border-box; width: 1.35rem; height: 1.2rem;
+  background: var(--rt-button); color: var(--fg); border: 1px solid; border-color: var(--rt-edge); font: 700 0.95rem/1 var(--font); text-align: center;
+}

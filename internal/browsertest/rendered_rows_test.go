@@ -22,14 +22,14 @@ const measureRowsLook = `(() => {
   const html = document.querySelector('div[data-floe-look="rows"]'), box = (e) => getComputedStyle(e).padding;
   if (!html) out.add('no element of html\'s rows drawn');
   else {
-    for (const e of document.querySelectorAll('[data-floe-look~="rows"], :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="links"])')) {
+    for (const e of document.querySelectorAll('[data-floe-look~="rows"], :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"])')) {
       if (box(e) !== box(html)) out.add((e.dataset.floePart || 'look rows') + ': its box padded ' + box(e) + ', html\'s rows ' + box(html));
     }
   }
   return [...out].join('\n');
 })()`
 
-// TestRenderedRows draws rowParts in every theme, design's and postmortem's examples (their pages' line heights are
+// TestRenderedRows draws rowParts in every theme, tech-spec's and postmortem's examples (their pages' line heights are
 // not report's), and rowParts in a template of one's own (rowPadKit) setting its own line height and the variables of
 // a row's padding: every row is in the page's line height, and the box of every part drawn as rows is padded as an
 // element of html's rows is.
@@ -51,7 +51,7 @@ func TestRenderedRows(t *testing.T) { //nolint:paralleltest // the browser tests
 		s.b.navigate("/a/rows-" + theme + "/?raw")
 		check("rowParts in " + theme)
 	}
-	for _, sample := range []string{"design", "postmortem"} {
+	for _, sample := range []string{"tech-spec", "postmortem"} {
 		data, err := os.ReadFile("../corpus/testdata/example/" + sample + ".yaml")
 		if err != nil {
 			t.Fatal(err)

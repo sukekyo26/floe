@@ -1,0 +1,1079 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>The cyber theme</title>
+<style>
+@layer floe.defaults, floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
+@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways on screen instead, as a table does, keeps its words whole there, and folds its lines on paper.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line unless what holds it sets --floe-pill-wrap: normal, still overflows.
+   Give such a part a layout for narrow screens, as keys has */
+/* Print keeps every ground, the page's too, as the screen draws it: a light text on a fill would be lost on white
+   paper. The prefixed name is for a Chromium before 136, as a VS Code's may be.
+   LIMIT: no test fails without the prefixed name, as the Chrome of the tests reads both */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+/* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
+   its own outside the box of its Markdown: smaller than every heading of a template it stands under, the least of which
+   is 1.1rem (adr's sections, runbook's steps), and smaller by level, h4 to h6 as h3.
+   LIMIT: h1 is as large as a question of tech-spec (1.05rem) over it, in an option's card, which the card tells apart */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.05em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) :is(h3, h4, h5, h6) { font-size: 0.95em; }
+p, ul, ol { margin: 0; }
+/* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
+h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+/* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
+   --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
+   its own) and the focus ring in it take them, as the accent and its soft ground would sink into the fill. What a part
+   holds draws on the part's own ground, without them, nor a --floe-pill-wrap set around the part; the part's box stays
+   in the face, its ring too. An element that paints a light ground of its own (a panel, a note) sets its text's colour
+   with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
+   no ground of its own writes it as var(--on-face, …) */
+:where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
+   its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
+   its blocks; empty Markdown draws no box. page.css reaches in a template's box, to arrange it, not in a
+   text's. What a quote or a list holds is spaced below.
+   LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
+   what it holds, and page.css stops at the part's box there; floe's templates place none so */
+[data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
+a { color: var(--on-face, var(--accent)); }
+/* LIMIT: a part draws a ring of focus or a pick by outline on its box (options' cards): a theme that draws a
+   decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
+   or ::before */
+:focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
+/* What a browser draws in its own monospace stays the page's size: with no font size set on the page, a browser sizes
+   monospace alone from 13px, and the same named twice from the page's */
+kbd, samp, tt { font-family: monospace, monospace; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
+/* On screen, a box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that
+   a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writes
+   overflow-x: auto with it, under @media screen. On paper, where what scrolls is not read, nothing scrolls: pre folds
+   its lines, and a part that scrolls on screen folds what it holds within the paper's width.
+   LIMIT: what folds no word on paper (a table's heads and cells, a column of numbers or of pills, a tree's note and its
+   depth, a field's name, a finding's level) reaches past the paper when its longest words are wider, and Chrome prints
+   the whole page smaller. In a grid's column of a fixed least width (cards side by side, columns) it reaches past its
+   card or column instead, over the next or out of the theme's frame, the page no wider until it reaches past the paper
+   there, when the whole page prints smaller again.
+   LIMIT: a box a grid's item holds (cards', or columns' long code or table), sent on to the next page at a page's end,
+   leaves the item as short as before, and what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
+   LIMIT: such a box shrinks to its border and padding (code's pre, which leaves its padding to its lines, to its border
+   alone) on screen where its content sets the width; give the place a width if floe places one so.
+   Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
+   or fit-content, a table's cell of auto width, justify-items or justify-self start in a grid, an item of a flex row
+   on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so: tree's list
+   is fit-content on screen but holds no box that scrolls. chart, keys and timeline (container-type: inline-size, to lay
+   out by their own width) shrink so in such a place too, to their padding */
+pre {
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
+  padding: 0.9rem 1rem; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+@media screen { pre { overflow-x: auto; contain: inline-size; } }
+@media print { pre { white-space: pre-wrap; overflow-wrap: break-word; } }
+pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (a block that scrolls): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
+   the room a part leaves around it and what text keeps clear of it at its right are defaults.css's alone: a part that
+   lies text under it keeps --floe-copy-room after its longest line, as code does */
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+/* Text a screen reader reads that the page does not show: the copy button's status, and .floe-hidden, the words that
+   tell what a mark of CSS means (a step done, a pro, a file added), which the mark itself is not read for (/ "").
+   It stands at the corner of what places it, or the page's, so that where its text would run widens no page.
+   LIMIT: text selected on the page and copied takes these words too; add user-select: none if that comes to matter.
+   LIMIT: a phone's screen reader (VoiceOver, TalkBack) moves its highlight onto the box it reads, so at each hidden word
+   the page may jump to that corner; floe's pages are read in a desktop's browser. Place each beside its text (its
+   ancestor positioned) if a phone's screen reader comes to be used */
+.floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, columns, a column's
+   title and parts, cards) floe leaves --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+   side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
+   shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
+   --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
+   none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
+   LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestLookRule/shadow-cast measures, no rule refuses.
+   LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
+   --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
+   leave the part's box */
+@property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
+@property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+[data-floe-part], [data-floe-look], blockquote {
+  box-shadow:
+    var(--floe-shadow-x, 0px) var(--floe-shadow-y, 0px) var(--floe-shadow-blur, 0px) var(--floe-shadow-spread, 0px) var(--floe-shadow-color),
+    var(--floe-inset);
+}
+}
+</style>
+<style>
+@layer floe.defaults {
+/* The defaults of the variables floe sets on the page's root, in floe.defaults, the lowest layer, under every palette,
+   as default's palette lies under every theme's: a theme that sets one on :scope in its palette.css or base.css wins
+   over it. Only a plain :root's --floe-* are here, without !important nor an at-rule (TestLintRule/defaults-root): a
+   style here would lose to whatever a theme writes, and !important turns the order of the layers round */
+/* A pill's corners round no more than 3/4 of its line, more than half its height on one line (half a line, its
+   padding and frame) and less on two: a pill of one line stays round at both ends, and one that wraps is a label.
+   LIMIT: a line box over about 1.3 lines (a fallback face of letters, kana or emoji) leaves a one-line pill straight sides.
+   Only the faces of the tests are measured */
+:root { --floe-pill-end: 0.75lh; }
+/* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
+   rows, and the look table and facts take it. floe's themes leave it as it is, so that rows are as tall in every theme */
+:root { --floe-row-pad: 0.4rem; }
+/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
+   sides of a row of the look rows. floe's themes leave it as it is and pad no box; a theme's frame around a box pads the
+   element it paints inside by it (default's tree) */
+:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
+/* The copy button's size, the room a part leaves around it and what text keeps clear of it at its right (base.css
+   draws the button, and keeps no room on paper, over the palette).
+   LIMIT: --floe-copy-room set in a theme's base.css, a layer over base.css's print, holds on paper too */
+:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
+/* The space between parts that stand one after another, which a box's shadow reaches no further than (base.css) */
+:root { --floe-room: 0.75rem; }
+/* The small text of parts, in two steps: small (a pill, a chip, a ring's number, a key, a table's heading, a term, a
+   date, a count, a note beside a value) and an aside, a little larger (a card's or a step's words, a note's title, a
+   tab's name, a value's unit). The text of code (code's lines, a tree's names, code in a pill) follows code's size
+   instead, and a diagram's, in its SVG, the diagram's units.
+   LIMIT: in rem, small text in large text (a slide's heading, swiss's large quote) is no larger */
+:root { --floe-text-small: 0.8rem; --floe-text-aside: 0.9rem; }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:scope {
+  --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
+  /* A quiet ground within a box of the surface: a table's head, a bar's track, a keycap.
+     LIMIT: one melting into its box's ground is seen, not measured; a theme that paints a box near it sets it there */
+  --quiet: color-mix(in srgb, var(--line) 45%, var(--surface));
+  --chart-1: #008fa3; --chart-2: #c2660a; --chart-3: #6157d9; --chart-4: #c8366f;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #b5e05a; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  /* The column a template centres its page in: its width, without the pad each side of it */
+  --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.palette {
+/* A dark ground of colour, never black, under faces a step lighter; light text, the neon green free for text too. The
+   other lights (the glow, yellow, pink, the rainbow) stay off text 
+   LIMIT: a page prints on its dark ground, as print keeps the ground (paper-ground); printing is rarely used
+   LIMIT: an image of a transparent ground and dark lines is hard to see on the dark ground; its ground is the writer's */
+:scope {
+  --bg: #2a3230; --surface: #424d4a; --quiet: #4c5854; --fg: #eaf3ef; --muted: #cad6d2; --line: #63726e;
+  --accent: #5cff86; --accent-soft: #285a37;
+  --good: #b9ff6a; --good-soft: #3a5428; --warn: #ffd65a; --warn-soft: #5a4a19; --bad: #ffbcc6; --bad-soft: #622d3a;
+  --accent-fill: #2cf05f; --good-fill: #a6f03a; --warn-fill: #ffd43d; --bad-fill: #ff7a93;
+  --chart-1: #5cff86; --chart-2: #ffd65a; --chart-3: #ff8fa0; --chart-4: #b9ff6a;
+  --code-bg: #161d1b; --code-fg: #dcffe4; --code-prompt: #2cf05f; --code-add: #8ff0b4; --code-del: #ffc6c3;
+  --on-fill: #0e1410; --shadow: rgb(54 255 108 / 0.4);
+  --display: var(--mono);
+  --rule: none;
+  --radius: 0; --radius-small: 0; --radius-pill: 0;
+  /* Its glow: a soft light around a box, no offset */
+  --floe-shadow-x: 0; --floe-shadow-y: 0; --floe-shadow-blur: 12px; --floe-shadow-spread: 0;
+  /* Its own lights: a green for lines and cut edges, a yellow for labels and barcodes, a pink for the other cut edge, the
+     dark of a terminal's band */
+  --cyber-glow: #36ff6c; --cyber-yellow: #ffe234; --cyber-pink: #ff5ec9; --cyber-ink: #161e1b;
+  --cyber-rainbow: linear-gradient(90deg, #4dff86, #d8ff4a, #ffe234, #ff9450, #ff5ec9);
+  /* A faint halo round a line of light, never round words */
+  --cyber-halo: drop-shadow(0 0 3px rgb(54 255 108 / 0.45));
+  --cyber-barcode: repeating-linear-gradient(90deg, var(--cyber-yellow) 0 2px, transparent 2px 4px, var(--cyber-yellow) 4px 5px,
+    transparent 5px 9px, var(--cyber-yellow) 9px 12px, transparent 12px 14px, var(--cyber-yellow) 14px 15px, transparent 15px 19px);
+  /* What a hologram box's cut corners show: the page's ground, a band's face in a band, a box's face in a box */
+  --cyber-around: var(--bg);
+  /* The page: a faint holographic light across the screen, held still as the page scrolls */
+  --page-bg:
+    linear-gradient(120deg, transparent 0 30%, rgb(92 255 134 / 0.06) 40%, rgb(255 212 61 / 0.05) 50%, rgb(255 111 189 / 0.06) 60%, transparent 70%) fixed,
+    var(--bg);
+  color-scheme: dark;
+}
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+/* A section's head is a terminal's line: //01 in yellow, the words in green with a faint green and pink shift, a
+   barcode and a rainbow running out to the right. The rule over a section is none (--rule), the head draws its own */
+:scope { counter-reset: cyber-section; --floe-heading-start: 0; --floe-heading-edge: none; }
+section > h2 {
+  display: flex; align-items: center; gap: 0.6rem; counter-increment: cyber-section;
+  font-family: var(--mono); color: var(--accent); text-shadow: 1px 1px rgb(92 255 134 / 0.6), -1px -1px rgb(255 111 189 / 0.55);
+}
+section > h2::before {
+  content: "//" counter(cyber-section, decimal-leading-zero); content: "//" counter(cyber-section, decimal-leading-zero) / counter(cyber-section, decimal-leading-zero);
+  color: var(--cyber-yellow);
+}
+section > h2::after {
+  content: "" / ""; flex: 1; height: 14px;
+  background: var(--cyber-barcode) left center / 120px 100% no-repeat,
+    linear-gradient(90deg, #4dff86, #d8ff4a, #ffe234, #ff9450, #ff5ec9, transparent) 130px center / calc(100% - 130px) 2px no-repeat;
+  filter: var(--cyber-halo);
+}
+/* In a band the head is plain: a band's words are its face's colour, its heads unmarked */
+[data-floe-look~=band] section > h2 { display: block; color: inherit; text-shadow: none; }
+[data-floe-look~=band] section > h2::before, [data-floe-look~=band] section > h2::after { content: none; }
+section > h3 { font-family: var(--mono); color: var(--on-face, var(--accent)); }
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) {
+/* A quote stands in a bracket down its left, in mono */
+blockquote {
+  border-left: 0; padding-left: 1.4rem; font-family: var(--mono);
+  background: linear-gradient(var(--cyber-glow), var(--cyber-glow)) left top / 10px 3px no-repeat,
+    linear-gradient(var(--cyber-glow), var(--cyber-glow)) left top / 3px 100% no-repeat,
+    linear-gradient(var(--cyber-glow), var(--cyber-glow)) left bottom / 10px 3px no-repeat;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (defaults.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Always dark, as code in an editor is; the language stands at the right of the heading. A face (base.css) whose
+   root is the part's, set on what it holds too, which base.css starts afresh: a scrolling block's ring in its colour */
+:scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
+/* What a part that takes code's look reads, set here with their values rather than read with a fallback, so that it
+   copies no number: the room at a line's sides (and the copy button's after it), and the colour of faint text, a
+   line's of the colour it is in (currentColor is resolved where the variable is read).
+   LIMIT: the heading's faint colour is made at the root from --code-head-fg there, so the file name does not follow
+   a colour a theme gives the heading itself, by a rule or by --code-head-fg on figcaption; make it in the heading
+   from currentColor if a theme comes to do so. */
+:scope {
+  --floe-code-pad: 1.1rem; --floe-code-room: var(--floe-code-pad);
+  --floe-code-faint: color-mix(in srgb, currentColor 70%, transparent);
+  --floe-code-head-faint: color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent);
+  display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
+  border-radius: var(--radius); overflow: hidden; color-scheme: dark;
+  background: var(--face); color: var(--on-face);
+  font-family: var(--mono);
+}
+/* A theme sets the heading's ground and colour by --code-head-bg and --code-head-fg, and the colours of a diff's
+   counts on it by --code-head-add and --code-head-del */
+:scope figcaption {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem var(--floe-code-pad); font-size: var(--floe-text-small);
+  background: var(--code-head-bg, color-mix(in srgb, var(--code-fg) 5%, transparent)); color: var(--code-head-fg, var(--code-fg));
+  border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
+}
+/* On screen it scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT); on paper its lines
+   fold (base.css's pre), each as wide as the box. Its lines hold the room at its sides */
+:scope pre {
+  margin: 0; padding: 0.95rem 0; background: none; border: 0; border-radius: 0; color: inherit;
+  font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
+}
+@media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
+:scope .file { color: var(--floe-code-head-faint); }
+/* The title and the file fold under each other, the language staying at the right: it has a shape of its own, which a
+   row that folds may not draw by place.
+   LIMIT: .names, .file, .lang, .lines, .mark and .numbered reach a part that takes this look too, its text of those names
+   drawn so unsaid; name them for code alone if one comes to use them for its own. */
+:scope .names { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; min-width: 0; }
+:scope .names > .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
+:scope .lang {
+  flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
+  background: var(--code-prompt); color: var(--code-bg);
+}
+/* A block, so that the code's last line break draws no empty line; no padding at its sides, which its line's rule sets */
+:scope pre > code { display: block; font: inherit; color: inherit; background: none; padding-block: 0; border-radius: 0; }
+/* Each line (an element pre holds) is as wide as the longest line, with the room at its sides: scrolled to the end, a
+   line keeps it after it.
+   LIMIT: a part that takes this look and writes a line's padding drops this room, its rule written after this one;
+   text pre holds outside an element has no room, and one inline among it has room around it. Lines are elements, and
+   a part whose lines differ takes the rule of class lines below, as diff does, or moves the room onto them by these variables; nothing checks it. Make this
+   rule outweigh a part's if one comes to write a line's padding by mistake. */
+:scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
+@media print { :scope pre > * { width: auto; } }
+/* Lines each an element in one code of class lines (code's and diff's): each paints its ground to the end of the longest
+   line, so the room moves from the code onto each. An element beside them is a hidden word, left out of a selection
+   as it is of what the button copies.
+   LIMIT: Safari takes only -webkit-user-select, and the browser tests run in Chrome alone, so nothing measures it there. */
+:scope pre > .lines { padding-inline: 0; }
+:scope .lines { --floe-code-gutter: 0px; }
+:scope .lines > :not(.floe-hidden) { display: block; padding-inline: calc(var(--floe-code-pad) + var(--floe-code-gutter)) var(--floe-code-room); }
+:scope .lines > .floe-hidden { -webkit-user-select: none; user-select: none; }
+/* A border, which no setting of print or forced colours takes off as it does a ground; its width comes off the room, so
+   that a marked line's text stays in line */
+:scope .lines > .mark {
+  border-inline-start: 3px solid var(--code-prompt); padding-inline-start: calc(var(--floe-code-pad) + var(--floe-code-gutter) - 3px);
+  background: color-mix(in srgb, var(--code-prompt) 16%, transparent);
+}
+/* A number is a counter, in no text copied or selected. --digits and the count's start are the part.html's. It hangs in
+   the room left of the line, whose width it takes off by its margin: a tab counts from the line's start, and what a
+   line folds to on paper stands right of the number. Same weight as .lines and after it, which sets the room to 0.
+   LIMIT: the number scrolls with the code; keep it at the left if readers come to lose it, on a ground of its own.
+   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes.
+   LIMIT: on paper, a line that starts with a long word with no space (a URL, minified code) leaves its number alone on
+   the first row, as the number is inline-block; all of it reads. Print is seldom used: hang the number if it matters. */
+:scope .numbered { --floe-code-gutter: calc((var(--digits) + 2) * 1ch); }
+:scope .numbered > :not(.floe-hidden) { counter-increment: line; }
+:scope .numbered > :not(.floe-hidden)::before {
+  content: counter(line); content: counter(line) / counter(line);
+  display: inline-block; width: calc(var(--digits) * 1ch); margin-inline: calc(-1 * var(--floe-code-gutter)) 2ch; text-align: end;
+  color: var(--floe-code-faint);
+}
+:scope .numbered > .mark::before { color: inherit; font-weight: 700; }
+/* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
+   it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
+   Where it draws the button, a line keeps the button's room after it: scrolled to the end, a line ends left of the
+   button; a short one fills the code as before. Printed, with the button hidden, the room is the code's own padding.
+   LIMIT: before it is scrolled to the end, a long first line runs under the button; scroll it to read that part. Leaving
+   it clear would push the code down by a line, short code too.
+   LIMIT: the room is kept after the longest line, though the button covers the first line alone: code whose longest
+   line comes within it (about 43px) of the width scrolls though no line would run under the button, as CSS cannot pad
+   the first line alone. If that comes to matter, give the button a line of its own above the code. */
+:scope > figcaption { grid-row: 1; }
+:scope > pre, :scope > .floe-copy { grid-row: 2; grid-column: 1; }
+:scope > .floe-copy { justify-self: end; align-self: start; margin: var(--floe-copy-gap); }
+:scope:has(> .floe-copy) { --floe-code-room: max(var(--floe-code-pad), var(--floe-copy-room)); }
+/* A scrolling block's ring on the part's root, inside its edge: the root, round, clips what lies outside the block, and
+   the root's own ring lies over the block, its edges and its scrollbar, round at the root's corners. A copy button lies
+   inside the root by --floe-copy-gap, clear of it.
+   LIMIT: what was faded by opacity, which Chrome could paint over the ring, is faded by its colour now; that nothing
+   draws over the ring is not measured. */
+:scope > pre:focus-visible { outline: none; }
+:scope:has(> pre:focus-visible) { outline: 2px solid var(--on-face); outline-offset: -2px; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* In the look of code, whose rule for lines in a code of class lines brings a line's face to the edges and as far as the
+   longest line when it scrolls, the button's room inside it */
+:scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
+:scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
+:scope .hunk { color: var(--code-prompt); }
+:scope .meta { color: var(--floe-code-faint); }
+:scope figcaption :is(.added, .removed) { flex: none; }
+:scope figcaption .added { color: var(--code-head-add, var(--code-add)); }
+:scope figcaption .removed { color: var(--code-head-del, var(--code-del)); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
+   text's box after the title, and what a note drawn in HTML holds is counted from after the word.
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language; make
+   it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
+:scope {
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius);
+}
+:scope::before {
+  content: "i"; content: "i" / ""; border-radius: 50%;
+  background: var(--tone); color: var(--on-fill); font-size: var(--floe-text-small); font-weight: 700; line-height: 1;
+}
+/* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
+:scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
+:scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
+:scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
+/* The gap between what a note drawn in HTML holds (a template's caution, a data item's note); a note of Markdown has its
+   title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
+   margins stay its own */
+:scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
+.title { display: block; font-size: var(--floe-text-aside); color: var(--tone); }
+:scope > .title + * { margin-top: 0.1rem; }
+/* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > :not(.floe-hidden) + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
+:scope code { background: var(--face, var(--surface)); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
+   any parts.
+   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
+/* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too; a
+   theme sets it on the :scope of its cards.css */
+:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
+.card {
+  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
+}
+/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
+.card { --face: initial; --on-face: initial; }
+/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
+   sets --floe-mark: auto on :scope.numbered and no background. A theme's decoration of a card lies over its padding and takes no room.
+   LIMIT: whether a decoration keeps off the text is seen, not measured
+   LIMIT: the number's --floe-mark on the root reaches what a card holds, a theme's auto too: a mark of one's own that
+   reads it, not set on its own root, draws at no size there. floe's marks set their own; floe part guide asks it */
+:scope.numbered { --floe-mark: 1.75rem; }
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
+  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
+  background: var(--accent-soft); color: var(--accent); font-size: var(--floe-text-small); font-weight: 700;
+}
+/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
+.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
+.option.pick { outline: 2px solid var(--on-face, var(--accent)); outline-offset: -1px; }
+.option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
+/* The pros and cons alone, not a list in the text, their signs as the look marked places them */
+.option .points { gap: 0.2rem; }
+/* Of no ground of their own: in the face's colour within a face, a theme's filled card */
+.option li.pro { color: var(--on-face, var(--fg)); }
+.option li.pro::before { content: "+"; content: "+" / ""; color: var(--on-face, var(--good)); }
+.option li.con::before { content: "−"; content: "−" / ""; color: var(--on-face, var(--bad)); }
+/* The text and the pros and cons in one box, one under another as a card's children are */
+.option > .body { display: grid; gap: var(--cards-gap); align-content: start; }
+/* --floe-room from the title and from the words, as between parts, never less than the card's gap; parts as tall as
+   their own, not as the row */
+.option > .parts { align-self: start; margin-top: max(0px, calc(var(--floe-room) - var(--cards-gap))); }
+.option > .parts + .body { margin-top: max(0px, calc(var(--floe-room) - var(--cards-gap))); }
+/* On paper a card holding parts goes to the next page whole, not its title left at the foot of one and its parts on
+   the next.
+   LIMIT: a card taller than a page still breaks where the browser breaks it */
+@media print { :scope:has(> .option > .parts) > .option { break-inside: avoid; } }
+/* Options holding parts: the cards on a line share four rows (the number, the title, the parts, the words), so that
+   the parts and the words of each start at one height, --cards-gap apart as in any card. The number takes no row by
+   name, so that a theme laying it out of the rows (position: absolute) keeps it placed against the card. The parts
+   keep the more of --floe-room and --cards-gap from the title and from the words: their margins, less the gap between
+   their rows, never below 0; options of no words keep none and no row for them, ending a card at its parts.
+   LIMIT: a row no card on a line fills still takes its gaps: a line of no parts (one card a line, a line wrapped) holds
+   --cards-gap more between the title and the words, and a theme that takes the number out of the rows (content: none
+   or position: absolute) --cards-gap more above the title; --floe-room more under a line of parts alone in options
+   holding words elsewhere. Plain on the page, a little room more, it is not measured but for the first. Options
+   holding no parts are drawn as before, and so are all in a browser that reads no subgrid. */
+@supports (grid-template-rows: subgrid) {
+  :scope:has(> .option > .parts) > .option { grid-row: span 4; grid-template-rows: subgrid; row-gap: var(--cards-gap); }
+  :scope:has(> .option > .parts):not(:has(> .option > .body)) > .option { grid-row: span 3; }
+  :scope:has(> .option > .parts) > .option > .title { grid-row: 2; }
+  :scope:has(> .option > .parts) > .option > .parts { grid-row: 3; margin-top: max(0px, calc(var(--floe-room) - var(--cards-gap))); }
+  :scope:has(> .option > .parts):has(> .option > .body) > .option > .parts { margin-bottom: max(0px, calc(var(--floe-room) - var(--cards-gap))); }
+  :scope:has(> .option > .parts) > .option > .body { grid-row: 4; margin-top: 0; }
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* What details, tabs, columns and an item of entries, checks or options hold.
+   LIMIT: kept within its place one stack deep and two (an option of options in an option), but for options and bars
+   two deep; deeper, a part comes to want more room than it has, and overflows. Measure it in wrapPage if it comes to matter */
+:scope { display: grid; gap: var(--floe-room); }
+/* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
+:scope > * { min-width: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
+   its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
+@media screen { :scope { overflow-x: auto; contain: inline-size; } }
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
+@media screen {
+  :scope :is(th, td):not(.num) { min-width: 7em; }
+  /* A num column's heading wraps as long as it needs, but not a character a line */
+  :scope th.num { min-width: 6em; }
+}
+:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
+/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
+/* LIMIT: Safari is not seen to paint a row's background once across it; if it paints it in each cell, a gradient starts
+   again in each column there (aurora's line). Measure it on darwin when a head comes to rely on it more */
+:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
+/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
+   --table-rule (none for no rule) */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows. The titles
+   have no ground: they and their ring are in the colour on a face around tabs, taken at the root (base.css takes faces
+   away below it). In a face the picked one is in the face's two colours turned over, to be told from the others and the
+   face whatever a theme picks it in (--tabs-face-bg and --tabs-face-fg are none outside a face) */
+:scope {
+  --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap);
+  --tabs-title: var(--on-face, var(--muted)); --tabs-ring: var(--on-face, var(--accent)); --tabs-print: var(--on-face, var(--fg));
+  --tabs-face-bg: var(--on-face); --tabs-face-fg: var(--face);
+}
+:scope > label {
+  position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: var(--floe-text-aside); font-weight: 600;
+  color: var(--tabs-title);
+}
+/* The picked tab, on screen alone: on paper every tab shows under its title, alike. A theme sets --tabs-picked-bg,
+   --tabs-picked-fg and --tabs-picked-ring (a box-shadow) rather than a rule of its own.
+   LIMIT: the picked tab draws --tabs-picked-ring (none unless set) over a shadow a theme gives every tab title; a theme
+   that wants that shadow on the picked one too sets the ring */
+@media screen {
+  :scope > label:has(:checked) {
+    background: var(--tabs-face-bg, var(--tabs-picked-bg, var(--accent-soft))); color: var(--tabs-face-fg, var(--tabs-picked-fg, var(--accent)));
+    box-shadow: var(--tabs-picked-ring, none);
+  }
+}
+:scope > label:has(:focus-visible) { outline: 2px solid var(--tabs-ring); outline-offset: 2px; }
+:scope input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+/* The panel stands --floe-room below the row of titles, the gap and its margin together.
+   LIMIT: a theme's tabs.css that writes the root's gap alone moves the panel off --floe-room; a theme writes no room
+   between parts */
+:scope > div { order: 1; flex-basis: 100%; display: none; margin-top: calc(var(--floe-room) - var(--tabs-gap)); }
+:scope > label:has(:checked) + div { display: grid; }
+/* On paper every tab shows, each under its title */
+@media print {
+  :scope > label { flex-basis: 100%; padding-inline: 0; color: var(--tabs-print); }
+  :scope > div { display: grid; order: 0; }
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out, and a
+   hidden word before each command, outside what is copied, tells a screen reader it is one */
+/* Its heading in code's faint colour of a heading, whatever colour a theme gives it */
+:scope figcaption { color: var(--floe-code-head-faint); }
+:scope :is(.run, .out) { display: block; }
+/* Every command but the first, past the hidden words between */
+:scope :is(.run, .out) ~ .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; content: "$ " / ""; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; content: "% " / ""; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language, and not read out
+   (/ ""), a command's line told by a hidden word instead; move it out of the CSS if a part's CSS comes to be checked
+   for letters as a theme's is */
+:scope.powershell .run::before { content: "PS> "; content: "PS> " / ""; }
+:scope.cmd .run::before { content: "> "; content: "> " / ""; }
+:scope .out { color: var(--floe-code-faint); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { border: 1px solid var(--tone-fill); color: var(--tone); background: var(--tone-soft); font-family: var(--mono); font-weight: 700; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { border: 1px solid var(--line); --floe-shadow-color: var(--shadow); --code-head-bg: var(--accent-soft); --code-head-fg: var(--accent); }
+:scope .lang { background: var(--cyber-glow); color: var(--on-fill); font-weight: 800; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each tone a frame of its own shape on its soft face, the colour the tone's: brackets at each corner (warn), a double
+   frame (bad), a bracket down the left (good), a line along the top (none) */
+:scope { border: 0; --floe-mark: 1.8rem; background: var(--tone-soft); }
+:scope::before { border-radius: 0; background: var(--surface); border: 2px solid var(--tone-fill); color: var(--tone); font-family: var(--mono); font-weight: 800; }
+.title { font-family: var(--mono); color: var(--tone); }
+:scope[data-floe-tone=warn] { background:
+  linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 4px 18px no-repeat,
+  linear-gradient(var(--tone-fill), var(--tone-fill)) right top / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) right top / 4px 18px no-repeat,
+  linear-gradient(var(--tone-fill), var(--tone-fill)) left bottom / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) left bottom / 4px 18px no-repeat,
+  linear-gradient(var(--tone-fill), var(--tone-fill)) right bottom / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) right bottom / 4px 18px no-repeat,
+  var(--tone-soft); }
+:scope[data-floe-tone=bad] { border: 2px solid var(--tone-fill); --floe-inset: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--tone-fill); }
+:scope[data-floe-tone=good] { background:
+  linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 18px 4px no-repeat, linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 4px 100% no-repeat,
+  linear-gradient(var(--tone-fill), var(--tone-fill)) left bottom / 18px 4px no-repeat, var(--tone-soft); }
+:scope:not([data-floe-tone]) { background: linear-gradient(var(--tone-fill), var(--tone-fill)) left top / 100% 4px no-repeat, var(--tone-soft); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A card's number is a green chip of mono figures */
+:scope.numbered { --floe-mark: auto; }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero);
+  justify-self: start; padding: 0.05rem 0.5rem; background: var(--cyber-glow); color: var(--on-fill);
+  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 800;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+.option.pick { --floe-inset: inset 0 0 0 2px var(--cyber-glow); --floe-shadow-color: var(--shadow); background: var(--accent-soft); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A hologram box: a rainbow along the top, the top left corner cut and lit in green, the bottom right in pink, on a
+   ground of its own. The cut corners are painted in what is around the box (--cyber-around), not cut out by clip-path,
+   which would cut the glow and a focus ring within.
+   LIMIT: a box held in another box shows the page's ground in its cut corners, not the outer box's face: a box nested
+   draws as it does alone (TestLookRule/nesting), so it cannot take its colour from where it stands */
+:scope {
+  border: 0; background-color: var(--surface); --floe-shadow-color: transparent;
+  background-image: var(--cyber-rainbow),
+    linear-gradient(135deg, transparent 0 13px, var(--cyber-glow) 13px 15px, transparent 15px),
+    linear-gradient(315deg, transparent 0 13px, var(--cyber-pink) 13px 15px, transparent 15px),
+    linear-gradient(135deg, var(--cyber-around) 0 14px, transparent 14px),
+    linear-gradient(315deg, var(--cyber-around) 0 14px, transparent 14px);
+  background-size: 100% 3px, 34px 34px, 34px 34px, 34px 34px, 34px 34px;
+  background-position: left top, left top, right bottom, left top, right bottom;
+  background-repeat: no-repeat;
+}
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A hologram box: a rainbow along the top, the top left corner cut and lit in green, the bottom right in pink, on a
+   ground of its own. The cut corners are painted in what is around the box (--cyber-around), not cut out by clip-path,
+   which would cut the glow and a focus ring within.
+   LIMIT: a box held in another box shows the page's ground in its cut corners, not the outer box's face: a box nested
+   draws as it does alone (TestLookRule/nesting), so it cannot take its colour from where it stands */
+:scope {
+  border: 0; background-color: var(--surface); --floe-shadow-color: transparent;
+  background-image: var(--cyber-rainbow),
+    linear-gradient(135deg, transparent 0 13px, var(--cyber-glow) 13px 15px, transparent 15px),
+    linear-gradient(315deg, transparent 0 13px, var(--cyber-pink) 13px 15px, transparent 15px),
+    linear-gradient(135deg, var(--cyber-around) 0 14px, transparent 14px),
+    linear-gradient(315deg, var(--cyber-around) 0 14px, transparent 14px);
+  background-size: 100% 3px, 34px 34px, 34px 34px, 34px 34px, 34px 34px;
+  background-position: left top, left top, right bottom, left top, right bottom;
+  background-repeat: no-repeat;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A terminal's band for the head, its words in light green over a line of green; each row numbered in its first cell.
+   The frame stays (a table is always framed) and the corners are not cut: the head and the rows paint over them */
+:scope {
+  border: 2px solid var(--cyber-glow); background: var(--surface); counter-reset: cyber-row; --floe-shadow-color: var(--shadow);
+  --table-head-bg: var(--cyber-ink); --table-head-fg: #c8ffd4; --table-rule: 1px solid var(--line);
+}
+:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); font-family: var(--mono); font-weight: 700; border-bottom: 3px solid var(--cyber-glow); }
+:scope thead th:last-child { background: var(--cyber-barcode) right 0.6rem center / 70px 12px no-repeat, var(--table-head-bg); }
+:scope tbody tr { counter-increment: cyber-row; }
+:scope tbody td:first-child { font-family: var(--mono); font-weight: 700; }
+:scope tbody td:first-child::before {
+  content: counter(cyber-row, decimal-leading-zero); content: counter(cyber-row, decimal-leading-zero) / counter(cyber-row, decimal-leading-zero);
+  margin-right: 0.8rem; color: var(--muted); font-weight: 400;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { --tabs-picked-bg: var(--cyber-glow); --tabs-picked-fg: var(--on-fill); }
+}
+}
+</style>
+<style>
+@layer floe.marks {
+:where([data-floe-part="note"]) {
+  position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+}
+:where([data-floe-part="note"]) > * { grid-column: text; align-self: first baseline; }
+:where([data-floe-part="note"])::before {
+  anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+}
+</style>
+<style>
+@layer floe.page.defaults {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+body { margin: 0; }
+.floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+/* The colours and faces are the theme's palette; the page lays them out */
+body {
+  line-height: 1.85; padding-block: 2.5rem 4rem;
+}
+main { display: grid; gap: 2.5rem; }
+h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
+h2 { font-size: 1.4rem; }
+header { display: grid; gap: 0.7rem; }
+section { display: grid; gap: var(--floe-room); }
+section > h2 { border-top: var(--rule); padding-top: var(--floe-heading-top, 1.3rem); }
+.sub { margin-top: 0.5rem; }
+.sub > h3 { font-size: 1.15rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; color: var(--muted); }
+/* The eyebrow is small and mono already: its code keeps its size, not base.css's smaller one */
+.eyebrow code { font-size: inherit; }
+.lead { color: var(--muted); font-size: 1.05rem; }
+.muted { color: var(--muted); }
+/* The contents beside the sections on a wide screen, stuck in sight and scrolling within where they are longer; over the
+   sections with the sections alone in them on a narrow one, where a long list would push the page down. Each column
+   keeps what it holds from widening it */
+section { scroll-margin-top: 1rem; }
+main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-columns: minmax(0, 1fr); }
+.body > .sections { align-content: start; }
+@media screen and (min-width: 1000px) {
+  main > .body { grid-template-columns: 16rem minmax(0, 1fr); }
+  main > .body > nav { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; scrollbar-width: thin; }
+}
+@media screen and (max-width: 999.98px) {
+  main > .body > nav li li { display: none; }
+}
+/* With contents the page takes the whole window, the contents and the sections side by side; the lead and the title
+   take the window's width with them, as the sections do.
+   LIMIT: with no top on the width, a lead of a very wide window runs long: about 112 full-width characters a line at
+   1920px, 150 at 2560px, and twice that of English. Stop it at --page-width, as a page without contents is, if that comes
+   to be hard to read */
+@media screen {
+  main:has(> .body) { --column-width: 100%; }
+}
+}
+}
+</style>
+</head>
+<body>
+<main class="floe-column">
+<header>
+<h1 id="the-cyber-theme">The cyber theme</h1>
+</header>
+<section>
+<h2 id="parts">Parts</h2>
+<div data-floe-text=""><p>Text with <strong>bold</strong>, <code>code</code> and a <a href="https://example.com/">link</a>.</p>
+<blockquote>
+<p>A quote.</p>
+</blockquote></div>
+<div data-floe-part="note"><span class="floe-hidden">Note: </span><strong class="title">Note</strong><div data-floe-text=""><p>A note in the accent.</p></div></div>
+<div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><div data-floe-text=""><p>A warning.</p></div></div>
+<div data-floe-part="table"><table>
+<thead><tr><th scope="col">Name</th><th scope="col" class="num">Count</th><th scope="col">State</th></tr></thead>
+<tbody>
+<tr><td>Pages</td><td class="num">1,840</td><td><span data-floe-tone="good" data-floe-part="cell">done</span></td></tr>
+<tr><td>Links</td><td class="num">120</td><td><span data-floe-tone="bad" data-floe-part="cell">open</span></td></tr>
+</tbody>
+</table></div>
+<figure data-floe-part="code"><figcaption><span class="names"><span class="file">a.conf</span></span><span class="lang">ini</span></figcaption><pre><code class="lines"><span data-floe-copy="">read_only = true
+</span></code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
+<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
+<div class="numbered" data-floe-part="options">
+<div class="card option" data-floe-look="panel"><div class="title">One</div><div class="body"><div data-floe-text=""><p>First.</p></div></div></div>
+<div class="card option" data-floe-look="panel"><div class="title">Two</div><div class="body"><div data-floe-text=""><p>Second.</p></div></div></div>
+</div>
+<form data-floe-part="tabs">
+<label><input type="radio" name="tab" checked=""/>One</label><div data-floe-part="stack"><div data-floe-text=""><p>First.</p></div></div>
+<label><input type="radio" name="tab"/>Two</label><div data-floe-part="stack"><div data-floe-text=""><p>Second.</p></div></div>
+</form>
+<figure data-floe-part="diff"><figcaption><span class="file">a.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code class="lines" data-floe-copy=""><span class="hunk">@@ -1 +1 @@
+</span><span class="del">-read_only = false
+</span><span class="add">+read_only = true
+</span></code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
+<div data-floe-part="table"><table>
+<thead><tr><th scope="col">Level</th><th scope="col">At</th><th scope="col">Finding</th><th scope="col">Status</th></tr></thead>
+<tbody>
+<tr><td><span data-floe-tone="bad" data-floe-part="cell">must</span></td><td><code>a.conf:1</code></td><td>The wiki is still open</td><td><span data-floe-tone="good" data-floe-part="cell">fixed</span></td></tr>
+<tr><td><span data-floe-tone="muted" data-floe-part="cell">nit</span></td><td></td><td>Two pages share a title</td><td></td></tr>
+</tbody>
+</table></div>
+</section>
+</main>
+
+
+</body></html>

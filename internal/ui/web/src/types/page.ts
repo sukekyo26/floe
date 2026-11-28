@@ -26,8 +26,8 @@ export interface Page {
   versionCount?: number;
   missing?: boolean;
   themed?: boolean;
-  // pickedTheme is the theme picked for the page on the management page, over the one it was drawn with
-  pickedTheme?: string;
+  // theme is the theme a page drawn from a data file is drawn in
+  theme?: string;
 }
 
 // A directory of a folder, GET /api/pages/{slug}/files (link.Listing)

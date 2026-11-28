@@ -251,7 +251,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PATCH /api/tasks", s.changeTasks)
 	mux.HandleFunc("DELETE /api/tasks", s.forgetTask)
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
-	mux.HandleFunc("GET /api/pages/{slug}/theme", s.ownTheme)
 	mux.HandleFunc("PUT /api/pages/{slug}/theme", s.pickTheme)
 	mux.HandleFunc("PUT /api/settings", s.putSettings)
 	mux.HandleFunc("GET /api/themes", s.themes)
@@ -532,6 +531,10 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
 		ReadHeaderTimeout: 10 * time.Second,
 		// Not ctx: the requests Shutdown waits for go on once it is done (a link's git).
 		BaseContext: func(net.Listener) context.Context { return context.WithoutCancel(ctx) },
+	}
+	// Before any answer, which would draw a page not moved yet in default.
+	if err := s.cfg.Store.MoveThemes(); err != nil {
+		s.log.Error("moving the themes of the pages", slog.Any("error", err))
 	}
 	// The first read is behind the answers: what starts the server waits for /api/health alone, and the read (the
 	// kit's, with Windows' checks of every name) can take seconds.

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<div class="floe-column sheet">
+<aside class="rail">
+
+<nav data-floe-look="toc" aria-label="{{word "contents"}}"><p class="title" aria-hidden="true">{{word "contents"}}</p>
+<ul>
+{{- if .Data.decisions}}<li><a href="#conclusion">{{word "conclusion"}}</a></li>{{end}}
+<li><a href="#background">{{word "background"}}</a></li>
+<li><a href="#solution">{{word "solution"}}</a></li>
+{{- if .Data.decisions}}<li><a href="#decisions">{{word "decisions"}}</a></li>{{else if .Data.decided}}<li><a href="#decided">{{word "decided"}}</a></li>{{end}}
+{{- if or .Data.data .Data.interfaces .Data.impact}}<li><a href="#build">{{word "build"}}</a></li>{{end}}
+{{- if or .Data.security .Data.testing .Data.rollout .Data.monitoring}}<li><a href="#ship">{{word "ship"}}</a></li>{{end}}
+{{- if or .Data.risks .Data.open}}<li><a href="#risks">{{word "risks"}}</a></li>{{end}}
+{{- range $i, $m := .Data.more}}<li><a href="#more-{{$i}}">{{$m.heading}}</a></li>{{end}}
+</ul>
+</nav>{{contents}}
+</aside>
+<main>
+<header class="head">
+<p class="kindline"><span>{{word "kind"}}</span></p>
+<h1>{{.Title}}</h1>
+{{- with .Data.summary}}<p class="summary">{{markdownLine .}}</p>{{end}}
+<dl class="fields">
+{{- with .Data.status}}<div><dt>{{word "status"}}</dt><dd><span data-floe-part="cell" data-floe-tone="accent">{{.}}</span></dd></div>{{end}}
+{{- with .Data.date}}<div><dt>{{word "date"}}</dt><dd>{{.}}</dd></div>{{end}}
+{{- with .Data.owner}}<div><dt>{{word "owner"}}</dt><dd>{{.}}</dd></div>{{end}}
+{{- with .Data.reviewers}}<div><dt>{{word "reviewers"}}</dt><dd>{{range $k, $r := .}}{{if $k}}{{word "sep"}}{{end}}{{$r}}{{end}}</dd></div>{{end}}
+{{- with .Data.related}}<div class="wide"><dt>{{word "related"}}</dt><dd>{{.}}</dd></div>{{end}}
+</dl>
+</header>
+{{- with .Data.decisions}}
+<section class="verdict" aria-labelledby="conclusion">
+<h2 id="conclusion">{{word "conclusion"}}</h2>
+<ol>
+{{- range $i, $d := .}}
+<li><span class="question">{{markdownLine $d.question}}</span>
+{{- with index $.Calc.picks $i}}<strong class="pick">{{.}}</strong>{{else}}<strong class="pick undecided">{{word "undecided"}}</strong>{{end}}
+{{- with $d.why}}<span class="why">{{markdownLine .}}</span>{{end}}</li>
+{{- end}}
+</ol>
+</section>
+{{- end}}
+<section class="block"><h2 id="background">{{word "background"}}</h2>{{.Data.background}}
+<div class="goals">
+<div><h3>{{word "goals"}}</h3><ul data-floe-look="marked" class="yes">{{range .Data.goals}}<li><span>{{markdownLine .}}</span></li>{{end}}</ul></div>
+{{- with .Data.non_goals}}<div><h3>{{word "non_goals"}}</h3><ul data-floe-look="marked" class="no-goals">{{range .}}<li><span>{{markdownLine .}}</span></li>{{end}}</ul></div>{{end}}
+</div>
+</section>
+<section class="block"><h2 id="solution">{{word "solution"}}</h2>{{.Data.solution}}
+{{- with .Data.diagram}}<div class="figure">{{.}}</div>{{end}}
+</section>
+{{- with .Data.decisions}}
+<section class="block"><h2 id="decisions">{{word "decisions"}}</h2>
+{{- range $i, $d := .}}
+<section class="decision" aria-labelledby="q-{{$i}}"><h3 id="q-{{$i}}">{{markdownLine $d.question}}</h3>{{$d.options}}</section>
+{{- end}}
+{{- with $.Data.decided}}<h3>{{word "decided"}}</h3><ul data-floe-look="rows" class="decided">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul>{{end}}
+</section>
+{{- else}}{{with .Data.decided}}
+<section class="block"><h2 id="decided">{{word "decided"}}</h2><ul data-floe-look="rows" class="decided">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
+{{- end}}{{end}}
+{{- if or .Data.data .Data.interfaces .Data.impact}}
+<section class="group"><h2 id="build" class="grouphead">{{word "build"}}</h2>
+{{- with .Data.data}}<section class="block"><h3>{{word "data"}}</h3>{{range .}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}</section>{{end}}
+{{- with .Data.interfaces}}<section class="block"><h3>{{word "interfaces"}}</h3>{{range .}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}</section>{{end}}
+{{- with .Data.impact}}<section class="block"><h3>{{word "impact"}}</h3>
+<div data-floe-look="table"><table><thead><tr><th scope="col">{{word "impact_what"}}</th><th scope="col">{{word "impact_text"}}</th></tr></thead>
+<tbody>{{range .}}<tr><td>{{markdownLine .what}}</td><td>{{markdownLine .text}}</td></tr>{{end}}</tbody></table></div></section>{{end}}
+</section>
+{{- end}}
+{{- if or .Data.security .Data.testing .Data.rollout .Data.monitoring}}
+<section class="group"><h2 id="ship" class="grouphead">{{word "ship"}}</h2>
+<div class="pair">
+{{- with .Data.security}}<section data-floe-look="panel" class="card"><h3>{{word "security"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>{{end}}
+{{- with .Data.testing}}<section data-floe-look="panel" class="card"><h3>{{word "testing"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>{{end}}
+</div>
+{{- with .Data.rollout}}<section class="block"><h3>{{word "rollout"}}</h3>{{.}}</section>{{end}}
+{{- with .Data.monitoring}}<section class="block"><h3>{{word "monitoring"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>{{end}}
+</section>
+{{- end}}
+{{- if or .Data.risks .Data.open}}
+<section class="block"><h2 id="risks">{{word "risks"}}</h2>
+{{- with .Data.risks}}
+<div data-floe-look="table"><table><thead><tr><th scope="col">{{word "risks"}}</th><th scope="col">{{word "mitigation"}}</th></tr></thead>
+<tbody>{{range .}}<tr><td>{{markdownLine .risk}}</td><td>{{with .mitigation}}{{markdownLine .}}{{end}}</td></tr>{{end}}</tbody></table></div>
+{{- end}}
+{{- with .Data.open}}<h3>{{word "open"}}</h3><ol>{{range .}}<li>{{markdownLine .question}}{{with .by}}<span class="by">{{word "answers"}}{{.}}</span>{{end}}</li>{{end}}</ol>{{end}}
+</section>
+{{- end}}
+{{- range $i, $m := .Data.more}}
+<section class="block"><h2 id="more-{{$i}}">{{$m.heading}}</h2>
+{{- range $m.parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
+</main>
+</div>
+</body>
+</html>

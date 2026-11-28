@@ -1,0 +1,24 @@
+en:
+  kind: Minutes
+  attendees: Attended
+  absent: Absent
+  decided: Decided
+  actions: 'Action items'
+  action: Action
+  owner: Owner
+  due: Due
+  done: Done
+  topics: Discussed
+  next: 'Next meeting:'
+ja:
+  kind: '議事録'
+  attendees: '出席者'
+  absent: '欠席者'
+  decided: '決定事項'
+  actions: '宿題'
+  action: '内容'
+  owner: '担当'
+  due: '期限'
+  done: '完了'
+  topics: '議題と議事'
+  next: '次回：'

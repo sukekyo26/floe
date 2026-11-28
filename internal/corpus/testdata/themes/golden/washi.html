@@ -23,11 +23,12 @@
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 /* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
-   its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
-   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem), and 1.1em as large as
-   adr's (and near postmortem's), its h2 told from them by nothing; lower them if that matters */
-:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
-:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
+   its own outside the box of its Markdown: smaller than every heading of a template it stands under, the least of which
+   is 1.1rem (adr's sections, runbook's steps), and smaller by level, h4 to h6 as h3.
+   LIMIT: h1 is as large as a question of tech-spec (1.05rem) over it, in an option's card, which the card tells apart */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.05em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) :is(h3, h4, h5, h6) { font-size: 0.95em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -195,20 +196,23 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.palette {
 :scope {
-  --chart-1: #2f6aa8; --chart-2: #c0492b; --chart-3: #7d52a0; --chart-4: #5f7f35;
- 
-  /* Width and style of this theme's box frames, and of lines drawn inside boxes alike */
-  --washi-frame: 4px double;
-  --bg: #ede4cf; --surface: #f7f1e3; --fg: #1d1b18; --muted: #5f594f; --line: #d3c9b4;
-  --accent: #264c78; --accent-soft: #dde5ef;
-  --good: #4f6f2e; --good-soft: #e3ead5; --warn: #885c0e; --warn-soft: #f1e4c8; --bad: #b33721; --bad-soft: #f5ddd6;
+  /* The first series in sumi, vermilion the last: vermilion is the heads' and the marks' */
+  --chart-1: #3d3833; --chart-2: #3f6b4e; --chart-3: #6a4f8a; --chart-4: #b23a20;
+  --bg: #f3efe6; --surface: #fffdf9; --fg: #1f1c19; --muted: #575148; --line: #d9d1c2;
+  --accent: #3d3833; --accent-soft: #ebe6dc;
+  --good: #36693a; --good-soft: #e5efe2; --warn: #865a0c; --warn-soft: #f6ebd2; --bad: #8f2442; --bad-soft: #f5e0e5;
   --font: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", "Noto Serif CJK JP", serif;
-  --code-bg: #1f1c19; --code-fg: #ece5d6; --code-prompt: #f0866b;
-  --rule: var(--washi-frame) var(--fg);
-  /* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), kept apart from --bad,
-     which a template may set otherwise, and the hairlines of its tables, in the ink */
-  --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent);
-  --radius: 0; --radius-small: 3px; --radius-pill: 3px;
+  --code-bg: #24211e; --code-fg: #eee8dc; --code-prompt: #f29a80;
+  /* Sumi and vermilion, apart from the palette's colours a template may set otherwise. Vermilion draws two things
+     alone: the brush strokes of heads, and the seals of what is marked (the pick, a thing done, a code's language) */
+  --washi-shu: #c13b23; --washi-sumi: #1f1c19; --washi-usuzumi: #ebe5d9;
+  /* Washi a little uneven under the page.
+     LIMIT: the unevenness sits at the same places of the page whatever its length, and is printed */
+  --page-bg: radial-gradient(circle 420px at 18% 22%, rgb(255 255 255 / 0.5), transparent), radial-gradient(circle 520px at 82% 70%, rgb(160 140 110 / 0.07), transparent), var(--bg);
+  --shadow: rgb(70 50 30 / 0.3);
+  --floe-shadow-y: 1px; --floe-shadow-blur: 4px; --floe-shadow-spread: -1px;
+  --rule: 1px solid var(--line);
+  --radius: 2px; --radius-small: 2px; --radius-pill: 2px;
 }
 }
 </style>
@@ -225,8 +229,11 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
-/* Sumi and vermilion printed on washi, in a Mincho face: tables closed by double rules, states and notes as
-   seals, cards marked with a seal of their number, and quotes ruled in vermilion */
+/* Sumi and vermilion on washi, in a Mincho face. A brush stroke across, in vermilion, thinning out to the right, is a
+   head's; a stroke down the left, thinning out downwards, tells the kind of a box; a vermilion seal marks a thing */
+section > h2 { padding-bottom: 0.5rem; letter-spacing: 0.06em;
+  background: linear-gradient(90deg, var(--on-face, var(--washi-shu)) 0 3.5rem, color-mix(in srgb, var(--on-face, var(--washi-shu)) 60%, transparent) 40%, transparent 95%) left bottom / 100% 5px no-repeat; }
+section > h3 { padding-bottom: 0.2rem; background: linear-gradient(90deg, var(--on-face, var(--washi-shu)) 0 1.6rem, transparent 1.6rem) left bottom / 100% 3px no-repeat; }
 }
 }
 </style>
@@ -234,10 +241,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.theme {
 @scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote {
-  background: var(--surface); color: var(--fg); padding: 0.8rem 1.6rem; border: 0; border-left: 3px solid var(--washi-shu);
-  font-size: 1.15rem; line-height: 1.8; letter-spacing: 0.08em;
-}
+/* A quote a white sheet, a vermilion stroke down its left */
+blockquote { background: linear-gradient(var(--washi-shu), color-mix(in srgb, var(--washi-shu) 40%, transparent) 70%, transparent) left / 4px 100% no-repeat, var(--surface); color: var(--fg); padding: 0.8rem 1.4rem; border: 0; font-size: 1.1rem; line-height: 1.8; }
 }
 }
 </style>
@@ -384,10 +389,10 @@ blockquote {
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
    silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
    text's box after the title, and what a note drawn in HTML holds is counted from after the word.
-   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
-   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language; make
+   it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
-  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius); max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius);
 }
 :scope::before {
   content: "i"; content: "i" / ""; border-radius: 50%;
@@ -611,96 +616,76 @@ blockquote {
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* No ground of its own: on a face (a band, a note, a quote) it takes the face's text colour, to read on it.
-   LIMIT: on a face its tone shows not (nor the colours of its marks); its word tells it */
-:scope {
-  background: none; border: 2px solid currentColor;
-  letter-spacing: 0.15em; font-weight: 700; color: var(--on-face, var(--tone));
-}
+/* A pill the tone's frame and words on the tone's pale face, on a face in the face's colours. One sumi as the accent
+   is; the pick of options fills its own in vermilion (options.css) */
+:scope { background: var(--face, var(--tone-soft)); border: 1.5px solid currentColor; color: var(--on-face, var(--tone)); font-weight: 700; letter-spacing: 0.05em; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border-top: 3px solid var(--washi-shu); --code-head-bg: none; }
+/* A vermilion stroke over its top; its language in a vermilion seal */
+:scope { background: linear-gradient(90deg, var(--washi-shu), color-mix(in srgb, var(--washi-shu) 50%, transparent) 60%, transparent) top / 100% 4px no-repeat, var(--code-bg); --code-head-bg: none; }
 :scope figcaption { border: 0; font-family: var(--font); }
-:scope .lang { background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }
+:scope .lang { background: var(--washi-shu); border: 1.5px solid var(--washi-shu); color: var(--on-fill); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope {
-  background: var(--surface); color: var(--fg); border: 0; border-top: 2px solid var(--tone);
-  --floe-mark: 2rem; --floe-mark-gap: 0.75rem;
-}
-/* The seal holds the note's own mark of its tone */
-:scope::before { border-radius: var(--radius-small); background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
-.title { letter-spacing: 0.1em; }
-:scope code { background: var(--face, color-mix(in srgb, var(--fg) 6%, transparent)); }
+/* The tone's pale face, a stroke of the tone down its left, its sign written large in the tone */
+:scope { color: var(--fg); border: 0; --floe-mark: 1.6rem; --floe-mark-gap: 0.7rem;
+  background: linear-gradient(var(--tone), color-mix(in srgb, var(--tone) 70%, transparent) 70%, transparent) left / 6px 100% no-repeat, var(--tone-soft); }
+:scope::before { background: none; color: var(--tone); font-size: 1.45rem; font-weight: 900; }
+.title { color: var(--tone); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A card in two rules, the inner one drawn over a card's padding (defaults.css's two variables), short of its text (facts' rows).
-   LIMIT: it stands 5px in, within --floe-row-pad (0.4rem); a template of one's own setting the variable under 5px
-   draws facts' text over it.
-   LIMIT: drawn within the box (--floe-inset, not an outline, which options' pick takes), its band
-   between the rules is --surface: a card, floe's or one's own, painted on another ground shows that band.
-   Inset shadows cannot leave the band clear.
-   LIMIT: base.css draws --floe-inset on a box alone (a part's, or an element that takes a look): a card of one's own
-   that takes no panel has the outer rule alone. floe's cards all take the panel */
-.card { position: relative; border: 1px solid var(--fg); --floe-inset: inset 0 0 0 2px var(--surface), inset 0 0 0 3px var(--fg); }
-/* The seal of its number stamped on its corner, over the padding and out of it no more than --floe-room */
+/* Numbers in square sumi seals. The pick is marked: its number and its pill vermilion seals, a vermilion stroke over its top */
 :scope.numbered { --floe-mark: 1.6rem; }
-:scope.numbered > .card::before {
-  content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
-  position: absolute; top: -0.5rem; right: -0.5rem; border-radius: 50%;
-  background: var(--washi-shu); color: var(--on-fill); font-size: var(--floe-text-small); font-weight: 700;
-}
-.card .title { letter-spacing: 0.08em; }
-.card :is(p, ul, ol) { color: var(--on-face, var(--muted)); }
+:scope.numbered > .option::before { border-radius: var(--radius-small); background: var(--washi-sumi); color: var(--surface); font-weight: 700; font-size: var(--floe-text-small); }
+:scope.numbered > .option.pick::before { background: var(--washi-shu); color: var(--on-fill); }
+.option.pick { background: linear-gradient(90deg, var(--washi-shu), color-mix(in srgb, var(--washi-shu) 55%, transparent) 75%, transparent) top / 100% 5px no-repeat, var(--surface); }
+.option.pick > .title > [data-floe-part=cell] { background: var(--washi-shu); border-color: var(--washi-shu); color: var(--on-fill); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope {
-  background: var(--surface); color: var(--fg);
-  border: 0; border-top: var(--washi-frame) var(--fg); border-bottom: var(--washi-frame) var(--fg);
-}
+/* A sheet of white washi without a frame, lifted off the ground */
+:scope { background: var(--surface); color: var(--fg); border: 0; --floe-shadow-color: var(--shadow); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope {
-  background: var(--surface); color: var(--fg);
-  border: 0; border-top: var(--washi-frame) var(--fg); border-bottom: var(--washi-frame) var(--fg);
-}
+/* A sheet of white washi without a frame, lifted off the ground */
+:scope { background: var(--surface); color: var(--fg); border: 0; --floe-shadow-color: var(--shadow); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 0; padding-inline: 1.4rem; --table-rule: 1px solid var(--washi-hair);
-  --table-head-bg: none; --table-head-fg: var(--fg); }
-:scope table { border-top: var(--washi-frame) var(--fg); border-bottom: var(--washi-frame) var(--fg); }
-:scope thead th { border-bottom: 1px solid var(--fg); font-size: 0.9rem; letter-spacing: 0.1em; }
+/* Framed in sumi, its head over a vermilion stroke across the table */
+:scope { border: 1px solid var(--washi-sumi); background: var(--surface); --table-head-bg: none; --table-head-fg: var(--fg); --table-rule: 1px solid var(--line); }
+:scope thead th { border-bottom: 0; font-weight: 700; }
+:scope thead { background: linear-gradient(90deg, var(--washi-shu) 0 25%, color-mix(in srgb, var(--washi-shu) 55%, transparent) 60%, color-mix(in srgb, var(--washi-shu) 15%, transparent)) left bottom / 100% 4px no-repeat; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { --tabs-picked-bg: none; --tabs-picked-fg: var(--fg); --tabs-picked-ring: inset 0 -2px 0 var(--washi-shu); }
+/* The tab picked a white sheet, a vermilion stroke under its name */
+:scope { --tabs-picked-bg: linear-gradient(90deg, var(--washi-shu), color-mix(in srgb, var(--washi-shu) 40%, transparent)) left bottom / 100% 3px no-repeat, var(--surface); --tabs-picked-fg: var(--fg); --tabs-picked-ring: none; }
 }
 }
 </style>

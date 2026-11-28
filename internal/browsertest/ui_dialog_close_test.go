@@ -62,9 +62,9 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 			t.Fatal(err)
 		}
 	}
-	onTask := func(slug, task, category string) {
+	onTask := func(slug, task, category string, more ...string) {
 		t.Helper()
-		s.floe(t, "task", "--slug", slug, "--task", task, "--category", category)
+		s.floe(t, append([]string{"task", "--slug", slug, "--task", task, "--category", category}, more...)...)
 	}
 	// plan-a put back on S300 outside, and drawn so
 	onAgain := func() {
@@ -73,8 +73,8 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		b.reread()
 		b.until("on again", "document.querySelector('#list li[data-slug=plan-a] [data-testid=task-tag]')?.getAttribute('href')?.includes('task=S300')")
 	}
-	onTask("plan-a", "S300", "案")
-	onTask("check-a", "S301", "x")
+	onTask("plan-a", "S300", "案", "--new")
+	onTask("check-a", "S301", "x", "--new")
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "実装")
 	b.size(1400, 900, false)
 	defer b.unsize()

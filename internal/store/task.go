@@ -367,14 +367,14 @@ func childrenOfTask(rows map[string]Task, name string) []string {
 }
 
 // checkParent refuses what ed would make of the parent of the task name. Only that row is looked at: another row broken
-// by hand does not keep this one from being written. A parent taken off and nothing else, of a task of no row, is
-// ErrNotFound: a name mistyped would make a row. A parent of itself checkSeen has refused.
+// by hand does not keep this one from being written. A task of no row is made only when the write says it is new
+// (checkTask). A parent of itself checkSeen has refused.
 func checkParent(project string, rows map[string]Task, name string, ed TaskEdit) error {
 	if ed.Parent == nil {
 		return nil
 	}
 	parent := *ed.Parent
-	// Taken off: of a task of no row, which it does not make (makesRow), it is not found there
+	// Taken off: of a task of no row, which a write makes only when it says the task is new, it is not found there
 	if parent == "" {
 		return nil
 	}

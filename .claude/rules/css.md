@@ -37,6 +37,7 @@ paths:
 - **CSS の勝ち負けは層で決まる** [layers]：セレクタの詳しさでなく、floe が並べる層で決まる（順は `draw.pageStyle` のコメント）。部品・見た目の名前に `base`・`palette`・`markdown` は使えない。`TestLookRule/layers`
 - **入れ子では外が勝つ** [nesting]：部品や見た目の中の部品の箱は、入れ子の外の規則に負け、同じ形に描く。`TestLookRule/nesting`
 - **Markdown の見た目は markdown.css** [markdown-css]：テーマの base.css はページの段で部品の箱と text の外枠で止まり、Markdown の見た目は markdown.css に書く（ページ全体に届くので、部品が描かない要素だけ）。（判断）
+- **Markdown の見出しはテンプレートの見出しより大きくしない** [markdown-headings]：部品とテンプレートの Markdown の `#`〜`###` は、その前に立つテンプレートの見出しより大きくせず、段ごとに小さくする。大きさは base.css 1 か所が em で書く。`TestLookRule/markdown-headings`
 - **状態と頭はテーマが変数で塗る** [states]：表の頭、選んだタブ、code の頭は、部品が `var(--x, 既定)` で読む変数をテーマが塗る。画面だけの状態は部品が `@media screen` で塗る。（判断）
 - **テーマは状態と印刷を書かない** [theme-states]：floe のテーマは `:checked` と `@media print` を書かない。`TestLintRule/theme-states`
 - **テンプレートが部品の形で描くものは、部品の箱として置く** [template-boxes]：札や注意の囲みは見た目として借りず、page.html に部品の箱（`data-floe-part="cell"`・`"note"`）で置き、色は `data-floe-tone`。page.css は箱の置き場所だけを書く。書き手の自由な字は cell にしない（長さに上限が無い）。札の形は `TestRenderedPills` が測る。（判断）

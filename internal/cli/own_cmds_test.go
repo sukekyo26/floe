@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -27,9 +28,13 @@ func TestNew(t *testing.T) {
 		env := cli.HomeVars(home)
 		for _, kind := range []string{"part", "theme", "template"} {
 			at := filepath.Join(cli.DefaultPlace(home, kind+"s"), name)
-			if code, stdout, stderr := runEnv(home, env, kind, "new", name); code != 0 || stdout != "made "+at+"\n" || stderr != "" {
+			code, stdout, stderr := runEnv(home, env, kind, "new", name)
+			if code != 0 || stderr != "" {
 				t.Errorf("floe %s new %s = %d, %q, %q", kind, name, code, stdout, stderr)
 			}
+			wantMade(t, stdout, at, "floe "+kind, func(args ...string) (int, string, string) {
+				return runEnv(home, env, args...)
+			}, name == "mine")
 			if code, stdout, stderr := runEnv(home, env, kind, "check"); code != 0 || stdout != "" || stderr != "" {
 				t.Errorf("floe %s check after new %s = %d, %q, %q", kind, name, code, stdout, stderr)
 			}
@@ -47,6 +52,36 @@ func TestNew(t *testing.T) {
 		}
 		if leftover, err := filepath.Glob(filepath.Join(filepath.Dir(cli.DefaultPlace(home, "parts")), "*", ".*")); err != nil || leftover != nil {
 			t.Errorf("new left %v, %v", leftover, err)
+		}
+	}
+}
+
+// nextLine is the line after made <path> of a new of one's own: the guide to read, and the command that prints the file
+// of floe's own to start from.
+var nextLine = regexp.MustCompile(`^next: read (.+) guide; (.+) prints floe's own to start from$`)
+
+// wantMade checks stdout of a new of one's own made at, of the commands under head (floe theme): made <path>, then the
+// guide and the file to start from, both of head. When ran, it runs both, which must print something, so that a
+// model renamed or gone is not named on.
+func wantMade(t *testing.T, stdout, at, head string, run func(args ...string) (int, string, string), ran bool) {
+	t.Helper()
+
+	lines := strings.Split(strings.TrimSuffix(stdout, "\n"), "\n")
+	if len(lines) != 2 || lines[0] != "made "+at {
+		t.Errorf("%s new printed %q, want made %s and the next line", head, stdout, at)
+		return
+	}
+	m := nextLine.FindStringSubmatch(lines[1])
+	if m == nil || m[1] != head || !strings.HasPrefix(m[2], head+" show ") {
+		t.Errorf("%s new's next line = %q, want its guide and a show of %s", head, lines[1], head)
+		return
+	}
+	if !ran {
+		return
+	}
+	for _, c := range []string{m[1] + " guide", m[2]} {
+		if code, out, stderr := run(strings.Fields(c)[1:]...); code != 0 || out == "" || stderr != "" {
+			t.Errorf("%s, named by %s new, = %d, %d bytes, %q", c, head, code, len(out), stderr)
 		}
 	}
 }
@@ -195,7 +230,7 @@ func TestListShow(t *testing.T) {
 		}
 		return strings.TrimSuffix(string(b), "\n")
 	}
-	allThemes := "app, aurora, blueprint, brutal, default, editorial, empty, ink, mine, notebook, pebble, retro, soft, swiss, washi"
+	allThemes := "app, aurora, cyber, default, editorial, empty, ink, mine, notebook, pebble, retro, soft, swiss, washi"
 	for _, tt := range []struct {
 		args []string
 		code int
@@ -250,7 +285,7 @@ func TestListShow(t *testing.T) {
 				"files: schema.json, computed.yaml, example.yaml, page.html, page.css\n"
 		}, ""},
 		{[]string{"template", "show", "memo", "computed.yaml"}, 0, func(out string) bool { return out == "n: 1\n" }, ""},
-		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook, slides` + "\n"},
+		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, meeting, memo, postmortem, prd, report, runbook, slides, tech-spec` + "\n"},
 		{[]string{"theme", "list"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "app\tfloe\t-\tAn app's screen: cool grey ground, white cards raised by soft shadows, a raspberry accent\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t-\t\n")
 		}, ""},
@@ -260,7 +295,7 @@ func TestListShow(t *testing.T) {
 		{[]string{"theme", "show", "mine", "code.css"}, 0, func(out string) bool { return out == ":scope { color: red; }\n" }, ""},
 		{[]string{"theme", "show", "empty"}, 0, func(out string) bool { return out == "empty\nwhere: "+filepath.Join(themes, "empty")+"\n" }, ""},
 		{[]string{"theme", "show", "empty", "x.css"}, 1, func(out string) bool { return out == "" }, `floe: empty has no file "x.css" (its files: )` + "\n"},
-		{[]string{"theme", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: there is no theme "nope"; use ` + allThemes + "\n"},
+		{[]string{"theme", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown theme "nope"; use ` + allThemes + "\n"},
 	} {
 		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
 			t.Parallel()

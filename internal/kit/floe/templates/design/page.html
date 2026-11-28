@@ -6,86 +6,67 @@
 <title>{{.Title}}</title>
 </head>
 <body>
-{{- /* The contents link to ids of the page's own, which floe keeps, not to those it makes of a heading's text in the page's language */}}
 <header class="head">
 <div class="floe-column">
-{{- if or .Data.owner .Data.date}}
-<p class="byline">{{with .Data.owner}}<span>{{.}}</span>{{end}}{{with .Data.date}}<span>{{.}}</span>{{end}}</p>
-{{- end}}
+<div class="titles">
+<p class="kind">{{word "kind"}}</p>
 <h1>{{.Title}}</h1>
-{{- with .Data.status}}
-<p class="status">{{.}}</p>
-{{- end}}
-{{- with .Data.summary}}
-<p class="summary">{{markdownLine .}}</p>
-{{- end}}
+{{- with .Data.summary}}<p class="summary">{{markdownLine .}}</p>{{end}}
+{{- with .Data.related}}<div class="related"><p class="label">{{word "related"}}</p>{{.}}</div>{{end}}
+</div>
+<dl class="props">
+{{- with .Data.status}}<div><dt>{{word "status"}}</dt><dd>{{.}}</dd></div>{{end}}
+{{- with .Data.owner}}<div><dt>{{word "owner"}}</dt><dd>{{.}}</dd></div>{{end}}
+{{- with .Data.date}}<div><dt>{{word "date"}}</dt><dd>{{.}}</dd></div>{{end}}
+<div><dt>{{word "screens"}}</dt><dd>{{len .Data.screens}}</dd></div>
+</dl>
 </div>
 </header>
-{{- with .Data.decisions}}
-<section class="verdict" data-floe-look="band" aria-labelledby="conclusion">
-<div class="floe-column">
-<h2 id="conclusion">{{word "conclusion"}}</h2>
-<ol>
-{{- range $i, $d := .}}
-<li><span class="question">{{markdownLine $d.question}}</span>
-{{- with index $.Calc.picks $i}}<strong class="pick">{{.}}</strong>{{else}}<strong class="pick undecided">{{word "undecided"}}</strong>{{end}}
-{{- with $d.why}}<span class="why">{{markdownLine .}}</span>{{end}}</li>
+<main class="floe-column">
+<section aria-labelledby="goal"><h2 id="goal">{{word "goal"}}</h2>{{.Data.goal}}
+{{- with .Data.users}}<p class="label">{{word "users"}}</p><ul class="users">{{range .}}<li data-floe-look="panel"><b>{{.who}}</b><span>{{markdownLine .need}}</span></li>{{end}}</ul>{{end}}
+</section>
+{{- with .Data.flow}}
+{{- /* LIMIT: from and to are drawn as written, not matched to the screens' names; a name written amiss is seen there */}}
+<section aria-labelledby="flow"><h2 id="flow">{{word "flow"}}</h2>
+<ol class="flow">{{range .}}<li><span class="node">{{.from}}</span><span class="edge">{{markdownLine .action}}</span><span class="node">{{.to}}</span></li>{{end}}</ol>
+</section>
 {{- end}}
-</ol>
+{{- range $i, $s := .Data.screens}}
+<section class="spec{{if $s.pc}} wide{{end}}" aria-labelledby="screen-{{$i}}">
+<div class="canvas">{{with $s.pc}}<img class="pc" src="{{.}}" alt="{{$s.name}} ({{word "pc"}})">{{end}}{{with $s.phone}}<img class="phone" src="{{.}}" alt="{{$s.name}} ({{word "phone"}})">{{end}}</div>
+<div class="side">
+<p class="no">{{count $i}} / {{len $.Data.screens}}</p>
+<h2 id="screen-{{$i}}">{{$s.name}}</h2>
+{{- with $s.text}}<p class="what">{{markdownLine .}}</p>{{end}}
+{{- with $s.notes}}<p class="label">{{word "notes"}}</p><ol data-floe-look="numbered" class="notes">{{range .}}<li data-floe-mark="solid" data-floe-tone="bad"><p>{{markdownLine .}}</p></li>{{end}}</ol>{{end}}
+{{- with $s.states}}
+<div class="states">{{range .}}<figure data-floe-look="panel">{{with .image}}<img src="{{.}}" alt="">{{end}}<figcaption><b>{{.name}}</b>{{with .text}}<span>{{markdownLine .}}</span>{{end}}</figcaption></figure>{{end}}</div>
+{{- end}}
 </div>
 </section>
 {{- end}}
-<div class="floe-column body">
-<main>
-<section><h2 id="background">{{word "background"}}</h2>{{.Data.background}}</section>
-<section><h2 id="goals">{{word "goals"}}</h2><ul>{{range .Data.goals}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
-{{- with .Data.non_goals}}
-<section><h2 id="non-goals">{{word "non_goals"}}</h2><ul class="non-goals">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
-{{- end}}
-{{- with .Data.decisions}}
-<section><h2 id="decisions">{{word "decisions"}}</h2>
-{{- range $i, $d := .}}
-<section class="decision" aria-labelledby="question-{{$i}}"><h3 id="question-{{$i}}">{{markdownLine $d.question}}</h3>
-{{$d.options}}
+{{- if or .Data.colors .Data.type}}
+<section aria-labelledby="styles"><h2 id="styles">{{word "styles"}}</h2>
+{{- with .Data.colors}}<p class="label">{{word "colors"}}</p><ul class="palette">{{range .}}<li><span class="tile" style="background: {{.value}}"></span><b>{{.name}}</b><code>{{.value}}</code>{{with .use}}<span class="use">{{markdownLine .}}</span>{{end}}</li>{{end}}</ul>{{end}}
+{{- /* LIMIT: a size has no upper bound; a sample of 9999px breaks the page that wrote it, which its writer sees */}}
+{{- with .Data.type}}<p class="label">{{word "type"}}</p><ul class="type">{{range .}}<li><span class="sample" style="font-size: {{.size}}; font-weight: {{or .weight 400}}">{{word "sample"}}</span><span><b>{{.name}}</b><code>{{.size}} / {{or .weight 400}}</code>{{with .use}}<span class="use">{{markdownLine .}}</span>{{end}}</span></li>{{end}}</ul>{{end}}
 </section>
 {{- end}}
-</section>
-{{- end}}
-{{- with .Data.decided}}
-<section><h2 id="decided">{{word "decided"}}</h2><ul data-floe-look="rows" class="decided">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
-{{- end}}
-{{- with .Data.impact}}
-<section><h2 id="impact">{{word "impact"}}</h2>
-<div data-floe-look="table"><table>
-<thead><tr><th scope="col">{{word "impact_what"}}</th><th scope="col">{{word "impact_text"}}</th></tr></thead>
-<tbody>
-{{- range .}}
-<tr><td>{{markdownLine .what}}</td><td>{{markdownLine .text}}</td></tr>
-{{- end}}
-</tbody>
-</table></div>
-</section>
+{{- if or .Data.components .Data.copy .Data.accessibility .Data.open}}
+<div class="foot">
+{{- with .Data.components}}<section aria-labelledby="components"><h2 id="components">{{word "components"}}</h2><dl class="defs">{{range .}}<div><dt>{{.name}}</dt>{{with .text}}<dd>{{markdownLine .}}</dd>{{end}}</div>{{end}}</dl></section>{{end}}
+{{- with .Data.copy}}<section aria-labelledby="copy"><h2 id="copy">{{word "copy"}}</h2><dl class="defs">{{range .}}<div><dt>{{.where}}</dt><dd><q>{{.text}}</q></dd></div>{{end}}</dl></section>{{end}}
+{{- with .Data.accessibility}}<section aria-labelledby="accessibility"><h2 id="accessibility">{{word "accessibility"}}</h2><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>{{end}}
+{{- with .Data.open}}<section aria-labelledby="open"><h2 id="open">{{word "open"}}</h2><ol>{{range .}}<li>{{markdownLine .question}}{{with .by}}<span class="use">{{word "answers"}}{{.}}</span>{{end}}</li>{{end}}</ol></section>{{end}}
+</div>
 {{- end}}
 {{- range $i, $m := .Data.more}}
-<section><h2 id="more-{{$i}}">{{$m.heading}}</h2>
+<section aria-labelledby="more-{{$i}}"><h2 id="more-{{$i}}">{{$m.heading}}</h2>
 {{- range $m.parts}}{{range .}}{{with .}}
 {{.}}{{end}}{{end}}{{end}}
 </section>
 {{- end}}
 </main>
-<aside>
-<nav data-floe-look="toc" aria-label="{{word "contents"}}"><p class="title" aria-hidden="true">{{word "contents"}}</p>
-<ul>
-<li><a href="#background">{{word "background"}}</a></li>
-<li><a href="#goals">{{word "goals"}}</a></li>
-{{- if .Data.non_goals}}<li><a href="#non-goals">{{word "non_goals"}}</a></li>{{end}}
-{{- if .Data.decisions}}<li><a href="#decisions">{{word "decisions"}}</a></li>{{end}}
-{{- if .Data.decided}}<li><a href="#decided">{{word "decided"}}</a></li>{{end}}
-{{- if .Data.impact}}<li><a href="#impact">{{word "impact"}}</a></li>{{end}}
-{{- range $i, $m := .Data.more}}<li><a href="#more-{{$i}}">{{$m.heading}}</a></li>{{end}}
-</ul>
-</nav>{{contents}}
-</aside>
-</div>
 </body>
 </html>

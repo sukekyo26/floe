@@ -1,0 +1,3 @@
+/* The option picked on the soft accent; a line's code in it on the surface, as its own ground is that colour too */
+.option.pick { background: var(--accent-soft); }
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }

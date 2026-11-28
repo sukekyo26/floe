@@ -21,7 +21,7 @@ func TestUIPressOnce(t *testing.T) { //nolint:paralleltest // the browser tests 
 	if _, err := st.Edit("p1", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--slug", "p1", "--task", "#1", "--title", "kid")
+	s.floe(t, "task", "--slug", "p1", "--task", "#1", "--title", "kid", "--new")
 	for _, slug := range []string{"p2", "p3", "p4"} {
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
 		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
@@ -29,7 +29,7 @@ func TestUIPressOnce(t *testing.T) { //nolint:paralleltest // the browser tests 
 		}
 	}
 	s.floe(t, "task", "--slug", "p2", "--task", "#1")
-	for _, args := range [][]string{{"--task", "#3", "--title", "up"}, {"--task", "#1", "--parent", "#3"}, {"--task", "#9", "--state", "done"}} {
+	for _, args := range [][]string{{"--task", "#3", "--title", "up", "--new"}, {"--task", "#1", "--parent", "#3"}, {"--task", "#9", "--state", "done", "--new"}} {
 		s.floe(t, append([]string{"task", "--project", project}, args...)...)
 	}
 	const undo = "[...document.querySelectorAll('#toasts [data-testid=undo]')].at(-1)"

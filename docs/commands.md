@@ -19,6 +19,10 @@ Flags are in each command's section below.
 | `floe publish <data.yaml>` | Store the page drawn from a data file, or link a file or a folder in place, and print its URL |
 | `floe check <data.yaml>...` | Check data files as their pages are drawn, without writing them |
 | `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
+| `floe repository new <dir>...` | Make `.floe/repository.yaml`: this floe's version and the directories of a repository's documents |
+| `floe repository render [data.yaml]...` | Write the page of each of the repository's documents, with its templates, parts and themes in `.floe/` |
+| `floe repository check [data.yaml]...` | Check the repository's templates, parts and themes, its documents and their pages, writing nothing |
+| `floe repository template\|part\|theme …` | The commands of `floe template`, `floe part` and `floe theme`, on the repository's `.floe/` (no `theme default`) |
 | `floe repository guide` | Print how to keep documents in a repository, drawn by templates of its own and checked in CI |
 | `floe rebuild` | Draw every stored page again with the templates, parts and themes of now |
 | `floe template list` | List the templates |
@@ -73,7 +77,7 @@ Draw the page of a data file with the template it names, store the page as it wa
 
 Pages are drawn from data files (`.yaml`, `.yml`); [pages.md](pages.md) tells how to write one. The data file is copied to `<slug>/source-<id>/data.yaml` under `FLOE_DIR`, with the images it shows at the paths it names them by; take it back from there if the original is lost. Each publish writes a new copy and then removes the one before, so a publish that fails leaves the page as it was. A relative path is resolved against the working directory.
 
-The stored page stays as it was drawn: changing the template, a part or a theme changes it only when `floe rebuild` draws it again. A page that names no theme takes the default theme chosen in the management page's settings when it is first stored, and keeps it: choosing another default changes the pages stored from then on only. A theme picked for the page in its menu on the management page (Theme) draws it again at once, and wins over all of these, kept when it is published again. Another file, such as an HTML file, is not stored: link it with `--link` to show it as it is.
+The stored page stays as it was drawn: changing the template, a part or a theme changes it only when `floe rebuild` draws it again. A stored page has one theme. A new page takes `--theme`, else its data's `theme:`, else the theme for new pages chosen in the management page's settings, else `default`; choosing another theme for new pages changes the pages stored from then on only. A theme picked for the page in its menu on the management page (Theme) becomes its theme and draws its last version again at once. A publish changes the page's theme only when its `--theme`, else its `theme:`, names another theme than the last publish did: publishing the same again keeps the theme picked. Another file, such as an HTML file, is not stored: link it with `--link` to show it as it is.
 
 The server draws each page in a process of its own, which may hold up to 512 MiB of memory and take up to 30 seconds for a page, and refuses a page larger than 80 MiB as `floe check` does: past any of these, the page is refused at its data file (`page.yaml: drawing it needed more than 512 MiB of memory, …`, `page.yaml: drawing it took more than 30 seconds, …`, `page.yaml: the page drawn is 96 MiB, over the 80 MiB a page may be, …`), and the server serves on. So is a linked data file's page when it is opened, a page drawn in a theme picked for it, and a page `floe rebuild` draws again. Drawing in that process makes publishing, and opening a linked data file's page, about 0.1 seconds slower.
 
@@ -85,7 +89,7 @@ The server draws each page in a process of its own, which may hold up to 512 MiB
 | `--slug <name>` | The URL name: 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit. Defaults to the slug of the file's own page, else the file name; a linked `index.html` takes the name of its directory. |
 | `--title <text>` | The title in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. |
 | `--description <text>` | A description shown in the list. |
-| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`; a theme picked for the page on the management page wins over it. Defaults to `theme:`, else the default theme the page took when first stored, else `default`. Refused with `--link` of an HTML file or a folder, which are shown as they are. |
+| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`. It becomes the page's theme when it names another than the last publish's `--theme` or `theme:` did; else the page keeps its theme, one picked on the management page too. Refused with `--link` of an HTML file or a folder, which are shown as they are. |
 | `--force` | Replace another file's page, or a link to another file, keeping nothing of the old one, not even a page's earlier versions. |
 | `--move-project` | Put the page in the project of the directory `floe publish` runs in, though it is in another; without it a page keeps its project. Refused with `--link` (flags that exclude each other), and where that directory has no project (the mistake says to run it in the repository the page is about); the project is not set from a name. |
 
@@ -147,15 +151,21 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 - A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade. [repository.md](repository.md) tells how to set a repository up.
 - A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
 
-## `floe repository guide`
+## `floe repository`
 
-Print how to keep documents in a repository, [repositories.md](agents/repositories.md), whole: how an agent changes one, and how to set a repository up so that CI checks them. [repository.md](repository.md) tells people the same. It takes no arguments.
+The commands of a repository's documents ([repository.md](repository.md)). Each but `new` and the guides works in the repository of the working directory: the directory at or above it that holds `.floe/repository.yaml`, looked for no higher than the one that holds `.git`. They read the templates, parts and themes in `.floe/` alone, not `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` nor `FLOE_THEMES_DIR`, use no server and no store, and read and write nothing out of the repository but the icon sets of `floe icons` (a link out of it is refused). They refuse a repository whose `version` is not this floe's (the part of `floe --version` before a `+`), before they read anything else.
+
+- `floe repository new <dir>...` writes `.floe/repository.yaml` in the working directory: `version`, this floe's, and `documents`, the directories given, from the root and `/`-separated (`docs/specs`; `./docs`, `docs/` and `..` are refused). It makes no directory: make the documents' directories. With a repository here or above, nothing is written.
+- `floe repository render [data.yaml]...` draws each data file given, else every `.yaml` and `.yml` under `documents` (not under a name that starts with a dot, nor under a link to a directory), and writes its page beside it, as `floe render` does. The documents are named from the root, wherever it runs.
+- `floe repository check [data.yaml]...` does what `floe repository template check` does, then checks the documents and their pages as `floe render --check` does: every mistake together, and, once the documents have none, each page missing or not drawn again; exit code 1 when there is one. An HTML file with no data file is left alone.
+- `floe repository template …`, `floe repository part …` and `floe repository theme …` are the commands of `floe template`, `floe part` and `floe theme`, on `.floe/templates`, `.floe/parts` and `.floe/themes` (one not there is none). `floe repository theme` has no `default`, which reads the store.
+- `floe repository guide` prints [repositories.md](agents/repositories.md) whole: how an agent changes a document, and how to set a repository up so that CI checks them. It and the `guide` of `template`, `part` and `theme` print out of a repository too, of any version.
 
 ## `floe rebuild`
 
 Have the server draw every stored page again from the copy of its data file and images, with its templates, parts and themes of now, and keep the page where it changed, or where its stored page is gone. Run it after you change a template, part or theme of your own, or upgrade floe.
 
-- A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, or fix the template. One past the memory or the time of a page (see `floe publish`) is told so, and the other pages are drawn on.
+- A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, fix the template, or choose the page another theme (Theme in its menu on the management page). One past the memory or the time of a page (see `floe publish`) is told so, and the other pages are drawn on.
 - Stopping the command (Ctrl+C) stops the drawing: the pages not drawn again yet keep the page they had. Run it again to draw them.
 - Linked files are drawn each time they are opened, and are left alone.
 - The server is started when it is not running.
@@ -168,7 +178,7 @@ Print the templates, floe's and your own, one per line in four tab-separated col
 
 ## `floe template new <name>`
 
-Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in. The `page.html` also holds a viewport `<meta>`, so that a phone draws the page at its own width. It prints `made <path>`, the directory it made.
+Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in. The `page.html` also holds a viewport `<meta>`, so that a phone draws the page at its own width. It prints `made <path>`, the directory it made, then `next: read floe template guide; floe template show report page.html prints floe's own to start from`. Under `floe repository` it names `floe repository`'s commands.
 
 - A name is lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
@@ -197,7 +207,7 @@ With `--all`, print every part, look and shared schema, floe's and your own, tha
 
 ## `floe part new <name>`
 
-Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of its box and an empty `part.css`, the smallest that `floe part check` takes, to fill in. It prints `made <path>`, the directory it made.
+Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of its box and an empty `part.css`, the smallest that `floe part check` takes, to fill in. It prints `made <path>`, the directory it made, then `next: read floe part guide; floe part show note part.html prints floe's own to start from`. Under `floe repository` it names `floe repository`'s commands.
 
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
 
@@ -217,7 +227,7 @@ Print the themes, floe's and your own, one per line in the same four tab-separat
 
 ## `floe theme new <name>`
 
-Make the theme `<name>` in `FLOE_THEMES_DIR`: an empty `palette.css`, the smallest that `floe theme check` takes, to fill in. It goes over floe's `default` palette, which `floe theme show default palette.css` prints, so it writes only what it changes. It prints `made <path>`, the directory it made.
+Make the theme `<name>` in `FLOE_THEMES_DIR`: an empty `palette.css`, the smallest that `floe theme check` takes, to fill in. It goes over floe's `default` palette, which `floe theme show default palette.css` prints, so it writes only what it changes. It prints `made <path>`, the directory it made, then `next: read floe theme guide; floe theme show default palette.css prints floe's own to start from`. Under `floe repository` it names `floe repository`'s commands.
 
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
 
@@ -300,6 +310,7 @@ A page's category is where the task's page places it among the task's pages, und
 
 ```sh
 floe task                                                           # the project's open tasks, nothing written
+floe task --task "#130" --new --title "Fix login"                  # a new task
 floe task --slug design-notes --task "#130"                         # the page on the task
 floe task --task "#130" --state doing                               # the task's state
 floe task --task "#130" --url https://example.com/issues/482        # a link added to the task
@@ -319,8 +330,10 @@ With no flag but `--project`, the open tasks of a project are told, the states `
 ```text
 $ floe task
 task #130 in project floe: state doing, title "Fix login"
+$ floe task --task "#130" --new --title "Fix login"
+task #130 in project floe: made; title "Fix login"
 $ floe task --slug design-notes --task "#130"
-task #130 in project floe: made
+task #130 in project floe: changed
 page design-notes: task #130 in project floe
 $ floe task --task "#130" --state doing
 task #130 in project floe: changed; state doing
@@ -344,11 +357,12 @@ With `--slug`, the task's project is each page's: `--task` puts the pages on tha
 | `--category <category>` | pages | With `--slug` only, of pages on a task. One not among the task's categories is added at their end, in the same write. `""` takes it off |
 | `--state <state>` | the task | `todo`, `doing`, `done` or `archived` |
 | `--url <url>` | the task | An outside link, `http` or `https`, added after its others; give it again for more. A task holds 10 at most: one that would bring it over is refused, while a task over 10 by hand still takes the other writes |
-| `--remove-url <url>` | the task | A link taken off; give it again for more. One the task does not have is no mistake. A link in both `--url` and `--remove-url` stays on. Of a task of no row it makes none: floe says there is no such task |
+| `--remove-url <url>` | the task | A link taken off; give it again for more. One the task does not have is no mistake. A link in both `--url` and `--remove-url` stays on |
 | `--parent <task ID>` | the task | With `--slug`, with `--task`: of the one task the pages go on. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
 | `--title <title>` | the task | `""` takes it off |
 | `--categories <name>` | the task | A category of the task; given again for each, the order of its categories, as written; a page's category not in it is added at its end, and one a page has is refused left out. `""` takes them all off |
 | `--pin`, `--unpin` | pages | With `--slug` only |
+| `--new` | the task | Makes the task named, in the state `todo`, with the fields given; refused for a task there is, and, with `--slug`, for pages of more than one project. A task is made by `--new` alone: any other write of a task of no row is refused, saying there is no such task |
 | `--clear` | pages | Off their task, and their pin off; the task stays |
 | `--forget` | the task | Without `--slug`. Refused while a page is on it, an archived one too, or it has a child task |
 
@@ -467,10 +481,10 @@ List the icons of the set (`lucide`, `aws`, `gcp`, `azure`) whose name contains 
 - The scripts of a page drawn from a data file cannot send what it holds out with `fetch`, XHR, images from elsewhere or forms, its download included. Linked HTML loads what it loads.
 - A page opens at the part its URL names (`/a/<slug>/#part`), and a move to a part inside it is kept in the URL, so that a copy of the URL or a reload opens that part.
 - The management page downloads a page as one file: the stored page, or a linked file, with its CSP in a `<meta>`.
-- The management page's settings (the gear at the end of the list's bar, on a window wider than 40rem; a page shown whole has none) open on their list, each with its value: Theme and Mode. A part is opened from its row, and the settings link over its heading goes back to the list. Theme chooses the default theme, from a card of a sample page drawn in each theme, floe's and your own. A page that names no theme takes it when it is first stored; the pages stored already do not change. Mode turns the task mode on or off: on, `floe guide` prints its Tasks section's Ask after publishing, which has an agent ask which task to put each new page on and under which of its categories; an agent reads the change when it reads the guide again. The store keeps both in `settings.json`, and saving one keeps the other; a `settings.json` that cannot be read refuses a new page drawn from a data file until one is saved again, which writes it anew.
+- The management page's settings (the gear at the end of the list's bar, on a window wider than 40rem; a page shown whole has none) open on their list, each with its value: Theme for new pages and Mode. A part is opened from its row, and the settings link over its heading goes back to the list. Theme for new pages chooses the default theme, from a card of a sample page drawn in each theme, floe's and your own. A page that names no theme takes it when it is first stored; the pages stored already do not change, even when stored again, which a note over the cards says too (a page's own theme is changed from its menu's Theme). Mode turns the task mode on or off: on, `floe guide` prints its Tasks section's Ask after publishing, which has an agent ask which task to put each new page on and under which of its categories; an agent reads the change when it reads the guide again. The store keeps both in `settings.json`, and saving one keeps the other; a `settings.json` that cannot be read refuses a new page drawn from a data file until one is saved again, which writes it anew.
 - A page's menu (…) has Edit, which changes its title and description, and its slug and project under Slug and project, which is folded: the project's name is typed in its Project.
-- A page's menu (…) has Theme, for a page drawn from a data file, stored or linked: a theme picked there draws that page alone again and wins over `--theme` and `theme:`, kept when the page is published again or rebuilt, and dropped when another file's page replaces it (`--force`). Its first card, Remove this page's theme, names the theme the page then shows in (`--theme`, `theme:` or the default it was first stored with) and gives it back to that. A theme the page cannot be drawn in leaves it as it was.
-- A stored page of two versions or more shows what changed between any two of them on the later version's page itself, in its theme and parts: words added are underlined in green, words gone struck through in red where they were, and what is gone of a list, a section or a part goes back in its shape by the part it was in (before it when it came before all that is left of it, else after), struck through; a table's rows and cells gone stay in their place in it, an ol's items with their numbers. A diagram or image that changed is framed, and its earlier version opens under it. A block is framed only where its words cannot show what changed. The contents list the sections that changed; `n` and `p` go from one change to the next. It opens from `Diff` over the page, and a page newly at another version says what changed since the one read. Opening it reads nothing; closing it opens the page, which reads it. A link and a folder have no versions. Bold, a link's target and CSS do not show; an image in a line of text is compared by its alt.
+- A page's menu (…) has Theme, for a page drawn from a data file, stored or linked: the theme picked there becomes the page's theme and draws its last version again, the versions before staying as they were drawn. It stays, rebuilt too, until a publish names another theme with `--theme` or `theme:`, and a page that replaces another file's (`--force`) is new. A linked data file is drawn in the theme its file's `theme:` names once that is not the one it named when linked or last picked. A theme the page cannot be drawn in leaves it as it was.
+- A stored page of two versions or more shows what changed between any two of them on the later version's page itself, in its theme and parts: words added are underlined in green, words gone struck through in red where they were, and what is gone of a list, a section or a part goes back in its shape by the part it was in (before it when it came before all that is left of it, else after), struck through; a table's rows and cells gone stay in their place in it, an ol's items with their numbers. A diagram or image that changed is framed, and its earlier version opens under it. A block is framed only where its words cannot show what changed. The contents list the sections that changed; `n` and `p` go from one change to the next. It opens from `Diff` over the page, and a page newly at another version says what changed since the one read. Opening it reads nothing; closing it opens the page, which reads it. A link and a folder have no versions. Bold, a link's target and CSS do not show; an image in a line of text is compared by its alt. A diff whose later version is the last is drawn in the page's theme; one between two versions before it, and a version before the last opened, show the theme that version was drawn in.
 - Printed from its frame, a page comes out one screen long, with a note to open it alone and print it there.
 - The management page takes keys, and `?` opens the help on its shortcuts, those that work where you are. The help's other part, About the page list or About the task list, says what that screen is and what its words mean (a page shown whole tells of the page list); the `?` button in the list's bar, before the settings, opens it there, on a window wider than 40rem (a page shown whole has none). `Ctrl+K` (`⌘K`) searches the pages. In the list: `j` `k` or `↑` `↓` move over the rows, `Enter` opens a row whole, `x` selects (as does Select in a row's menu), `f` stars, `/` goes to the search; pressing a row whose page is open beside the list, as a double press does, opens it whole; `d` opens what changed in the page open. On a page open whole: `j` `k` go on through the rows that opened it, `h` goes its way back, `f` stars, `d` opens what changed since the version read, whose `n` `p` go to the next and previous change and `d` closes, `/` searches the pages. After a press inside a page, `j` `k` `h` `d` `?` `/` `Ctrl+K` still work on a page floe drew, and `Ctrl+K` alone on a linked HTML file, which may use the letters itself.
 

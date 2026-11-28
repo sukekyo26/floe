@@ -1,0 +1,4 @@
+/* Locked: a second frame of green inside the hologram box */
+.card { --floe-inset: inset 0 0 0 2px var(--surface), inset 0 0 0 4px var(--cyber-glow); }
+:scope .card > .title { font-family: var(--mono); font-size: 1.4rem; color: var(--accent); }
+:scope .card > .meta { font-family: var(--mono); }

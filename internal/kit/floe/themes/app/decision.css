@@ -1,0 +1,8 @@
+/* A decision is a sheet pulled up from below: its top corners large, a grabber drawn in its padding at the top; its
+   title large, its state a grey chip */
+.card {
+  border-radius: var(--app-sheet);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--muted) 60%, transparent) 99%, transparent) center 0.45rem / 3.2rem 6px no-repeat, var(--surface);
+}
+:scope .card > .meta { justify-self: start; padding: 0.1rem 0.8rem; border-radius: 999px; background: var(--app-chip); --face: var(--app-chip); font-weight: 700; }
+:scope .card > .title { font-size: 1.5rem; font-weight: 800; }

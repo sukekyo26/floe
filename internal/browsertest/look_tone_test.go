@@ -28,9 +28,9 @@ const toneExtra = `  - heading: Tones held
 //     and --<tone>-fill (or else --<tone>-soft);
 //   - an element of a tone that draws in its tone's colours, --<tone> or --<tone>-soft, but not from --tone,
 //     --tone-soft or --tone-fill: what draws so (itself, its ::before and ::after, and what it holds short of a
-//     part's box) keeps the colour when the three are set on it to others. What draws in colours of a theme's own (brutal's fills) or in
+//     part's box) keeps the colour when the three are set on it to others. What draws in colours of a theme's own (pebble's fills) or in
 //     none of its tone (a stat without a note), and links, are let be; accent, and muted's text, the page's colours
-//     drawn anywhere (blueprint's panels, a date), are not measured so;
+//     drawn anywhere (a date), are not measured so;
 //   - a part's box without a tone whose --tone is not --accent (stats': --muted; the diagram's: none), and the page's
 //     root;
 //   - a diagram's box without a tone filled other than --surface.

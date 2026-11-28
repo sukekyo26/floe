@@ -2,14 +2,16 @@
 
 A part draws an item of a data file. It is a directory that says what the item may hold, how it is drawn and how it looks. A look is a directory of CSS alone, which parts and elements borrow. A shared schema is a JSON Schema that parts and templates name. This doc says what each file holds, what `part.html` can call, what a part's CSS reaches and how a change takes effect, and what `floe part check` refuses. A data file writes a part as one key naming it (`- quote: { text: Hello }` among a section's `parts`). A part is used in a template as `floe template guide` tells (*Parts in a template*), and in a data file as `floe guide` tells.
 
+In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its parts are in `.floe/parts`, and without it floe reads and writes your own.
+
 ## Where parts are
 
-- Parts, looks and shared schemas are in `FLOE_PARTS_DIR` (default `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`) (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path): a part or a look is a directory, a shared schema a file `<name>.json` beside them. `floe part new quote` makes the smallest part, `quote`: a `schema.json`, a `part.html` holding its box and an empty `part.css`. A file directly in `FLOE_PARTS_DIR` other than `<name>.json` is ignored without a message: put a part's files in its directory.
+- Parts, looks and shared schemas are in your parts' directory, `FLOE_PARTS_DIR` (default `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`), or `.floe/parts` under `floe repository` (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path): a part or a look is a directory, a shared schema a file `<name>.json` beside them. `floe part new quote` makes the smallest part, `quote`: a `schema.json`, a `part.html` holding its box and an empty `part.css`. A file directly in your parts' directory other than `<name>.json` is ignored without a message: put a part's files in its directory.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit. It MUST NOT be the name of one of floe's parts, looks or shared schemas, nor a key a section of floe's templates takes (`html`, the one key of `any.json` that no part has): yours sit beside floe's and never take their place.
 - A part's or look's name MUST NOT be `base`, `palette` or `markdown` (the names of a theme's files for every page), and MUST NOT be the name of a shared schema of yours too (a directory and a `<name>.json` of one name).
-- A directory in `FLOE_PARTS_DIR`, and anything in a part's or look's directory, MUST NOT be a link to a directory (a link to a file is read), and a file MUST be a regular file (a FIFO or a device is refused unread).
-- `FLOE_PARTS_DIR` MUST NOT be the directory of your themes or templates (`FLOE_THEMES_DIR`, `FLOE_TEMPLATES_DIR`), contain it, or be in it: floe would read the files of one as those of the other (`floe part check` compares it with the themes' directory; the commands that draw a page compare all three).
-- A mistake in any part of yours stops every page, whether or not the page uses that part, until it is fixed (`floe template guide`, *Where templates are*). A new part made in another directory and moved in once `floe part check` is clean stops none: set `FLOE_PARTS_DIR` to that directory for `floe part new quote` and `floe part check` (`floe template guide`, *Make one in another directory*).
+- A directory in your parts' directory, and anything in a part's or look's directory, MUST NOT be a link to a directory (a link to a file is read), and a file MUST be a regular file (a FIFO or a device is refused unread).
+- Your parts' directory MUST NOT be the directory of your themes or templates, contain it, or be in it: floe would read the files of one as those of the other (`floe part check` compares it with the themes' directory; the commands that draw a page compare all three).
+- A mistake in any part of yours stops every page, whether or not the page uses that part, until it is fixed (`floe template guide`, *Where templates are*). A new part made in another directory and moved in once `floe part check` is clean stops none: set `FLOE_PARTS_DIR` to that directory for `floe part new quote` and `floe part check` (`floe template guide`, *Make one in another directory*). `floe repository` uses no server: in a repository, make the part in place with `floe repository part new` and check it with `floe repository part check`.
 
 ## Files
 
@@ -84,6 +86,7 @@ The functions floe adds to html/template's own (`printf`, `index`, `eq` and the 
 | `markdownLine` | `{{markdownLine .text}}` | A line of Markdown as HTML, without a paragraph around it |
 | `markdownLabel` | `{{markdownLabel .text}}` | A line of Markdown as `markdownLine` writes it, its links as their words |
 | `num` | `{{num .n}}` | A number written with grouping; `{{num 3 .n}}` to 3 significant digits |
+| `count` | `{{count $i}}` | The index of a `range` (`range $i, $a := .items`), from 0, as a number from 1: `1` for the first |
 | `bytes` | `{{bytes .n}}` | A count of bytes in the binary unit that keeps it under 1024 (1536 is `1.5 KiB`) |
 | `contents` | `{{contents}}` | The script that marks, in the contents just before it, the place the page is read at |
 | `word` | `{{word "by"}}` | A word of the part's `words.yaml`, in the page's language |
@@ -99,6 +102,7 @@ The functions floe adds to html/template's own (`printf`, `index`, `eq` and the 
 | `chart` | `{{$c := chart}}` | The places of the part `chart`, from the part's value |
 | `written` | `{{written}}` | The part's value as written |
 | `tree` | `{{range tree .}}` | A list of paths nested |
+| `linkTo` | `{{$to := linkTo .url}}` | Where a URL goes: `.Kind` is `web` when it names a scheme or a host (`//host/x` too), `mail` for `mailto:`, else `here`; `.Name` names a `web` one, by its host without the port, `PR #412` for a pull request of github.com, its scheme when it has no host |
 
 `script`, `code`, `bars`, `stats` and `chart` take nothing and read the part's whole value (`.`), as `diagram` does, so that a mistake in it is told at its line and column. The value MUST have the shape each reads (refused when a page is drawn, at the value or its key, saying which `"type"` to give it in your schema):
 
@@ -223,7 +227,7 @@ A look draws nothing and lends its style to parts and elements that take it. A l
 
 A theme's rules for a look draw every part that takes it. A card in an element that takes `cards` may take `panel` itself (`<div data-floe-look="cards"><div class="card" data-floe-look="panel">`): the cards, the outer, draw it as they draw the cards of a part.
 
-- Do not take two looks that write `marks:` on one element in HTML (`data-floe-look="numbered marked"`, or a box of `links` that takes `marked`): both rules reach its rows, and floe does not refuse it.
+- Do not take two looks that write `marks:` on one element in HTML (`data-floe-look="numbered marked"`, or a box of `timeline` that takes `marked`): both rules reach its rows, and floe does not refuse it.
 
 ### Names floe gives
 

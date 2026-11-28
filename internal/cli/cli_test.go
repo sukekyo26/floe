@@ -149,7 +149,7 @@ func TestHelp(t *testing.T) {
 		"publish\tStore a page drawn from a data file (or --link an HTML file or a folder in place) and print its URL\n" +
 		"rebuild\tDraw every stored page again with the templates, parts and themes of now\n" +
 		"render\tWrite the page of each data file to an HTML file beside it, or in --out-dir\n" +
-		"repository\tPrint how to keep documents in a repository and check them in CI\n" +
+		"repository\tDraw and check a repository's documents, with its templates, parts and themes in .floe\n" +
 		"rm\tDelete pages in order, stopping at the first failure (a linked file itself is left alone)\n" +
 		"serve\tRun the server in the foreground\n" +
 		"skill\tInstall a skill that points your agent to floe guide\n" +

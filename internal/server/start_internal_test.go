@@ -151,7 +151,7 @@ func TestOpenWaitsForRead(t *testing.T) {
 				t.Fatal("no linked file")
 			}
 			// The version of the drawing of the first read (generation 1), as version tells it.
-			since := s.id + ".1." + files.Mark(file) + "." + m.UpdatedAt + "." + m.PickedTheme
+			since := s.id + ".1." + files.Mark(file) + "." + m.UpdatedAt + "." + m.Theme
 			st := stalled(t, s)
 			ctx, cancel := context.WithCancel(t.Context())
 			addr, done := started(ctx, t, s)

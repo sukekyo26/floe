@@ -1,24 +1,44 @@
 en:
-  conclusion: Conclusion
-  undecided: Undecided
-  background: Background
-  goals: Goals
-  non_goals: Non-goals
-  decisions: Options
-  decided: Decided
-  impact: Impact
-  impact_what: Area
-  impact_text: Effect
-  contents: Contents
+  kind: 'Design spec'
+  related: 'Related documents'
+  status: 'Status'
+  owner: 'Owner'
+  date: 'Date'
+  screens: 'Screens'
+  goal: 'Goal'
+  users: 'Users'
+  flow: 'Screen flow'
+  pc: 'computer'
+  phone: 'phone'
+  notes: 'Notes'
+  styles: 'Design rules'
+  colors: 'Colors'
+  type: 'Typography'
+  sample: 'Aa Sample'
+  components: 'Components'
+  copy: 'UI text'
+  accessibility: 'Accessibility'
+  open: 'Open questions'
+  answers: 'Answers: '
 ja:
-  conclusion: '結論'
-  undecided: '未決'
-  background: '背景'
-  goals: '目的'
-  non_goals: 'やらないこと'
-  decisions: '案と比べ'
-  decided: '決めたこと'
-  impact: '影響の範囲'
-  impact_what: '範囲'
-  impact_text: '影響'
-  contents: '目次'
+  kind: 'デザイン仕様書'
+  related: '関連文書・デザインファイル'
+  status: '状態'
+  owner: '作成者'
+  date: '日付'
+  screens: '画面'
+  goal: '目的'
+  users: '対象ユーザー'
+  flow: '画面遷移'
+  pc: 'PC'
+  phone: 'スマホ'
+  notes: '仕様メモ'
+  styles: 'デザインルール'
+  colors: 'カラー'
+  type: 'タイポグラフィ'
+  sample: 'あア亜 Aa'
+  components: 'コンポーネント'
+  copy: 'UI テキスト'
+  accessibility: 'アクセシビリティ'
+  open: '未決事項'
+  answers: '回答者：'

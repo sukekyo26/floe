@@ -43,7 +43,7 @@ was not written again.`,
 			if cmd.Flags().Changed("out-dir") {
 				out = a.arg(outDir, place{name: "--out-dir", wants: "cli_wants_out_dir"})
 			}
-			return a.renderPages(args, out, check)
+			return a.renderPages(a.args(args, "cli_wants_data"), out, check)
 		},
 	}
 	f := cmd.Flags()
@@ -59,38 +59,47 @@ type rendered struct {
 	page           []byte
 }
 
-func (a *app) renderPages(paths []string, out arg, check bool) error {
+// renderPages draws the data files given, and writes their pages, or, with check, tells each page missing or not
+// what its data file draws.
+func (a *app) renderPages(given []arg, out arg, check bool) error {
 	k, err := a.kit(true)
 	if err != nil {
 		return err
 	}
-	pages, err := a.drawPages(k, a.iconStore(), paths, out)
+	pages, err := a.drawPages(k, a.iconStore(), given, out)
 	switch {
 	case err != nil:
 		return err
 	case check:
-		return checkPages(pages)
+		return checkPages(pages, a.commandHead()+" render")
 	default:
 		return a.writePages(pages, out)
 	}
 }
 
-// drawPages draws the page of each data file with k and the icons of store and names the HTML file it goes to,
+// drawPages draws the page of each data file given with k and the icons of store and names the HTML file it goes to,
 // in out, else beside it, or returns the mistakes of out and of every file, and the pages two data files would write.
-func (a *app) drawPages(k *kit.Kit, store diagram.Icons, paths []string, out arg) ([]rendered, error) {
+func (a *app) drawPages(k *kit.Kit, store diagram.Icons, given []arg, out arg) ([]rendered, error) {
 	var found usererr.List
 	if failed := found.Add(out.err); failed != nil {
 		return nil, failed
 	}
 	defer a.drawn()
-	pages := make([]rendered, 0, len(paths))
+	pages := make([]rendered, 0, len(given))
 	// The pages so far, to tell two that are one file: one real path (through a symlink), or two the system
 	// says are one file (os.SameFile), as on a filesystem that ignores case (macOS) a.html and A.html are.
 	// LIMIT: two pages not yet written are one file only by their paths: on macOS a.html and A.html written
 	// anew overwrite one another, as pages written on Linux and checked out on macOS do.
 	// LIMIT: each page is compared with each before it, by what was read of it once; enough for a command line.
 	var first []target
-	for _, f := range a.args(paths, "cli_wants_data") {
+	for _, f := range given {
+		if outside := a.repo.insideArg(f); outside != nil {
+			// Not read: what it leads to is not the repository's.
+			if failed := found.Add(outside); failed != nil {
+				return nil, failed
+			}
+			continue
+		}
 		p, at := pageOf(f, out)
 		a.watchDrawing(f.name)
 		page, warnings, err := drawFile(k, store, f)
@@ -102,7 +111,7 @@ func (a *app) drawPages(k *kit.Kit, store diagram.Icons, paths []string, out arg
 			// Nowhere to write to, or to read from, or no data file to write the page of: told above.
 			continue
 		}
-		t, bad := targetAt(p, at, first)
+		t, bad := a.targetAt(p, at, first)
 		if failed := found.Add(bad); failed != nil {
 			return nil, failed
 		}
@@ -130,6 +139,15 @@ func pageOf(f, out arg) (rendered, string) {
 	}
 	name := baseName(f.name) + ".html"
 	return rendered{from: f.name, to: dirs.Join(dir, name), real: "", page: nil}, dirs.Join(at, name)
+}
+
+// targetAt is targetAt of the page p, refused out of the repository of floe repository's commands too.
+func (a *app) targetAt(p rendered, at string, first []target) (target, error) {
+	t, err := targetAt(p, at, first)
+	if err != nil {
+		return t, err
+	}
+	return t, a.repo.inside(t.page.real, t.page.to)
 }
 
 // targetAt is the page p, at where it is, and the file it goes to, or why it is not written: it leads nowhere, it
@@ -240,20 +258,21 @@ func (a *app) writePages(pages []rendered, out arg) error {
 	return found.Err()
 }
 
-// checkPages returns a mistake for each page that is missing or is not what its data file draws.
-func checkPages(pages []rendered) error {
+// checkPages returns a mistake for each page that is missing or is not what its data file draws, which command
+// writes.
+func checkPages(pages []rendered, command string) error {
 	var found usererr.List
 	for _, p := range pages {
 		old, _, err := files.Read(p.real)
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
-			found = append(found, usererr.New("cli_render_missing", p.to, p.from))
+			found = append(found, usererr.New("cli_render_missing", p.to, p.from, command))
 		case err != nil:
 			if failed := found.Add(usererr.CannotRead(p.to, err)); failed != nil {
 				return failed
 			}
 		case !bytes.Equal(old, p.page):
-			found = append(found, usererr.New("cli_render_stale", p.to, p.from))
+			found = append(found, usererr.New("cli_render_stale", p.to, p.from, command))
 		}
 	}
 	return found.Err()

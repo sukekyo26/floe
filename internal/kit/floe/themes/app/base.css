@@ -1,2 +1,4 @@
-/* An app's screen: white cards raised from a cool ground by soft shadows, with no frame. A quote is ruled in the accent,
-   on no ground of its own, so that in a note or a card it makes no white box in the white */
+/* An app's screen: white cards raised from a cool ground by soft shadows, with no frame; each part in the shape of an
+   app's own (a notification, a sheet pulled up, a settings row, a message bubble). A section's heading carries a short
+   raspberry bar under it, as an app's tab */
+section > h2 { padding-bottom: 0.45rem; background: linear-gradient(var(--accent), var(--accent)) left bottom / 2.5rem 4px no-repeat; }

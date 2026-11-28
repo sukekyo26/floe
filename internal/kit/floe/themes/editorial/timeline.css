@@ -1,0 +1,2 @@
+:scope .date { font-weight: 800; color: var(--accent); }
+:scope > li::after { background: var(--fg); }

@@ -207,7 +207,7 @@ func TestRenderedChart(t *testing.T) { //nolint:paralleltest // the browser test
 			amiss = append(amiss, fmt.Sprintf("%s at the columns' least, %d:\n%s", th.Name(), least, got))
 		}
 		b.unsize()
-		if th.Name() == "notebook" || th.Name() == "blueprint" {
+		if th.Name() == "notebook" {
 			if got := b.eval(`(() => { const s = document.querySelector('[data-floe-part=chart] svg'), probe = document.createElement('i');
 			  probe.style.background = 'var(--surface)'; s.parentElement.append(probe); const surface = getComputedStyle(probe).backgroundColor; probe.remove();
 			  return getComputedStyle(s).backgroundColor === surface ? '' : getComputedStyle(s).backgroundColor + ' under the plot, not ' + surface; })()`); got != "" {

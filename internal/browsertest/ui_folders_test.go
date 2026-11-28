@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -36,6 +37,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	page("docs/guide/start.html", "../")
 	page("docs/guide/deep/x.html", "../../")
 	page("docs/a,b:c/odd.html", "../")
+	page("docs/guide/deep/a/b/c/d/e/y.html", "../../../../../../../")
 	s.write(t, "docs/s.css", "h1 { color: rgb(1, 2, 3); }")
 	// A directory of no page, whose note the keys pass over; one of more pages than a directory lists, whose last opens all the same.
 	s.write(t, "docs/assets/a.css", "")
@@ -175,6 +177,50 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Once the rows have risen in, every folder's heading and every row of the tree shows whole.
 	b.still()
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].map((li) => (li.dataset.testid ?? li.dataset.kind) + ':' + getComputedStyle(li).opacity).join(',')"))
+
+	// In a column too narrow for a deep page's name, time and buttons on one line, the name keeps its room and the time
+	// goes with the buttons under it; a shallow row, and the deep one in a wide column, stay on one line.
+	lines := func(file string) string {
+		return b.eval(`(() => { const li = document.querySelector('#list li[data-testid=tree][data-file="` + file + `"]');
+			const box = (s) => li.querySelector(s).getBoundingClientRect(), mid = (r) => (r.top + r.bottom) / 2;
+			const name = box('[data-testid=title]'), time = box('time'), open = box('[data-testid=open]');
+			return ` + js(file+":") + ` + (name.width >= 40 ? ' name' : ' no name') + (mid(time) > name.bottom ? ' 2 lines' : ' 1 line') +
+				(Math.abs(mid(time) - mid(open)) < 2 ? '' : ' (time and buttons apart)'); })()`)
+	}
+	narrow := func(px int) {
+		b.navigate("/api/pages")
+		b.eval(fmt.Sprintf(`localStorage.setItem('list.open', JSON.stringify(['docs', ...['guide', 'guide/deep', 'guide/deep/a', 'guide/deep/a/b', 'guide/deep/a/b/c', 'guide/deep/a/b/c/d', 'guide/deep/a/b/c/d/e'].map((d) => 'docs:' + d)]));
+			localStorage.setItem('list.columns', JSON.stringify({ ...JSON.parse(localStorage.getItem('list.columns') ?? '{}'), list: %d }))`, px))
+		b.navigate("/")
+		b.until("the deep page", `document.querySelector('#list li[data-testid=tree][data-file="guide/deep/a/b/c/d/e/y.html"]') !== null`)
+		b.still()
+	}
+	b.size(1280, 900, false)
+	deep := "guide/deep/a/b/c/d/e/y.html"
+	// Wide, the deep row and a shallow one stay on one line.
+	narrow(560)
+	wrapped := make([]string, 0, 4)
+	wrapped = append(wrapped, lines(deep), lines("index.html"))
+	// The column where the deep row has room for its name and time, not its buttons too, measured on the row at 560px
+	// so that it is the same scene whatever the fonts: the time goes there with the buttons, under the name.
+	between := b.eval(`(() => { const li = document.querySelector('#list li[data-testid=tree][data-file="` + deep + `"]'), style = getComputedStyle(li);
+		const room = li.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd), gap = parseFloat(style.columnGap);
+		const least = getComputedStyle(li.querySelector('[data-testid=title]').parentElement).minWidth, px = [...least.matchAll(/([\d.]+)px/g)].map((m) => Number(m[1]));
+		const time = li.querySelector('time').getBoundingClientRect(), actions = li.querySelector('[data-testid=actions]').getBoundingClientRect();
+		if (px.length === 0) return 'the name has no least width: ' + least;
+		const timeFits = Math.min(...px) + gap + time.width, allFit = Math.min(...px) + gap + (actions.right - time.left);
+		const column = Math.round(560 - room + (timeFits + allFit) / 2);
+		return allFit - timeFits < 8 || column < 320 ? 'no column between ' + timeFits + ' and ' + allFit + ' (column ' + column + ')' : String(column); })()`)
+	column, err := strconv.Atoi(between)
+	if err != nil {
+		t.Fatalf("a column for the name and the time alone: %s", between)
+	}
+	narrow(column)
+	wrapped = append(wrapped, lines(deep))
+	narrow(320)
+	check(t, "a deep row in a narrow column", append(wrapped, lines(deep)),
+		deep+": name 1 line|index.html: name 1 line|"+deep+": name 2 lines|"+deep+": name 2 lines")
+	b.unsize()
 
 	guide := "dir:docs:guide/deep,page:docs:guide/setup.html,page:docs:guide/start.html"
 	check(t, "folders", out, `["docs"] ?kind=folder|a,b:c+,assets+,big+,guide+,index.html|1 groups, 1 folder|["docs","docs:guide","docs:a,b:c"] ?kind=folder|`+

@@ -15,7 +15,7 @@ import (
 // it), and the page wider than the paper only when no element is told.
 // LIMIT: a box with no text of its own (a bar, a frame, an hr) and the text a display: contents element holds are told by
 // the page's line alone, with no place; measure their boxes too if a part comes to draw one past the paper.
-// A box's scrollWidth is not read where nothing clips: a decoration drawn out of a box (washi's seal on a card) is
+// A box's scrollWidth is not read where nothing clips: a decoration drawn out of a box (the tray pebble draws behind a check) is
 // within --floe-room by the rules, and reaches no further than the paper. A word hidden to the eye (base.css's
 // .floe-hidden) is clipped to a pixel by design.
 // It returns {seen, amiss}: the elements it measured, and for each told its part and what is amiss.

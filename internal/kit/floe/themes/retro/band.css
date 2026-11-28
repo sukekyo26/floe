@@ -1,0 +1,2 @@
+/* A band is a title bar too: the navy run to blue of the sections' headings, its words white */
+:scope { --face: var(--rt-navy); --on-face: var(--on-fill); background: var(--face); background-image: var(--rt-bar); color: var(--on-face); }

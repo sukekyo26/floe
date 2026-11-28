@@ -37,7 +37,7 @@ func floe(t *testing.T) *kit.Kit {
 	return k
 }
 
-// floe's own read without a mistake, once a process: 29 parts, 7 looks, 13 themes and 7 templates.
+// floe's own read without a mistake, once a process: 29 parts, 7 looks, 12 themes and 7 templates.
 func TestFloe(t *testing.T) {
 	t.Parallel()
 
@@ -46,8 +46,8 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows", "tags", "toc", "zoom"}) || len(themes) != 13 ||
-		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook", "slides"}) {
+	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows", "tags", "toc", "zoom"}) || len(themes) != 12 ||
+		!slices.Equal(templates, []string{"adr", "design", "handoff", "meeting", "postmortem", "prd", "report", "runbook", "slides", "tech-spec"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
 	for _, name := range parts {
@@ -120,8 +120,8 @@ func TestEntryFiles(t *testing.T) {
 		{k.Parts, "bars", "schema.json, part.yaml, part.html, part.css"},
 		{k.Parts, "panel", "part.yaml, part.css"},
 		{k.Parts, "tone", "tone.json"},
-		{k.Templates, "design", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
-		{k.Themes, "retro", "theme.yaml, palette.css, base.css, markdown.css, cards.css, cell.css, chart.css, note.css, panel.css, table.css"},
+		{k.Templates, "tech-spec", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
+		{k.Themes, "retro", "theme.yaml, palette.css, base.css, markdown.css, band.css, bars.css, cards.css, cell.css, code.css, details.css, diagram.css, note.css, numbered.css, panel.css, stats.css, table.css, tabs.css, timeline.css, toc.css"},
 		{k.Themes, "ink", "theme.yaml, palette.css, markdown.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
 	} {
 		if got := names(tt.entries(), tt.name); got != tt.want {
@@ -884,12 +884,15 @@ func TestShapes(t *testing.T) {
 		"part tree":           "[] change,note,path",
 		"part zoom":           "-",
 		"template adr":        "-",
-		"template design":     "background,date,decided,decisions,goals,impact,lang,more,non_goals,owner,status,summary,template,theme,title",
+		"template design":     "accessibility,colors,components,copy,date,flow,goal,lang,more,open,owner,related,screens,status,summary,template,theme,title,type,users",
 		"template handoff":    "asks,date,doing,done,from,lang,more,next,notes,summary,template,theme,title,to",
+		"template meeting":    "absent,actions,attendees,date,decided,lang,more,next,place,template,theme,title,topics",
 		"template postmortem": "actions,authors,cause,date,effects,lang,lessons,more,severity,summary,template,theme,timeline,title",
+		"template prd":        "actors,background,constraints,date,functional,glossary,goals,lang,more,nonfunctional,open,owner,related,scope,status,summary,template,theme,title,version",
 		"template report":     "eyebrow,lang,lead,sections,template,theme,title,toc",
 		"template runbook":    "caution,lang,more,needs,owner,rollback,steps,summary,template,theme,title,updated",
 		"template slides":     "direction,lang,slides,subtitle,template,theme,title",
+		"template tech-spec":  "background,data,date,decided,decisions,diagram,goals,impact,interfaces,lang,monitoring,more,non_goals,open,owner,related,reviewers,risks,rollout,security,solution,status,summary,template,testing,theme,title",
 		"section html":        "html",
 	}
 	k := floe(t)

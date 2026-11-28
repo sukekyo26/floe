@@ -23,11 +23,12 @@
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 /* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
-   its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
-   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem), and 1.1em as large as
-   adr's (and near postmortem's), its h2 told from them by nothing; lower them if that matters */
-:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
-:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
+   its own outside the box of its Markdown: smaller than every heading of a template it stands under, the least of which
+   is 1.1rem (adr's sections, runbook's steps), and smaller by level, h4 to h6 as h3.
+   LIMIT: h1 is as large as a question of tech-spec (1.05rem) over it, in an option's card, which the card tells apart */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.05em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) :is(h3, h4, h5, h6) { font-size: 0.95em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -195,8 +196,18 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.palette {
 :scope {
-  --chart-1: #9c3b2e; --chart-2: #0a749b; --chart-3: #a87a1c; --chart-4: #5e55ab;
-  --radius: 4px; --radius-small: 3px; --radius-pill: 3px; }
+  --bg: #efefec; --surface: #fff; --fg: #161616; --muted: #555550; --line: #d6d6d0;
+  /* The accent is the ink: the yellow is kept to bands, numbers and bars, and no tone takes it */
+  --accent: #161616; --accent-soft: #fcf3c2; --accent-fill: #e2e2dc;
+  --good: #2b6942; --good-soft: #e3efe4; --warn: #8a5508; --warn-soft: #f9e6d0; --bad: #a3241c; --bad-soft: #fbe4e0;
+  --chart-1: #161616; --chart-2: #a88400; --chart-3: #b4532f; --chart-4: #2b6942;
+  --code-bg: #161616; --code-fg: #eeeeea; --code-prompt: #f5d000;
+  --rule: none;
+  --radius: 10px; --radius-small: 4px; --radius-pill: 4px;
+  /* The theme's own: its yellow, and the short bar of it over a box at the words' start */
+  --editorial-hi: #f5d000;
+  --editorial-bar: linear-gradient(var(--editorial-hi), var(--editorial-hi)) var(--floe-pad-inline) 0 / 2.75rem 5px no-repeat;
+}
 }
 </style>
 <style>
@@ -211,8 +222,33 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.theme {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+/* A section opens on a band of the theme's colour, its number on a block, seen while the page is scrolled fast. The band
+   paints a ground of its own, so it takes no face from around it. Its pad is the one room the theme makes, as pebble's
+   band: words on a ground need it off the ground's edge. A section that is a panel of its own (handoff's) keeps its plain
+   heading, a band in a box being one box too many */
+:scope { counter-reset: editorial-section; --floe-heading-top: 0.55rem; --floe-heading-start: 1rem; --floe-heading-edge: none; }
+section:not([data-floe-look]):has(> h2) { counter-increment: editorial-section; }
+section:not([data-floe-look]) > h2 {
+  padding: var(--floe-heading-top) 1rem 0.55rem var(--floe-heading-start); border-radius: var(--radius-small);
+  background: var(--editorial-hi); color: var(--fg); --face: initial; --on-face: initial; font-weight: 800;
+}
+section:not([data-floe-look]) > h2::before {
+  content: counter(editorial-section, decimal-leading-zero); content: counter(editorial-section, decimal-leading-zero) / counter(editorial-section, decimal-leading-zero);
+  display: inline-block; margin-right: 0.7rem; vertical-align: 0.15em; padding: 0.05rem 0.45rem; border-radius: var(--radius-small); line-height: 1.5;
+  background: var(--fg); color: var(--editorial-hi); font: 800 var(--floe-text-small) var(--mono); letter-spacing: 0.1em;
+}
+/* A thick yellow underline of a sub-heading's words: drawn on them, it takes no room */
+section > h3 { text-decoration: underline 4px var(--editorial-hi); text-underline-offset: 0.3em; text-decoration-skip-ink: none; }
+}
+}
+</style>
+<style>
+@layer floe.theme {
 @scope (:root) {
-blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: var(--on-face, var(--fg)); font-size: 1.1rem; }
+/* A quote pulled out: large heavy words by a thick yellow rule, a large mark within the pad at its left */
+blockquote { position: relative; padding-left: 1.4rem; border-left: 3px solid var(--editorial-hi); color: var(--on-face, var(--fg)); font-size: 1.2rem; font-weight: 700; line-height: 1.7; }
+blockquote::before { content: "“"; content: "“" / ""; position: absolute; left: 0.3rem; top: -0.1rem; color: var(--on-face, var(--fg)); font: 900 1.9rem/1 Georgia, serif; }
 }
 }
 </style>
@@ -359,10 +395,10 @@ blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: 
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
    silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
    text's box after the title, and what a note drawn in HTML holds is counted from after the word.
-   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
-   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language; make
+   it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
-  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius); max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius);
 }
 :scope::before {
   content: "i"; content: "i" / ""; border-radius: 50%;
@@ -595,25 +631,39 @@ blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A side note: one face of its tone, a heavy edge at the left, its title a kicker */
 :scope::before { content: none; }
-.title { font-size: 0.8rem; letter-spacing: 0.06em; }
+:scope { background: var(--tone-fill); border-radius: var(--radius-small); --floe-inset: inset 5px 0 0 var(--tone); }
+.title { font-size: var(--floe-text-aside); letter-spacing: 0.08em; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-.card { border-top: 3px solid var(--accent); }
-:scope.numbered > .card::before { content: none; }
+/* Each card under a short bar of the highlight at the words' start; a number is a large figure */
+.card { background: var(--editorial-bar), var(--surface); }
+:scope.numbered { --floe-mark: auto; }
+:scope.numbered > .card::before { background: none; color: var(--fg); font: 900 2.4rem/1 var(--font); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+.option.pick { background: var(--editorial-bar), var(--accent-soft); }
+/* A line's code in the option picked on the surface, as its own ground is the card's soft yellow too */
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Set as a report in print: rules and thin frames instead of faces and shadows */
-:scope { padding-inline: 0.4rem; --table-head-bg: none; --table-head-fg: var(--fg); }
-:scope thead th { border-bottom: 2px solid var(--fg); font-weight: 700; }
+/* A table set in print: a heavy rule of ink over it, its head ruled under, the first column bold */
+:scope { --table-head-bg: none; --table-head-fg: var(--fg); --floe-inset: inset 0 3px 0 var(--fg); }
+:scope thead th { border-bottom: 1.5px solid var(--fg); font-weight: 700; }
+:scope tbody td:first-child { font-weight: 700; }
 }
 }
 </style>

@@ -70,14 +70,14 @@ describe(settingsView, () => {
 describe(themeCards, () => {
   it('chooses the default, or the first card when the default is none, and tells a default gone', () => {
     expect.assertions(3);
-    const now = themeCards(read({ default: 'mine' }), '', null, '');
+    const now = themeCards(read({ default: 'mine' }), '', null);
     expect([now.now, now.checked, now.cards.map((c) => c.now)]).toStrictEqual([
       { kind: 'now', name: 'mine' },
       'mine',
       [false, true],
     ]);
-    expect(themeCards(read(), '', null, '').checked).toBe('default');
-    const gone = themeCards(read({ default: 'lost' }), '', null, '');
+    expect(themeCards(read(), '', null).checked).toBe('default');
+    const gone = themeCards(read({ default: 'lost' }), '', null);
     expect([gone.now, gone.checked, gone.cards.some((c) => c.now)]).toStrictEqual([
       { kind: 'gone', name: 'lost' },
       'default',
@@ -87,7 +87,7 @@ describe(themeCards, () => {
 
   it('says settings.json unreadable with no card now, and one’s own things broken with their mistakes and no cards', () => {
     expect.assertions(2);
-    const settings = themeCards(read({ settings: { errors: [] } }), '', null, '');
+    const settings = themeCards(read({ settings: { errors: [] } }), '', null);
     expect([settings.now, settings.cards.some((c) => c.now)]).toStrictEqual([{ kind: 'settingsBroken' }, false]);
     const broken = themeCards(
       read({
@@ -98,7 +98,6 @@ describe(themeCards, () => {
       }),
       '',
       null,
-      '',
     );
     expect([broken.now, broken.cards, broken.mistakes]).toStrictEqual([
       { kind: 'ownBroken' },
@@ -107,16 +106,15 @@ describe(themeCards, () => {
     ]);
   });
 
-  it('puts the card that takes a page’s theme off first, checking the page’s theme or telling it gone', () => {
-    expect.assertions(3);
-    const none = themeCards(read(), '', '', 'shows in default');
-    expect([none.cards[0], none.checked, none.now]).toStrictEqual([
-      { name: '', about: 'shows in default', dir: '', now: false },
-      '',
+  it('checks the page’s theme among the themes alone, or tells it gone', () => {
+    expect.assertions(2);
+    const mine = themeCards(read(), '', 'mine');
+    expect([mine.cards.map((c) => c.name), mine.checked, mine.now]).toStrictEqual([
+      ['default', 'mine'],
+      'mine',
       { kind: 'pageMore' },
     ]);
-    expect(themeCards(read(), '', 'mine', '').checked).toBe('mine');
-    const gone = themeCards(read(), '', 'lost', '');
+    const gone = themeCards(read(), '', 'lost');
     expect([gone.now, gone.checked]).toStrictEqual([{ kind: 'pickedGone', name: 'lost' }, null]);
   });
 });

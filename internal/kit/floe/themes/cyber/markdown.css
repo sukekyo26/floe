@@ -1,0 +1,7 @@
+/* A quote stands in a bracket down its left, in mono */
+blockquote {
+  border-left: 0; padding-left: 1.4rem; font-family: var(--mono);
+  background: linear-gradient(var(--cyber-glow), var(--cyber-glow)) left top / 10px 3px no-repeat,
+    linear-gradient(var(--cyber-glow), var(--cyber-glow)) left top / 3px 100% no-repeat,
+    linear-gradient(var(--cyber-glow), var(--cyber-glow)) left bottom / 10px 3px no-repeat;
+}

@@ -93,7 +93,7 @@ func listsKitAll(t *testing.T) map[string]string {
 	t.Helper()
 
 	own := map[string]string{"themes/lists/base.css": listsGeneral, "themes/plain/base.css": "/* no rules */\n"}
-	for _, k := range []map[string]string{listsKit(t, "report", "lists-report"), listsKit(t, "design", "lists-design"), listsLook} {
+	for _, k := range []map[string]string{listsKit(t, "report", "lists-report"), listsKit(t, "tech-spec", "lists-tech-spec"), listsLook} {
 		maps.Copy(own, k)
 	}
 	return own

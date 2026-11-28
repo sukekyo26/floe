@@ -1,23 +1,27 @@
 # Templates
 
-A template is the page a data file is drawn into: a directory that says what the data file may hold, how the page is laid out and what goes with it. A data file names its template with `template:` (`floe guide` tells how to write a data file). floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). This doc says what each file holds, what `page.html` can use, what `page.css` reaches, how a template uses parts, looks and the palette, and what `floe template check` refuses. For a part of your own, see `floe part guide`; for a theme, `floe theme guide`.
+A template is the page a data file is drawn into: a directory that says what the data file may hold, how the page is laid out and what goes with it. A data file names its template with `template:` (`floe guide` tells how to write a data file). floe's templates are `report`, `tech-spec`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). This doc says what each file holds, what `page.html` can use, what `page.css` reaches, how a template uses parts, looks and the palette, and what `floe template check` refuses. For a part of your own, see `floe part guide`; for a theme, `floe theme guide`.
+
+In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its templates are in `.floe/templates`, and without it floe reads and writes your own.
 
 ## Where templates are
 
-- A template is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template.
+- A template is a directory in your templates' directory, named after the template: `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), or `.floe/templates` under `floe repository`.
 - `~` is your home (`%USERPROFILE%` on Windows), and floe does not expand it: set the variable to a whole path.
 - `floe template new memo` makes the smallest one, `memo`: a `page.html`, a `schema.json` and an `example.yaml` to fill in.
-- A file directly in `FLOE_TEMPLATES_DIR` is ignored without a message: put a template's files in its directory.
+- A file directly in your templates' directory is ignored without a message: put a template's files in its directory.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Do not give a template the name of one of floe's, unless it is to replace it (a template of yours hides floe's of that name for every page that names it, and nothing says so).
-- A directory in `FLOE_TEMPLATES_DIR`, and anything in a template's directory, MUST NOT be a link to a directory. A link to a file is not refused: floe reads the file it leads to.
+- A directory in your templates' directory, and anything in a template's directory, MUST NOT be a link to a directory. A link to a file is not refused: floe reads the file it leads to.
 - Every file there MUST be a regular file: floe refuses a FIFO or a device without reading it.
-- `FLOE_TEMPLATES_DIR` MUST NOT be the directory of your parts or of your themes (`FLOE_PARTS_DIR`, `FLOE_THEMES_DIR`), a directory above either, or a directory under either: floe would read the files of one as those of the other.
+- Your templates' directory MUST NOT be the directory of your parts or of your themes, a directory above either, or a directory under either: floe would read the files of one as those of the other.
 - A mistake in any template, part, look, shared schema or theme of yours stops every page, whether or not the page uses it (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike.
 - `floe template check` and `floe part check` (`floe theme check` the same) list those mistakes, all of them.
 - A published page is drawn with the server's templates (`floe serve --help`). After you change one, `floe rebuild` draws the stored pages again with it.
 
 ### Make one in another directory
+
+`floe repository` uses no server: in a repository, make the template in place with `floe repository template new` and check it with `floe repository template check`.
 
 The server reads your templates again as soon as you save one, so a template half written stops the server's pages for everyone who uses it. Write a new template in another directory, and move it in once it is checked (in sh, where the shell expands `~`):
 
@@ -94,6 +98,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 | `markdownLabel` | A line of Markdown as `markdownLine` writes it, its links (written or found, such as a URL) as their words: a label that goes in a link of the template's own |
 | `contents` | The script that marks, in the contents just before it (`<nav data-floe-look="toc">…</nav>{{contents}}`), the link to the part of the page being read: `aria-current="location"` |
 | `num` | A number with its digits grouped (`{{.Calc.total \| num}}` is `1,234,567`), or rounded to significant digits (`{{.Calc.rate \| num 3}}` is `0.00648`) |
+| `count` | The index of a `range`, from 0, as a number from 1 (`{{range $i, $a := .Data.asks}}Q{{count $i}}{{end}}` writes `Q1`, `Q2`…): a number in the page's text, which a reader can copy and a screen reader reads, unlike a CSS counter. It takes an `int` alone |
 | `bytes` | A count of bytes in a binary unit (`{{.Calc.size \| bytes}}` is `1.5 KiB`) |
 | `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |
 | `word` | A word of the template's `words.yaml` in the page's language (`{{word "status_doing"}}`) |
@@ -129,7 +134,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 - Do not write a list's display, marks, padding or gap, or a rule for its items (`li`, `::marker`), for a list that is a part's box: floe sets them there, and `page.css` does not reach the items in a part's box (`floe part guide`, *The CSS layers and @scope*).
 - `page.css` reaches the display, the padding and the items of an element that takes the look `rows`, `table`, `cards` or `tags`. It does not reach them in a list that is a part's box.
 - Do not write `display`, `gap` or `grid-template` on the items of `numbered` or `marked`, nor on the box of a `note` or of a part of yours whose `part.yaml` has `marks: box`, however it is placed.
-  - Such a box is a row with a mark itself: `.caution { display: flex; gap: 0.5rem; }` puts a note's title and text in one row. The rows of `links`, `timeline` and `checklist` stand in the part's box, which `page.css` does not reach.
+  - Such a box is a row with a mark itself: `.caution { display: flex; gap: 0.5rem; }` puts a note's title and text in one row. The rows of `timeline` and `checklist` stand in the part's box, which `page.css` does not reach.
   - `page.css` is over `floe.marks`, so such a rule wins over the layout of the marks, and `floe template check` passes it: `grid-template-columns: 1fr` on a `numbered` item puts the ring and the line on the text.
 - Size the marks with `--floe-mark` and `--floe-mark-gap` on the list (`.steps { --floe-mark: 3rem; --floe-mark-gap: 2rem; }`).
 - Do not pad the rows of a box that takes the look `rows` (`rows` pads its rows by `--floe-row-pad` above and below, and `--floe-pad-inline` at the sides: a padding of yours replaces the look's).
@@ -140,7 +145,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 ### The column
 
 - floe starts every page with no margin on the body. An element of the class `floe-column` (`<main class="floe-column">`) is centred in a column `--column-width` wide, within `--page-pad` each side. Both stop at the parts' boxes, like `page.css`, and `page.css` wins over them even with selectors of less specificity.
-- Set `--column-width` in the template's `page.css`, to any length (`:scope { --column-width: 40rem; }`) or to the palette's `--text-width`, which `adr` and `runbook` do for a page of one column (`:scope { --column-width: var(--text-width); }`). A theme's palette that sets it widens the column of a template that sets none (`report`, `design`, `handoff` and `postmortem`), but not of a `report` with contents, whose `page.css` sets `--column-width: 100%` on screen (`@media screen { main:has(> .body) { --column-width: 100%; } }`).
+- Set `--column-width` in the template's `page.css`, to any length (`:scope { --column-width: 40rem; }`) or to the palette's `--text-width`, which `adr` and `runbook` do for a page of one column (`:scope { --column-width: var(--text-width); }`). A theme's palette that sets it widens the column of a template that sets none (`report`, `tech-spec`, `handoff` and `postmortem`), but not of a `report` with contents, whose `page.css` sets `--column-width: 100%` on screen (`@media screen { main:has(> .body) { --column-width: 100%; } }`).
 - floe sets no font size, so the page's text takes the size its reader's browser sets.
 
 These lines of `report`'s `page.css` lay out its column (`<main class="floe-column">`):
@@ -174,7 +179,7 @@ A part draws an item of the data. `floe part list --all` lists every part, look 
 
 `page.html` puts the item where it goes, `{{.Data.fields}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML. A part is drawn from an item of the data alone, in its own shape (a `checklist` takes objects, not plain texts). `page.html` has no function that draws a part: to show a computed value or plain texts as a part, write the part's box in `page.html` (`cell` and `note`, below) or borrow a look.
 
-The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. floe draws its Markdown in a box of no part (`data-floe-text`), with no background or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its `h1` is 1.2em and its `h2` 1.1em, as in a template's own Markdown. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
+The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. floe draws its Markdown in a box of no part (`data-floe-text`), with no background or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its `h1` is 1.05em, its `h2` 1em and its `h3` to `h6` 0.95em, as in a template's own Markdown: smaller than the headings of every floe template, whose least is 1.1rem. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 
 An item that is a part of any kind, written as one key that names its kind (`note: …`), refers to `any.json`; a list of them, as report's sections do, refers to it as its items. Your own parts join it (`floe part guide`). In a template's root schema:
 
@@ -254,7 +259,7 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--chart-1`, `--chart-2`, `--chart-3`, `--chart-4` | The colours of a chart's series, in order, at 3:1 at the least on a part's background | `#008fa3`, `#c2660a`, `#6157d9`, `#c8366f` |
 | `--page-bg` | The whole page's background, a pattern such as squares too (`--bg` by default) | `var(--bg)` |
 | `--rule` | The `border` of a rule across the page, such as between sections | `1px solid var(--line)` |
-| `--text-width` | The width of a page of one column, and of a note (below the table) | `56rem` |
+| `--text-width` | The width of a page of one column (below the table) | `56rem` |
 | `--page-width`, `--page-pad` | The column a page is centred in (`.floe-column`): its width, unless the template sets `--column-width`, and the pad each side of it, inside the column's box | `96rem`, `16px` |
 
 - `--tone`, `--tone-soft` and `--tone-fill` take the tone from `data-floe-tone` (`floe part guide`, *Tones*). A template marks a tone so too.

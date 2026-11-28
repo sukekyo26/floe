@@ -509,11 +509,9 @@ func TestRenderedCopyRoom(t *testing.T) { //nolint:paralleltest // the browser t
 		s.floe(t, "publish", file, "--slug", "room-"+name, "--theme", name)
 		b.navigate("/a/room-" + name + "/?raw")
 		out = append(out, name+": "+b.eval(measureRoom), name+": "+b.eval(measureLines))
-		// brutal's terminal.css gives a terminal's heading its full colour
-		head := map[bool]string{false: "head faint", true: "head not faint"}[name == "brutal"]
 		want = append(want, name+": bare room, bare short",
 			name+": code ok, code ok, terminal ok, diff ok, code short reaches, diff short reaches, terminal short, diff ok, near ok",
-			name+": code pre 0px 0px line 17.6px, terminal pre 0px 0px line 17.6px, diff pre 0px 0px line 17.6px, file faint, "+head+", out faint, meta faint")
+			name+": code pre 0px 0px line 17.6px, terminal pre 0px 0px line 17.6px, diff pre 0px 0px line 17.6px, file faint, head faint, out faint, meta faint")
 	}
 	b.media("print")
 	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=terminal] pre > *, .lines > :not(.floe-hidden)')]"+

@@ -46,7 +46,7 @@ export function createThemeWrites({
       const ran = await whileHeld(async () => {
         why = page ? await putPageTheme(page.slug, theme) : await putSettings({ theme });
         if (why || !page) return;
-        toasts.toast(theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_unset'));
+        toasts.toast(t('ui_theme_page_set', theme));
         await pages.load();
       });
       if (!ran) return { ran, why };

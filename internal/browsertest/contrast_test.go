@@ -57,7 +57,7 @@ const colours = `
 // background colours of the element and those around it laid one over another on the root's, each faded by
 // the opacity over it, as the text is. It tells a line for each below 4.5:1, 3:1 for large text (24px,
 // or 18.66px bold), as WCAG AA asks.
-// LIMIT: a ground of an image or a gradient (blueprint's squares, aurora's wash) counts as the colour under it, the
+// LIMIT: a ground of an image or a gradient (notebook's rules, aurora's wash) counts as the colour under it, the
 // ground is that of the elements around in the document, not of one positioned under the text, an opacity fades
 // each ground on its own rather than the group, and a diagram's text, in SVG, is not measured. aurora's text on its
 // wash and its glass is so measured on --bg alone: its palette was worked out by hand on the darkest colour of the
@@ -120,10 +120,10 @@ const measureContrastAt = `(() => {` + contrastBody + `return JSON.stringify({ s
 // focus draws no ring, on it or around it. The page's tab must have the focus (SetFocusEmulationEnabled) for a focus to
 // be :focus-visible.
 // LIMIT: a ring 2px wide over two grounds is measured on the one under the middle of its line (the edge of the
-// border 3px wide under brutal's heading of code is not), and one low at fewer than half its points passes. The round
+// border 3px wide under a heading of code is not), and one low at fewer than half its points passes. The round
 // corners of a box clipping a ring are not seen, nor a scrollbar under a ring, which the test's Chrome hides. A box
 // with overflow counts as clipping what is in it though it is not the containing block of one placed absolutely, and an
-// outline an element draws without the focus (washi's .card) counts as its ring.
+// outline an element draws without the focus (app's option picked) counts as its ring.
 // It leaves low, each line by the part (or the element) it is in, and seen, the elements it focused.
 const ringsBody = colours + partOfJS + `
   const low = new Map();

@@ -61,13 +61,15 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval(seen), b.eval(focused),
 		b.eval("document.getElementById('settings').open"),
 		b.eval("document.getElementById('theme-now').textContent"),
+		// The default's part says over the cards that the pages there are now keep their themes
+		b.eval("[document.getElementById('theme-keep').checkVisibility(), document.querySelector('#theme-keep b').textContent].join(' / ')"),
 		// default is the one now, picked; each card's sample in the sandbox, from the server
 		b.eval("document.querySelector('#theme-grid input:checked').value"),
 		b.eval("[...document.querySelectorAll('#theme-grid iframe')].every((f) => f.getAttribute('sandbox') === '' && f.src.endsWith('/sample'))"),
 		b.eval("document.querySelector('#theme-grid input[value=ink]').closest('label').querySelector('[data-testid=ds]').textContent"),
 	)
 	b.eval("document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()")
-	b.until("the toast", "[...document.querySelectorAll('[data-testid=toast]')].some((e) => e.textContent.includes('Changed the default theme to ink'))")
+	b.until("the toast", "[...document.querySelectorAll('[data-testid=toast]')].some((e) => e.textContent.includes('Changed the theme for new pages to ink'))")
 	// Saved, back on the list: its row of the theme told anew and focused, the toast in the modal, which the top layer shows
 	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-theme-now').textContent"), b.eval(focused),
 		b.eval("document.getElementById('settings').contains(document.getElementById('toasts'))"), strings.TrimSpace(s.floe(t, "theme", "default")))
@@ -135,7 +137,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A save held: the modal holds still, nothing closes it nor goes back to the list, till it is answered and told
 	b.eval("window.saveThrown = 0; addEventListener('error', () => { saveThrown++; })")
 	for _, c := range []struct{ part, save, told string }{
-		{"theme", "document.getElementById('theme-choose').click()", "Changed the default theme to ink"},
+		{"theme", "document.getElementById('theme-choose').click()", "Changed the theme for new pages to ink"},
 		{"mode", "document.getElementById('mode-save').click()", "Turned the task mode on"},
 	} {
 		b.eval("document.getElementById('settings-open').click()")
@@ -178,9 +180,9 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"list / Settings / true / Close / false / true / true", "default / Off",
 		"mode / Mode / false / Cancel / true / true / false", "settings-title",
 		"list / Settings / true / Close / false / true / true", "mode",
-		"theme / Theme / false / Cancel / true / false / true", "settings-title",
+		"theme / Theme for new pages / false / Cancel / true / false / true", "settings-title",
 		"true",
-		"Default now: default. Pages stored from now on are drawn in this theme. The pages there are now do not change.", "default", "true",
+		"Set now: default", "true / The pages there are now keep their themes", "default", "true",
 		"Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink",
 		"list / Settings / true / Close / false / true / true", "ink", "theme", "true", "ink", "true",
 		"settings-open",
@@ -197,9 +199,9 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}, "|"))
 }
 
-// TestUIPageTheme opens a page's themes from its row's menu, none chosen first and checked, picks one, which draws the
-// page in it and stays checked, the focus back on the menu; a refusal is said in the modal's words, and a theme picked
-// that is gone is told.
+// TestUIPageTheme opens a page's themes from its row's menu, the page's theme checked and no card that takes it off,
+// picks one, which draws the page in it and stays checked, the focus back on the menu; a refusal is said in the modal's
+// words, and a theme of the page that is gone is told.
 func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -211,7 +213,7 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	open := func() {
 		t.Helper()
 		openPageThemes(b, "p")
-		b.until("the cards", "document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 13")
+		b.until("the cards", "document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 12")
 	}
 	// The icon seen at the head of the modal
 	const icon = "[...document.querySelectorAll('#settings [data-testid=modal-head] svg')].filter((e) => e.getClientRects().length).map((e) => e.dataset.testid).join()"
@@ -219,9 +221,12 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out := make([]string, 0, 16)
 	out = append(out,
 		b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').textContent, document.getElementById('theme-now').textContent].join(' / ')"),
-		b.eval("[...document.querySelector('#theme-grid [data-testid=theme-card]').querySelectorAll('[data-testid=theme-shot], [data-testid=nm]')].map((e) => e.textContent).join(' / ')"),
+		// No card takes the page's theme off: each is a theme
+		b.eval("[...document.querySelectorAll('#theme-grid input')].some((i) => i.value === '')"),
 		b.eval("JSON.stringify(document.querySelector('#theme-grid input:checked').value)"),
 		b.eval(icon),
+		// A page's theme is that page's alone: no word of the pages there are now
+		b.eval("document.getElementById('theme-keep').checkVisibility()"),
 	)
 	b.eval("document.querySelector('#theme-grid input[value=ink]').click()")
 	// Listed anew, read after the write, for the next opening to show the theme picked
@@ -247,7 +252,7 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	closeSettings(b)
 	// A theme picked that is gone: the list read says so of the page
 	b.eval(`window.fetch = (u, i) => (!i?.method && new URL(u, location.href).pathname === '/api/pages'
-		? window.realFetch(u, i).then((r) => r.json()).then((list) => new Response(JSON.stringify(list.map((a) => (a.slug === 'p' ? { ...a, pickedTheme: 'acme' } : a)))))
+		? window.realFetch(u, i).then((r) => r.json()).then((list) => new Response(JSON.stringify(list.map((a) => (a.slug === 'p' ? { ...a, theme: 'acme' } : a)))))
 		: window.realFetch(u, i))`)
 	b.untilRead(b.reread(), "the list with the theme gone", "true")
 	open()
@@ -259,9 +264,9 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the settings", "document.getElementById('settings').open")
 	out = append(out, b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').hidden, document.getElementById('settings-list').hidden].join(' / ')"), b.eval(icon))
 	check(t, "page theme", out, strings.Join([]string{
-		"This page's theme / P / Choosing draws this page alone again. The theme chosen stays when the page is updated.",
-		"The page then shows in default / Remove this page's theme",
-		`""`, "page-icon",
+		"This page's theme / P / Choosing draws the latest version of this page again in it. It stays until the data's theme: changes and the page is published.",
+		"false",
+		`"default"`, "page-icon", "false",
 		"false", "true", "true",
 		"ink",
 		"Failed to change this page's theme: the page changed meanwhile. Choose again", "true",

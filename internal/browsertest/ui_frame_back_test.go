@@ -35,7 +35,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "task", "--slug", "a", "--slug", "b", "--task", "#128", "--state", "doing")
+	s.floe(t, "task", "--slug", "a", "--slug", "b", "--task", "#128", "--state", "doing", "--new")
 	s.floe(t, "task", "--slug", "pin", "--pin")
 	b.size(1400, 800, false)
 	defer b.unsize()
@@ -184,7 +184,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	if _, err := st.Edit("none", store.Edit{Project: &none}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--slug", "none", "--task", "#7", "--state", "doing")
+	s.floe(t, "task", "--slug", "none", "--task", "#7", "--state", "doing", "--new")
 	opened("/tasks?project=%2F&task=%237")
 	b.eval("document.querySelector('#list li[data-slug=none] [data-testid=title]').focus()")
 	b.pressKey("\r")
@@ -197,7 +197,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 
 	// A long name is cut, with nothing past the edge, down to the narrowest width that has the word.
 	long := "#" + strings.Repeat("a long task name ", 6)
-	s.floe(t, "task", "--slug", "a", "--task", long)
+	s.floe(t, "task", "--slug", "a", "--task", long, "--new")
 	opened("/tasks?project=proj&task=" + url.QueryEscape(strings.TrimSpace(long)))
 	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').focus()")
 	b.pressKey("\r")
@@ -253,7 +253,7 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "task", "--slug", "a", "--slug", "b", "--slug", "c", "--task", "#1", "--state", "doing")
+	s.floe(t, "task", "--slug", "a", "--slug", "b", "--slug", "c", "--task", "#1", "--state", "doing", "--new")
 	b.size(1400, 800, false)
 	defer b.unsize()
 

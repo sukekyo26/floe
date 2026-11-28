@@ -51,7 +51,7 @@ var bandParts = bandText + bandHeld + "chart: { kind: line, title: T, x: [a, b],
 
 // bandColours is parts in a band that draw some of their text in colours of their own (muted, a tone, the page's
 // text colour): bars' label, value and unit, a tree's note and change, a timeline's date; tabs, whose titles have no
-// ground, and links, whose title, words and URL draw in colours of their own.
+// ground, and links, whose title, words, destination and frame draw in colours of their own.
 var bandColours = "bars: [{ label: Copied, value: 40, of: 100, unit: pages }]\n" +
 	"tree: [{ path: pages/, note: what export writes }, { path: pages/home.md, change: changed }]\n" +
 	"timeline: [{ date: '03-01', title: Started, text: The copy began. }]\n" +
@@ -85,7 +85,7 @@ const measureBand = `(() => {` + colours + `
   const fenced = find('markdown', 'header > [data-floe-markdown] > pre > code');
   if (fenced && framed(fenced)) push('markdown', 'fenced code: frame ' + getComputedStyle(fenced).boxShadow);
   // A text has no ground of its own: its Markdown is in the band's text colour, and its heading takes no mark of the
-  // page's (retro's stripes, which its band.css leaves out).
+  // page's (retro's close box, drawn on a section's heading alone).
   const said = find('text', 'header > [data-floe-text] p'), heading = find('text', 'header > [data-floe-text] h2');
   const band = getComputedStyle(header).color;
   if (said && getComputedStyle(said).color !== band) push('text', 'colour ' + getComputedStyle(said).color + ', want the band\'s ' + band);

@@ -1,0 +1,4 @@
+/* A figure is underlined in orange marker.
+   LIMIT: the marker runs under the unit and the figure moved from too, as the part holds the figure in no element of
+   its own; underlining the figure alone would need the part to wrap it */
+.stat .value { width: fit-content; background: linear-gradient(transparent 60%, var(--nb-marker) 60%); }

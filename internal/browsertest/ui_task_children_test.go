@@ -42,29 +42,29 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Helper()
 		s.floe(t, append([]string{"task", "--project", project, "--task"}, args...)...)
 	}
-	page("proj", "p1", "--task", "#1", "--state", "doing", "--title", "the parent")
+	page("proj", "p1", "--task", "#1", "--state", "doing", "--title", "the parent", "--new")
 	page("proj", "p1b", "--task", "#1")
-	page("proj", "c2", "--task", "#2", "--state", "doing", "--title", "earlier doing child")
-	page("proj", "c3", "--task", "#3", "--state", "done", "--title", "archived child")
-	page("proj", "c4", "--task", "#4", "--state", "doing", "--title", "doing child")
+	page("proj", "c2", "--task", "#2", "--state", "doing", "--title", "earlier doing child", "--new")
+	page("proj", "c3", "--task", "#3", "--state", "done", "--title", "archived child", "--new")
+	page("proj", "c4", "--task", "#4", "--state", "doing", "--title", "doing child", "--new")
 	for _, child := range []string{"#2", "#3", "#4"} {
 		task("proj", child, "--parent", "#1")
 	}
 	task("proj", "#3", "--state", "archived")
 	// No page of its own: its state says, as of any task.
-	task("proj", "#10", "--state", "archived", "--title", "gone by its child")
-	page("proj", "c11", "--task", "#11", "--state", "archived")
+	task("proj", "#10", "--state", "archived", "--title", "gone by its child", "--new")
+	page("proj", "c11", "--task", "#11", "--state", "archived", "--new")
 	task("proj", "#11", "--parent", "#10")
-	task("proj", "#20", "--state", "done", "--title", "kept by its child")
-	page("proj", "c21", "--task", "#21", "--state", "doing")
+	task("proj", "#20", "--state", "done", "--title", "kept by its child", "--new")
+	page("proj", "c21", "--task", "#21", "--state", "doing", "--new")
 	task("proj", "#21", "--parent", "#20")
 	// Its state says, a child at work or not.
-	page("proj", "p30", "--task", "#30", "--state", "archived")
-	page("proj", "c31", "--task", "#31", "--state", "doing")
+	page("proj", "p30", "--task", "#30", "--state", "archived", "--new")
+	page("proj", "c31", "--task", "#31", "--state", "doing", "--new")
 	task("proj", "#31", "--parent", "#30")
 	// Of the same name in another project: nothing of it shows here.
-	page("other", "o1", "--task", "#1", "--state", "doing")
-	task("other", "#5", "--parent", "#1")
+	page("other", "o1", "--task", "#1", "--state", "doing", "--new")
+	task("other", "#5", "--parent", "#1", "--new")
 
 	rows := func(view string) string {
 		t.Helper()
@@ -130,7 +130,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval("[document.getElementById('task-none').hidden, document.getElementById('task-delete-box').hidden, document.getElementById('task-none-kids').hidden, getComputedStyle(document.getElementById('read-blank')).display].join(' ')"); got != "false true false none" {
 		t.Errorf("a parent of no page: %q", got)
 	}
-	task("proj", "#99", "--title", "no page, no child")
+	task("proj", "#99", "--title", "no page, no child", "--new")
 	open("#99")
 	if got := b.eval("[document.getElementById('task-delete-box').hidden, document.getElementById('task-none-kids').hidden, document.getElementById('task-family').hidden].join(' ')"); got != "false true false" {
 		t.Errorf("no page, no child: %q", got)
@@ -328,7 +328,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	// Made meanwhile under another parent: refused as stale, read again and said so; pressed again, it is taken.
 	field("#106")
 	b.fill("#kin-title", "mine")
-	task("proj", "#106", "--parent", "#1")
+	task("proj", "#106", "--parent", "#1", "--new")
 	press("kin-submit")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
 	if got := b.eval("document.getElementById('kin-error').textContent + '|' + document.getElementById('kin-note').textContent + '|' + document.getElementById('kin-title').closest('label').hidden"); got != "Failed to save: task #106 is there already; the tasks are read again, so check and save again|#106 becomes a child, moving from its parent #1|true" {
@@ -345,7 +345,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	task("proj", "#106", "--parent", "")
 	task("proj", "#106", "--forget")
 	// Shown there, then gone and read before the press: sent as there, as shown, and refused, not made of no title.
-	task("proj", "#107", "--title", "theirs")
+	task("proj", "#107", "--title", "theirs", "--new")
 	b.untilRead(b.reread(), "#107 read", "true")
 	press("task-child")
 	b.until("the dialog", "document.getElementById('kin-dialog').open")
@@ -368,7 +368,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		b.until("armed", "document.getElementById('task-delete').dataset.armed === 'true'")
 		press("task-delete")
 	}
-	task("proj", "#104", "--title", "to remove", "--state", "doing")
+	task("proj", "#104", "--title", "to remove", "--state", "doing", "--new")
 	open("#104")
 	if got := b.eval("((e) => { e.style.color = 'var(--color-danger)'; document.body.append(e); const want = getComputedStyle(e).color; e.remove(); return want !== '' && getComputedStyle(document.getElementById('task-delete')).color === want; })(document.createElement('i'))"); got != "true" {
 		t.Error("the button is not of a delete's color")
@@ -420,7 +420,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if err = os.WriteFile(file, text, 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
-	page("proj", "tp", "--task", "t-pages")
+	page("proj", "tp", "--task", "t-pages", "--new")
 	if err = os.WriteFile(file, text, 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
@@ -459,26 +459,29 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 }
 
 // A task's head keeps its way back, title and Edit in one row, wide and narrow: the mark and Edit in the middle of the title however
-// many lines it takes, the title's lines all right of the mark, and nothing past the window, a title with no space in it too. The way
+// many lines it takes, the title's lines all right of the mark, and nothing past the window or the head, a title with no space in it
+// and a project of a long name too. The way
 // back is a mark alone, of an icon button's room, named; the archive stands by the state. 280px is narrower than a phone, as the tests'
 // fonts are narrower than a person's.
 func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	b.navigate("/")
-	tasks := []struct{ name, title, lines string }{
-		{"#1", "short", "one"},
-		{"#2", strings.TrimSpace(strings.Repeat("a title of many words ", 6)), "more"},
-		{"#3", strings.Repeat("unbroken", 12), "more"},
+	long := "a-project-of-a-very-long-name-that-a-person-may-have-for-a-repository"
+	tasks := []struct{ project, name, title, lines string }{
+		{"proj", "#1", "short", "one"},
+		{"proj", "#2", strings.TrimSpace(strings.Repeat("a title of many words ", 6)), "more"},
+		{"proj", "#3", strings.Repeat("unbroken", 12), "more"},
+		{long, "#4", "short", "one"},
 	}
 	for _, task := range tasks {
-		s.floe(t, "task", "--project", "proj", "--task", task.name, "--title", task.title, "--state", "done")
+		s.floe(t, "task", "--project", task.project, "--task", task.name, "--title", task.title, "--state", "done", "--new")
 	}
 	defer b.unsize()
 	for _, width := range []int64{1400, 400, 280} {
 		b.size(width, 800, width != 1400)
 		for _, task := range tasks {
-			b.navigate("/tasks?project=proj&task=" + url.QueryEscape(task.name))
+			b.navigate("/tasks?project=" + url.QueryEscape(task.project) + "&task=" + url.QueryEscape(task.name))
 			b.until("the head", "!document.getElementById('task-head').hidden && !document.getElementById('task-archive').hidden")
 			got := b.eval(`(() => {
   const at = (id) => document.getElementById(id), r = (id) => at(id).getBoundingClientRect(), mid = (id) => (r(id).top + r(id).bottom) / 2;
@@ -491,6 +494,7 @@ func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tes
   if (up.top - document.querySelector('[data-testid=bar]').getBoundingClientRect().bottom < 8) said.push('the mark by the bar');
   if (!['task-up', 'task-edit', 'task-archive', 'task-project', 'task-add-page'].every((id) => r(id).left >= 0 && r(id).right <= innerWidth)) said.push('past the window');
   if (document.documentElement.scrollWidth > innerWidth || body.scrollWidth > body.clientWidth) said.push('scrolls sideways');
+  if (at('task-head').scrollWidth > at('task-head').clientWidth) said.push('the head past its room');
   if (r('task-archive').top < Math.max(title.bottom, r('task-edit').bottom)) said.push('the archive off the state');
   // The title's own lines, the ID's line above them left out
   const text = document.createRange();
@@ -518,12 +522,12 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "one")
-	s.floe(t, "task", "--slug", "b", "--task", "#2")
-	s.floe(t, "task", "--slug", "c", "--task", "#3")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "one", "--new")
+	s.floe(t, "task", "--slug", "b", "--task", "#2", "--new")
+	s.floe(t, "task", "--slug", "c", "--task", "#3", "--new")
 	s.floe(t, "task", "--project", "proj", "--task", "#3", "--parent", "#1")
-	s.floe(t, "task", "--project", "proj", "--task", "#12", "--state", "todo")
-	s.floe(t, "task", "--project", "proj", "--task", "#AB", "--state", "todo")
+	s.floe(t, "task", "--project", "proj", "--task", "#12", "--state", "todo", "--new")
+	s.floe(t, "task", "--project", "proj", "--task", "#AB", "--state", "todo", "--new")
 	b.size(1400, 800, false)
 	defer b.unsize()
 	dialog := func(slug string) {
@@ -605,9 +609,9 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		save()
 	}
 	stale("c", "#90", "mine", "task #90 is there already; the tasks are read again", func() {
-		s.floe(t, "task", "--project", project, "--task", "#90", "--title", "theirs")
+		s.floe(t, "task", "--project", project, "--task", "#90", "--title", "theirs", "--new")
 	})
-	s.floe(t, "task", "--project", project, "--task", "#91", "--state", "todo")
+	s.floe(t, "task", "--project", project, "--task", "#91", "--state", "todo", "--new")
 	b.untilRead(b.reread(), "#91 read", "true")
 	stale("c", "#91", "", "task #91 is no longer there; the tasks are read again", func() {
 		s.floe(t, "task", "--project", project, "--task", "#91", "--forget")
@@ -624,7 +628,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	dialog("c")
 	field("set-task", "#93")
 	field("set-task-title", "mine")
-	s.floe(t, "task", "--project", project, "--task", "#93", "--title", "theirs", "--url", "https://example.com/theirs", "--parent", "#1")
+	s.floe(t, "task", "--project", project, "--task", "#93", "--title", "theirs", "--url", "https://example.com/theirs", "--parent", "#1", "--new")
 	b.untilRead(b.reread(), "#93 read", "true")
 	submitSet(b)
 	b.until("refused", "!document.getElementById('set-error').hidden")
@@ -640,7 +644,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the dialog", "document.getElementById('set-dialog').open")
 	field("set-task", "#92")
 	field("set-task-title", "mine")
-	s.floe(t, "task", "--project", project, "--task", "#92", "--state", "todo")
+	s.floe(t, "task", "--project", project, "--task", "#92", "--state", "todo", "--new")
 	submitSet(b)
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	save()

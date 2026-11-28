@@ -1,2 +1,4 @@
-.card { border-top: 3px solid var(--accent); }
-:scope.numbered > .card::before { content: none; }
+/* Each card under a short bar of the highlight at the words' start; a number is a large figure */
+.card { background: var(--editorial-bar), var(--surface); }
+:scope.numbered { --floe-mark: auto; }
+:scope.numbered > .card::before { background: none; color: var(--fg); font: 900 2.4rem/1 var(--font); }

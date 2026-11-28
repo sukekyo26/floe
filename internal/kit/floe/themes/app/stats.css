@@ -1,0 +1,6 @@
+/* The number leads, large, in the text's face (its digits of one width), not in code's face; its change is a capsule of
+   its tone */
+.stat .value, .stat .from { font-family: var(--font); }
+.stat .value { font-size: 2.5rem; }
+.stat dt { font-weight: 700; color: var(--accent); }
+.stat .note[data-floe-tone] { justify-self: start; padding: 0.05rem 0.7rem; border-radius: 999px; background: var(--tone-soft); }

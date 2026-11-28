@@ -44,9 +44,9 @@ func TestTaskRename(t *testing.T) {
 		project, name string
 		ed            store.TaskEdit
 	}{
-		{"p", "#1", store.TaskEdit{State: new("doing"), Title: new("T"), Categories: new([]string{"a"})}},
-		{"p", "#2", store.TaskEdit{Parent: new("#1")}},
-		{"q", "#1", store.TaskEdit{State: new("todo")}},
+		{"p", "#1", store.TaskEdit{State: new("doing"), Title: new("T"), Categories: new([]string{"a"}), New: new(true)}},
+		{"p", "#2", store.TaskEdit{Parent: new("#1"), New: new(true)}},
+		{"q", "#1", store.TaskEdit{State: new("todo"), New: new(true)}},
 	} {
 		if _, err := editTask(s, c.project, c.name, c.ed); err != nil {
 			t.Fatal(err)
@@ -121,7 +121,7 @@ func TestTaskRenameRefused(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
 	for _, name := range []string{"#1", "#2"} {
-		if _, err := editTask(s, "p", name, store.TaskEdit{State: new("todo")}); err != nil {
+		if _, err := editTask(s, "p", name, store.TaskEdit{State: new("todo"), New: new(true)}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -178,7 +178,7 @@ func TestTaskRenameParentNew(t *testing.T) {
 
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
-	if _, err := editTask(s, "p", "#5", store.TaskEdit{State: new("todo")}); err != nil {
+	if _, err := editTask(s, "p", "#5", store.TaskEdit{State: new("todo"), New: new(true)}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := renameTask(s, "#5", "#8", store.TaskEdit{Parent: new("#8"), ParentNew: new(true), ParentTitle: new("P")}); err == nil ||

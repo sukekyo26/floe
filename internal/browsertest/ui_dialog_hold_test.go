@@ -56,12 +56,12 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 			t.Fatal(err)
 		}
 	}
-	onTask := func(slug, task, category string) {
+	onTask := func(slug, task, category string, more ...string) {
 		t.Helper()
-		s.floe(t, "task", "--slug", slug, "--task", task, "--category", category)
+		s.floe(t, append([]string{"task", "--slug", slug, "--task", task, "--category", category}, more...)...)
 	}
-	onTask("plan-a", "S300", "案")
-	onTask("check-a", "S301", "x")
+	onTask("plan-a", "S300", "案", "--new")
+	onTask("check-a", "S301", "x", "--new")
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "実装")
 	link := s.write(t, "links/l.html", "<!doctype html><title>L</title><p>l</p>")
 	b.size(1400, 900, false)
@@ -402,9 +402,9 @@ var dialogHoldWant = []string{
 	"add link, held: true none 0 / sent 1",
 	"add link, answered: false closerequest 5 / add-link / sent 1",
 	"page theme, held: true none 0 / sent 1",
-	"page theme, answered: false closerequest 21 / list More for T plan-a / sent 1",
+	"page theme, answered: false closerequest 19 / list More for T plan-a / sent 1",
 	"mode, held: true none 0 / sent 1",
-	"mode, answered: true closerequest 20 / settings BUTTON Task mode: OnAgents work with the task list, putting pages on tasks. / sent 1",
+	"mode, answered: true closerequest 19 / settings BUTTON Task mode: OnAgents work with the task list, putting pages on tasks. / sent 1",
 	"edit, read, held: true none 0 / sent 1",
 	"set, read, held: true none 0 / sent 1",
 	"add page, read, held: true none 0 / sent 1",

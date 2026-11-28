@@ -1,4 +1,10 @@
+/* A tile paler than its tone's soft colour, holding all it says, in a thin edge of its tone a little deeper than that
+   colour, drawn within the note to --default-pad. The colours are mixed here, not in base.css, as --tone-soft is each
+   note's own and the root's would take the root's tone */
 :scope {
-  border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
+  background: color-mix(in srgb, var(--tone-soft) 45%, var(--surface)); --floe-mark: 1.75rem;
+  --floe-inset: inset 0 0 0 var(--default-pad) color-mix(in srgb, var(--tone) 15%, var(--tone-soft));
+  --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface);
 }
-:scope::before { border-radius: var(--radius-small); background: var(--surface); color: var(--tone); }
+/* A line's code on the tile takes its quiet ground, as the tile would melt into it */
+:scope code { background: var(--quiet); }

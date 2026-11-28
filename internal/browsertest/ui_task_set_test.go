@@ -24,8 +24,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "design", "--url", "https://example.com/a/one")
-	s.floe(t, "task", "--slug", "c", "--task", "#2", "--category", "build")
+	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "design", "--url", "https://example.com/a/one", "--new")
+	s.floe(t, "task", "--slug", "c", "--task", "#2", "--category", "build", "--new")
 	b.size(1400, 800, false)
 	defer b.unsize()
 
@@ -300,7 +300,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("on its own task", inMenuItem("#list li[data-slug=b]", "task-open", "i.hidden")+" + ' ' + document.querySelectorAll('#list [data-testid=task-tag]').length")
 
 	// The suggestions say what a task is in, cut to their box; put on a task, the toast says it too, and leads there.
-	s.floe(t, "task", "--task", "#5", "--project", "proj", "--title", strings.Repeat("A very long title ", 6), "--state", "done")
+	s.floe(t, "task", "--task", "#5", "--project", "proj", "--title", strings.Repeat("A very long title ", 6), "--state", "done", "--new")
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
 	for _, width := range []int64{1400, 400} {

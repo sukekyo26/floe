@@ -18,8 +18,8 @@ func TestUITaskRename(t *testing.T) { //nolint:paralleltest // the browser tests
 	if _, err := st.Edit("a", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--slug", "a", "--task", "#1", "--category", "design", "--state", "doing")
-	s.floe(t, "task", "--project", "proj", "--task", "#2", "--parent", "#1")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--category", "design", "--state", "doing", "--new")
+	s.floe(t, "task", "--project", "proj", "--task", "#2", "--parent", "#1", "--new")
 	b.size(1400, 800, false)
 	defer b.unsize()
 

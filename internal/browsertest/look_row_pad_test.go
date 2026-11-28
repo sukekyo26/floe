@@ -31,9 +31,6 @@ const rowParts = `  - table:
   - keys:
       - { keys: [Ctrl, K], text: Find a page }
       - { keys: [J], text: Next }
-  - links:
-      - { title: Docs, url: "https://example.com/docs", text: read }
-      - { title: Wiki, url: "https://example.com/wiki" }
   - checklist:
       - { text: CI passes, done: true }
       - text: Write the plan
@@ -69,7 +66,7 @@ var rowPadKit = map[string]string{
 // rowsSel finds the rows of every part and look drawn as rows: a table's cells, its head's and its body's, but not
 // its number columns, whose font a theme may change (swiss); the rows of the look rows; and facts' cards.
 const rowsSel = `':is([data-floe-part], [data-floe-look~="table"]) :is(thead th, tbody td):not(.num), ' +
-    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="links"]) > *, ' +
+    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"]) > *, ' +
     '[data-floe-part="facts"] > .card'`
 
 // rowOwnerJS defines owner, the part (or "look rows", "look table") a row is of.
@@ -103,7 +100,7 @@ func measureRowPad(want pads) string {
 })(` + mustJSON(want) + `)`
 }
 
-// rowsSection is a section of design's and postmortem's more holding an element of html that takes the look rows.
+// rowsSection is a section of tech-spec's and postmortem's more holding an element of html that takes the look rows.
 const rowsSection = "  - heading: Rows\n    parts:\n      - html: |\n          <div data-floe-look=\"rows\"><p>One</p><p>Two</p></div>\n"
 
 // rowsOn measures the page open, told as what, as measureRowPad does, and returns what it found rows of too.
@@ -121,7 +118,7 @@ func rowsOn(t *testing.T, s *site, what string, want pads) (measured, []string) 
 const lookRowPadFix = "pad a row by --floe-row-pad above and below and --floe-pad-inline at the sides: take the look rows or table, " +
 	"and write no padding of a row; a theme sets neither"
 
-// lookRowPad measures rowParts in every theme, on the screen and printed, and design's and postmortem's examples, by
+// lookRowPad measures rowParts in every theme, on the screen and printed, and tech-spec's and postmortem's examples, by
 // defaults.css's variables (basePads), and rowParts in a template of one's own (rowPadKit) whose page.css sets them
 // otherwise, by those, as measureRowPad does. Every part that takes the look rows or table, and table and facts, must be drawn as rows in
 // rowParts.
@@ -157,7 +154,7 @@ func lookRowPad(t *testing.T, s *site) measured {
 		}
 		s.b.media("")
 	}
-	for _, sample := range []string{"design", "postmortem"} {
+	for _, sample := range []string{"tech-spec", "postmortem"} {
 		data, err := os.ReadFile("../corpus/testdata/example/" + sample + ".yaml")
 		if err != nil {
 			t.Fatal(err)
@@ -179,13 +176,13 @@ func lookRowPad(t *testing.T, s *site) measured {
 	return m
 }
 
-// brokenRowPad draws links in a theme of one's own whose links.css pads its rows by a number.
+// brokenRowPad draws a checklist in a theme of one's own whose checklist.css pads its rows by a number.
 func brokenRowPad(t *testing.T, s *site) (string, measured) {
 	t.Helper()
 
 	base := basePads(t, s)
-	s.brokenPage(t, map[string]string{"themes/thin/links.css": ":scope > * { padding-block: 3px; }\n"},
-		themePage("thin", "- links: [{ title: Docs, url: 'https://example.com/docs', text: read }]\n"))
+	s.brokenPage(t, map[string]string{"themes/thin/checklist.css": ":scope > * { padding-block: 3px; }\n"},
+		themePage("thin", "- checklist: [{ text: CI passes, done: true }, { text: Write the plan }]\n"))
 	got, _ := rowsOn(t, s, "broken", base)
-	return "links", got
+	return "checklist", got
 }

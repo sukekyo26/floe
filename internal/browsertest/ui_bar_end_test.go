@@ -82,7 +82,7 @@ func TestUIScreenSwitch(t *testing.T) { //nolint:paralleltest // the browser tes
 	s := newSite(t)
 	b := s.b
 	s.floe(t, "publish", s.page(t, "a.yaml", "T a", ""), "--slug", "a")
-	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "One")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "One", "--new")
 	b.size(1440, 800, false)
 	defer b.unsize()
 

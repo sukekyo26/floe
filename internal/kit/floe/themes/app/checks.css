@@ -1,0 +1,2 @@
+/* The counts are round badges of their tone, in the text's face */
+:scope > .total b { display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: 50%; background: var(--tone-soft); font-family: var(--font); font-weight: 800; }

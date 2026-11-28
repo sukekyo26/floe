@@ -17,17 +17,18 @@ func TestUIDialogTwice(t *testing.T) { //nolint:paralleltest // the browser test
 	s := newSite(t)
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
-	publish := func(slug, task string) {
+	publish := func(slug, task string, more ...string) {
 		t.Helper()
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
 		project := "proj"
 		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, "task", "--slug", slug, "--task", task)
+		s.floe(t, append([]string{"task", "--slug", slug, "--task", task}, more...)...)
 	}
-	publish("own", "S300")
-	for i := range 8 {
+	publish("own", "S300", "--new")
+	publish("other-0", "S301", "--new")
+	for i := 1; i < 8; i++ {
 		publish(fmt.Sprintf("other-%d", i), "S301")
 	}
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "a", "--categories", "b", "--categories", "c", "--categories", "d", "--categories", "e", "--categories", "f")

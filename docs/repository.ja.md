@@ -6,20 +6,32 @@
 
 ```text
 .floe/
+  repository.yaml         設定（floe の版と、文書の置き場所）
   templates/api-spec/     page.html・schema.json・example.yaml など
-  parts/.gitkeep          自分の部品（あれば）
-  themes/.gitkeep         自分のテーマ（あれば）
+  parts/                  自分の部品（あれば）
+  themes/                 自分のテーマ（あれば）
 docs/specs/
   orders.yaml             直すデータファイル
-  orders.html             そのページ（floe render が書く）
+  orders.html             そのページ（floe repository render が書く）
   invoice.yaml
   invoice.html
 .gitattributes
 ```
 
+`.floe/repository.yaml`（`floe repository new` が書く）：
+
+```yaml
+version: '0.5.0'
+documents:
+  - 'docs/specs'
+```
+
+- `floe repository` は、このファイルでリポジトリを見つけます。リポジトリの中のどのディレクトリからでも上へ探し、`.git` のあるディレクトリより上は探しません。そのコマンドが読むテンプレート・部品・テーマは `.floe/` のものだけで、`~/.config/floe` や `FLOE_*_DIR` の設定にあるものは読まず、サーバーも保存先も使いません。`.floe/` の中の無いディレクトリは「無い」として扱うので、`.gitkeep` は要りません。
+- `version` は、ページを描く floe の版です。別の版の floe は、ほかを読む前に、両方の版を言って断ります。ソースからビルドした floe は、版の後に `+` と commit が付き（`0.5.0+67f6e156bc78`）、`+` の前を比べます。そうした、リリースとリリースの間の floe は違う形に描くことがあり、それは check が「描き直していないページ」として言います。
+- `documents` には、文書のディレクトリを、根から `/` で区切り、前に `./`、後ろに `/` を付けずに書きます（`docs/specs`）。その下の `.yaml` と `.yml` は、フォルダの中のものも全部文書です。点で始まる名前の下と、ディレクトリへのリンクの下は見ません（そのディレクトリは `documents` に書きます）。データファイルの無い HTML には何もしないので、手で書いたページも置けます。データファイルを消した後に残ったページも同じで、check は見つけません。
+- floe は、`floe icons` のアイコン集のほかは、リポジトリの外を読みも書きもしません。リポジトリの外へのリンクのページ・データファイル・`.floe/` のディレクトリは断り、`.floe/` のディレクトリの中の、そのディレクトリの外へのリンクも断ります。
 - 点で始まる名前は、リンクしたフォルダの一覧に出ないので、`.floe/` はページと並びません。
-- `docs/specs` には、floe のデータファイル（名前は `.yaml`）とそのページだけを置きます。下のコマンドは、そこの `.yaml` を全部描き、`.yml` は描きません。
-- `.floe/` の 3 つのディレクトリは、空なら `.gitkeep` を入れて、どれも置きます。下のコマンドが 3 つとも floe に指すので、誰かの `~/.config/floe` にあるものは、ページを描くのにも止めるのにも関わりません。無いディレクトリは floe が断り、空のディレクトリは git が残しません。
+- ページは、データファイルが `theme:` で名指すテーマ、無ければ `default` で描きます。管理ページで選んだテーマはリポジトリのページに届かず、テンプレートは自分のテーマを持てません。
 
 `.gitattributes` で、ページと比べるものと、ページにそのまま入るものを、どのマシンでも同じバイトにし、GitHub の差分ではページを畳みます。
 
@@ -29,60 +41,43 @@ docs/specs/
 /.floe/**             text=auto eol=lf
 ```
 
+`docs/specs` に手で書いた HTML を置くときは、これらの後に、それを `-linguist-generated` で名指す行を足します（`/docs/specs/notes.html -linguist-generated`）。
+
 ## 最初のテンプレート
 
 リポジトリの根で走らせます：
 
 ```sh
-mkdir -p .floe/templates .floe/parts .floe/themes docs/specs
-touch .floe/parts/.gitkeep .floe/themes/.gitkeep
-env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes" floe template new api-spec
+floe repository new docs/specs
+mkdir -p docs/specs
+floe repository template new api-spec
 ```
 
-パスは絶対パスです（floe は相対のパスを断ります）。[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: design`）も名指せます。
+`floe repository new` は `documents` のディレクトリを作らないので、`mkdir` で作ります。floe のテンプレートだけを使うなら（`template: tech-spec`）、`template new` は要りません。[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き（そこに出るコマンドには、頭に `floe repository` を付けます。`floe repository template check`）、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: tech-spec`）も名指せます。
 
 ## 描く・確かめる
 
-どれもリポジトリの根で走らせます。ページを描きます：
+ページを描きます：
 
 ```sh
-(
-  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
-  floe render docs/specs/*.yaml
-)
+floe repository render
 ```
 
-確かめます（CI がするのもこれです）。データファイルの誤りも言うので、`floe check` を並べて走らせる必要はありません：
+確かめます（CI がすることです）。リポジトリのテンプレート・部品・テーマを、各テンプレートの `example.yaml` を描いて確かめ、次に全部の文書を確かめて、誤りを全部言います。文書の誤りが無くなると、無いページ・描き直していないページを言います。
 
 ```sh
-(
-  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
-  floe template check &&
-  floe render --check docs/specs/*.yaml
-)
+floe repository check
 ```
 
-- 括弧が、設定を自分のシェルに残しません（残すと `floe publish` に届きます。[ページを読む](#ページを読む)）。
-- 2 つは、プロジェクトのコマンドを走らせる仕組みのどれに入れても構いません。
-- 文書を `docs/specs` の下のフォルダに分けるときは、`floe render docs/specs/*.yaml` を `find docs/specs -name '*.yaml' -exec floe render {} +` に、`floe render --check docs/specs/*.yaml` を `find docs/specs -name '*.yaml' -exec floe render --check {} +` に替えます。`+` を `\;` にしないでください（失敗が消え、検査が必ず通ります）。`.yaml` が 1 つも無いと、find は何も走らせずに通り、glob は落ちます。
-- Windows では、WSL などの POSIX のシェルで走らせます（リポジトリは WSL の中に置きます）。PowerShell では、3 つを `"$PWD\.floe\templates"` のようなパスにし、プログラムに `*.yaml` を展開しないので、ファイルを自分で並べます（未確認です）。
-
-データファイルの無くなったページは、floe は探しません。次の任意の 1 行が探し、隣に `.yaml` の無い `.html`（手で書いたものも）で落ちます。前の失敗が消えないように、`&&` でつなぎます：
-
-```sh
-(
-  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
-  floe template check &&
-  floe render --check docs/specs/*.yaml &&
-  find docs/specs -name '*.html' | while read -r f; do [ -f "${f%.html}.yaml" ] || { echo "no YAML for $f"; exit 1; }; done
-)
-```
+- どちらも、リポジトリのどのディレクトリからでも走らせられ、見つけた文書を根からの名前で言います。データファイルを渡すと、それだけを描く・確かめます。渡すパスは、今いる所からのパスです（根で `floe repository render docs/specs/orders.yaml`）。
+- データファイルに 1 つでも誤りがある間、`floe repository render` はどのページも書かず、check はページより先に誤りを言います。
+- 2 つを、プロジェクトのコマンドを走らせる仕組みに置きます。
 
 ## CI
 
-どちらもサーバー無しで描きます。ページを描いた版の floe を入れ、どのマシンも同じ版にします。検査は、PR の統合先（ここでは `main`）でも走らせます。別々には通る 2 つの PR（片方がテンプレートを変え、もう片方が文書を足す）が、両方マージした後に落ちることがあります。ここでは設定は CI のジョブのもので、CI には、それを受け取る自分のサーバーはありません。
+どちらも floe のサーバーを使わずに描きます。ページを描いた版（`.floe/repository.yaml` が名指す版）を入れます。PR がマージされる先のブランチ（ここでは `main`）でも確かめます。別々には通る 2 つの PR が、両方マージされると落ちることがあるからです（片方がテンプレートを変え、もう片方が文書を足したときなど）。
 
-GitHub Actions（`.github/workflows/specs.yml`）：
+GitHub Actions の `.github/workflows/specs.yml`：
 
 ```yaml
 name: specs
@@ -99,37 +94,29 @@ jobs:
       - uses: 'actions/checkout@v7'
       - name: 'Install floe'
         run: |
-          curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.4.0/install.sh | FLOE_VERSION=0.4.0 sh
+          curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.5.0/install.sh | FLOE_VERSION=0.5.0 sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: 'Check the documents'
-        run: |
-          set -e
-          export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
-          floe template check
-          floe render --check docs/specs/*.yaml
+        run: 'floe repository check'
 ```
 
-AWS CodeBuild（`buildspec.yml`）：
+AWS CodeBuild の `buildspec.yml`：
 
 ```yaml
 version: 0.2
 phases:
   install:
     commands:
-      - 'curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.4.0/install.sh | FLOE_VERSION=0.4.0 FLOE_INSTALL_DIR=/usr/local/bin sh'
+      - 'curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.5.0/install.sh | FLOE_VERSION=0.5.0 FLOE_INSTALL_DIR=/usr/local/bin sh'
   build:
     commands:
-      - |
-        set -e
-        export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
-        floe template check
-        floe render --check docs/specs/*.yaml
+      - 'floe repository check'
 ```
 
 ## 文書を直す
 
 1. `.html` でなく `.yaml` を直します（`.html` は、次に描くと上書きされます）。
-2. ページを描き（[描く・確かめる](#描く確かめる)）、`.yaml` と `.html` を一緒にコミットします。
+2. ページを描き（`floe repository render`）、`.yaml` と `.html` を一緒にコミットします。
 
 - マージがぶつかったら、`.yaml` を直して描き直し、`.html` を add します（`.html` は、ぶつかりの印ごと書き直されます）。
 - 文書を消すときは、両方のファイルを消します。名前を変えるときも、古いページを消します。
@@ -143,19 +130,19 @@ floe publish --link docs/specs
 
 マシンごとに 1 回走らせます。フォルダは管理ページの 1 行になり、ページは木で並びます（[links.ja.md](links.ja.md#フォルダ)）。開いているページは、描き直すと読み直されます。
 
-リポジトリの設定は自分のシェルに置かず、リポジトリのテンプレートで描く `docs/specs` のデータファイルは publish しません。サーバーは、起動したときのテンプレートで描くので、そのデータファイルを断り（`unknown template "api-spec"`）、ほかのテンプレートを指した `floe publish` は `--link` でも断ります。サーバーが動いていなければ、その publish が、自分の全部のページをリポジトリのテンプレートで描くサーバーを起こします。
+リポジトリのテンプレートで描く `docs/specs` のデータファイルは publish しません。サーバーはリポジトリのでなく自分のテンプレートで描くので、そのデータファイルを断ります（`unknown template "api-spec"`）。`floe publish` は `.floe/repository.yaml` を読みません。
 
 ## エージェントに知らせる
 
-リポジトリの AGENTS.md（か CLAUDE.md）に次を、そのリポジトリの描くコマンドと確かめるコマンドを入れて書くと、文書を直すエージェントに伝わります。
+リポジトリの AGENTS.md（か CLAUDE.md）に次を書くと、文書を直すエージェントに伝わります。
 
 ```markdown
-The documents in docs/specs are drawn by floe. To change one, run `floe guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `<command>`, check with `<command>`. Their templates are in .floe/, which some searches leave out.
+The documents in docs/specs are drawn by floe. To change one, run `floe repository guide` first, and commit its data file (.yaml or .yml) and its .html together. Do not edit the .html. Draw with `floe repository render`, check with `floe repository check`. Their templates are in .floe/, which some searches leave out.
 ```
 
 ## 気を付けること
 
 - **誰も変えていないページが落ちるとき**：ページを描いたのと別の版の floe か、その間にマージされた PR がテンプレート・部品・テーマを変えたときです。最新を取り込み、描き直して、ページをコミットします。
-- **floe の版**：別の版はページを違う形に描くことがあります。版を上げるのは専用の PR にします。CI に新しい版を書き（同じ行に 2 か所）、入れて、ページを全部描き、コミットします。floe のソースからビルドした、リリースとリリースの間の floe は、違う形に描くことがあり、版の番号の後に `+` と commit が付きます（`<版>+<commit>`）。ページは、版に `+` の無いリリースの floe で描きます。
+- **floe の版**：別の版はページを違う形に描くことがあるので、`floe repository` は `.floe/repository.yaml` が名指すのと別の版を断ります。版を上げるのは専用の PR にします。`.floe/repository.yaml` と CI（同じ行に 2 か所）に新しい版を書き、入れて、`floe repository render` を走らせ、ページをコミットします。ソースからビルドした、リリースとリリースの間の floe は、`+` の前の版が同じでも違う形に描くことがあります。ページは、版に `+` の無いリリースの floe で描きます。
 - **AWS・Google Cloud・Azure のアイコン**：floe は同梱しないので、描く前に、各マシンと CI が取ってきます（CI では Install floe の次の段。[commands.ja.md](commands.ja.md#floe-icons-fetch-セット-zip-か-url)）。`floe icons fetch aws` と `floe icons fetch gcp` は最新のセットを取り、アイコンが変わるとページも変わります。AWS を 1 つのセットに留めるには、その zip の URL（日付が入る）を、CI でも自分のマシンでも渡します（`floe icons fetch aws https://…/Icon-package_….zip`）。Google の 2 つの zip は、中身が変わっても URL が同じなので、zip を取っておいて両方を渡します。Azure の zip は、条件に同意して手で落とし、`floe icons fetch azure` に渡します。Lucide のアイコンは組み込みです。
-- **ページが多いとき**：1 回の `floe render` が使えるメモリは、そのページ全部を合わせて 512 MiB までです（[commands.ja.md](commands.ja.md#floe-render-datayaml)）。超えたら、`docs/specs` のフォルダを 1 つずつ走らせます。
+- **ページが多いとき**：1 回の `floe repository render` が使えるメモリは、そのページ全部を合わせて 512 MiB までです（[commands.ja.md](commands.ja.md#floe-render-datayaml)）。超えたら、`docs/specs` のフォルダのデータファイルを、1 つのフォルダずつ渡します。

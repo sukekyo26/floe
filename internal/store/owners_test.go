@@ -209,8 +209,8 @@ func TestThemesOwner(t *testing.T) {
 				t.Fatal(told(err, root))
 			}
 			pub("q", c.repo, c.place, true)
-			if m := s.ReadMeta("s"); m.PickedTheme != "ink" || drawnIn(t, s, root, "s") != "ink" {
-				t.Errorf("published again: picked %q, drawn in %q; want ink", m.PickedTheme, drawnIn(t, s, root, "s"))
+			if m := s.ReadMeta("s"); m.Theme != "ink" || drawnIn(t, s, root, "s") != "ink" {
+				t.Errorf("published again: theme %q, drawn in %q; want ink", m.Theme, drawnIn(t, s, root, "s"))
 			}
 		})
 	}
@@ -243,12 +243,12 @@ func TestThemesOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	link("a.yaml", true)
-	if m := s.ReadMeta("s"); m.CreatedTheme != "ink" {
-		t.Errorf("the same file linked again with --force: created %q, want ink", m.CreatedTheme)
+	if m := s.ReadMeta("s"); m.Theme != "ink" {
+		t.Errorf("the same file linked again with --force: theme %q, want ink", m.Theme)
 	}
 	link("b.yaml", true)
-	if m := s.ReadMeta("s"); m.CreatedTheme != "washi" {
-		t.Errorf("another file linked with --force: created %q, want washi", m.CreatedTheme)
+	if m := s.ReadMeta("s"); m.Theme != "washi" {
+		t.Errorf("another file linked with --force: theme %q, want washi", m.Theme)
 	}
 }
 

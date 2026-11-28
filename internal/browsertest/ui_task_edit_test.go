@@ -21,17 +21,21 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
 	project := "proj"
-	for _, p := range [][2]string{{"plan-a", "案"}, {"design-a", "設計"}, {"build-a", "実装"}, {"review-a", "レビュー"}, {"gone-a", ""}} {
+	for i, p := range [][2]string{{"plan-a", "案"}, {"design-a", "設計"}, {"build-a", "実装"}, {"review-a", "レビュー"}, {"gone-a", ""}} {
 		s.floe(t, "publish", s.page(t, p[0]+".yaml", "T "+p[0], ""), "--slug", p[0])
 		if _, err := st.Edit(p[0], store.Edit{Project: &project}); err != nil {
 			t.Fatal(err)
 		}
 		if p[1] != "" {
-			s.floe(t, "task", "--slug", p[0], "--task", "S300", "--category", p[1])
+			args := []string{"task", "--slug", p[0], "--task", "S300", "--category", p[1]}
+			if i == 0 {
+				args = append(args, "--new")
+			}
+			s.floe(t, args...)
 		}
 	}
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "レビュー")
-	s.floe(t, "task", "--slug", "gone-a", "--task", "G1", "--category", "x")
+	s.floe(t, "task", "--slug", "gone-a", "--task", "G1", "--category", "x", "--new")
 	b.size(1400, 900, false)
 	defer b.unsize()
 

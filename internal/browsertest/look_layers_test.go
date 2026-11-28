@@ -77,7 +77,7 @@ const lookLayersFix = "write CSS for its layer: a template's page.css, a theme's
 	"decides, and write no !important, which turns the layers' order over"
 
 // layersNote tells, of the page of the template layers, the note's background, the theme's size of the mark (default's
-// --floe-mark, 2.25rem, over the template's), the template's margin; the template's own paragraph and the note's, in
+// --floe-mark, 1.75rem, over the template's), the template's margin; the template's own paragraph and the note's, in
 // the palette's colour on its ground; the animation and the face. layersNoteWant is what floe draws.
 const (
 	layersNote = `(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
@@ -85,7 +85,7 @@ const (
 			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`
-	layersNoteWant = "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true"
+	layersNoteWant = "color(srgb 0.984118 0.959412 0.920588) | 28px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true"
 )
 
 // lookLayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
@@ -156,7 +156,7 @@ func lookLayers(t *testing.T, s *site) measured {
 		`          <div data-floe-part="note"><p><code id="own">a</code></p><div data-floe-part="table"><table><tbody><tr><td>`+
 		`<code id="held">b</code></td></tr></tbody></table></div></div>`+"\n", "#held")
 	got = b.eval(`['own', 'held'].map((id) => getComputedStyle(document.getElementById(id)).backgroundColor).join(' | ')`)
-	m.expect("nested", got, "rgb(255, 255, 255) | rgb(220, 235, 236)")
+	m.expect("nested", got, "rgb(255, 255, 255) | rgb(244, 227, 239)")
 
 	// The colours a template sets on :scope reach what the theme draws in the parts, the text on a filled face among
 	// them, which takes the surface the template set.
@@ -166,12 +166,12 @@ func lookLayers(t *testing.T, s *site) measured {
 	m.expect("brand", got, "rgb(1, 2, 3) | rgb(1, 2, 3) | rgb(4, 5, 6)")
 
 	// A part of one's own takes the panel's look by its part.yaml: floe's washi styles it by the panel's file (its
-	// surface and double rules).
+	// surface, with no frame).
 	open("own-sheet", "template: report\nlang: en\ntheme: washi\nsections:\n  - parts:\n"+
 		"      - html: <div data-floe-part=\"sheet\">mine</div>\n", "[data-floe-part=sheet]")
 	got = b.eval(`(() => { const s = getComputedStyle(document.querySelector('[data-floe-part=sheet]'));
 		return s.backgroundColor + ' ' + s.borderTopStyle })()`)
-	m.expect("own sheet", got, "rgb(247, 241, 227) double")
+	m.expect("own sheet", got, "rgb(255, 253, 249) none")
 
 	// A card takes the panel's look without being a part's box, a layer under the parts': options and default's
 	// cards.css keep it a face of the surface on the panel of default, the nearer scope though.
@@ -179,7 +179,7 @@ func lookLayers(t *testing.T, s *site) measured {
 		"      - options: [{ title: a }]\n      - steps: [{ title: b }]\n", ".card")
 	got = b.eval(`['.card', '[data-floe-part=steps]'].map((at) => {
 		const s = getComputedStyle(document.querySelector(at)); return s.backgroundColor + ' ' + s.borderTopLeftRadius; }).join(' | ')`)
-	m.expect("cards", got, "rgb(255, 255, 255) 8px | color(srgb 0.91098 0.903529 0.884706) 20px")
+	m.expect("cards", got, "rgb(255, 255, 255) 8px | color(srgb 0.919137 0.912314 0.894745) 20px")
 
 	// Nested, the outer wins whatever the selectors: a look of one's own over the look a cell of it takes again,
 	// two deep, and a part of one's own over the box of another it holds.

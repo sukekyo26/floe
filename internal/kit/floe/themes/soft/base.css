@@ -1,1 +1,10 @@
-/* Faces with round corners, as the parts are drawn by default */
+/* A section opens on a soft pill of the tray, its words in the accent: seen while the page is scrolled fast. The pill
+   paints a ground of its own, so it takes no face from around it; its pad is room the theme makes, as pebble's band.
+   A section that is a panel or a band keeps its plain heading: a pill in a box of its own is one box too many. A section
+   standing in one (adr's article) takes the pill, to mark its sections as a report's are */
+:scope { --floe-heading-top: 0.5rem; --floe-heading-start: 1.1rem; --floe-heading-edge: none; }
+section:not([data-floe-look]) > h2 {
+  padding: var(--floe-heading-top) 1.1rem 0.5rem var(--floe-heading-start); border-radius: min(var(--radius-pill), var(--floe-pill-end));
+  background: var(--soft-tray); color: var(--accent); --face: initial; --on-face: initial;
+}
+section > h3 { text-decoration: underline 0.35em var(--soft-mark); text-underline-offset: -0.2em; text-decoration-skip-ink: none; }

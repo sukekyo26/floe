@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"math"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,7 +25,8 @@ import (
 // partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a
 // text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
-	"copyButton": copyButtonOf, "diff": diffOf, "markdown": MarkdownFlow, "tree": treeOf, "zoom": zoomScript,
+	"copyButton": copyButtonOf, "diff": diffOf, "linkTo": linkTo, "markdown": MarkdownFlow, "tree": treeOf,
+	"zoom": zoomScript,
 }
 
 // zoomScript is the function zoom of a part.html: the script that zooms the frames of class floe-zoom, as the
@@ -478,4 +480,43 @@ func wholeScript(body string) bool {
 		}
 	}
 	return z.Next() == html.ErrorToken && errors.Is(z.Err(), io.EOF)
+}
+
+// linkPlace is where a link goes: Kind is here (a path of floe's), mail or web, and Name names a web one.
+type linkPlace struct {
+	Kind, Name string
+}
+
+// linkTo tells where the URL u goes: out of floe when it names a scheme or a host, a scheme-relative //host/x
+// too. A web one is named by its host without the port, a pull request of github.com as PR #412, and by its
+// scheme when it has no host. A URL net/url cannot read is taken as a path, as its href is drawn as written.
+func linkTo(u string) linkPlace {
+	p, err := url.Parse(u)
+	switch {
+	case err != nil || p.Scheme == "" && p.Host == "":
+		return linkPlace{Kind: "here", Name: ""}
+	case p.Scheme == "mailto":
+		return linkPlace{Kind: "mail", Name: ""}
+	case p.Hostname() == "":
+		return linkPlace{Kind: "web", Name: p.Scheme}
+	}
+	if n, ok := pullOf(p); ok {
+		return linkPlace{Kind: "web", Name: "PR #" + n}
+	}
+	return linkPlace{Kind: "web", Name: p.Hostname()}
+}
+
+// pullOf returns the number of the pull request of github.com p names, as /owner/repo/pull/412 and what follows.
+func pullOf(p *url.URL) (string, bool) {
+	if !strings.EqualFold(p.Hostname(), "github.com") {
+		return "", false
+	}
+	parts := strings.Split(strings.TrimPrefix(p.Path, "/"), "/")
+	if len(parts) < 4 || parts[0] == "" || parts[1] == "" || parts[2] != "pull" {
+		return "", false
+	}
+	if _, err := strconv.ParseUint(parts[3], 10, 64); err != nil {
+		return "", false
+	}
+	return parts[3], true
 }

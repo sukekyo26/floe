@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<header class="floe-column head">
+<p class="leaf"><span class="month">{{slice .Data.date 0 7}}</span><span class="day">{{slice .Data.date 8 10}}</span>{{with slice .Data.date 10}}<span class="hours">{{.}}</span>{{end}}</p>
+<div class="info">
+<p class="when"><span class="kind" data-floe-part="cell">{{word "kind"}}</span>{{with .Data.place}}<span>{{.}}</span>{{end}}</p>
+<h1>{{.Title}}</h1>
+<div class="people"><p><b>{{word "attendees"}}</b>{{range .Data.attendees}}<span class="who">{{.}}</span>{{end}}</p>{{with .Data.absent}}<p><b>{{word "absent"}}</b>{{range .}}<span class="who off">{{.}}</span>{{end}}</p>{{end}}</div>
+</div>
+</header>
+<main class="floe-column">
+{{- if or .Data.decided .Data.actions}}
+<div class="outcome">
+{{- with .Data.decided}}
+<section data-floe-look="panel"><h2 id="decided">{{word "decided"}} <span class="count">{{len .}}</span></h2>
+<ul data-floe-look="marked" class="decided">{{range .}}<li><span>{{markdownLine .}}</span></li>{{end}}</ul>
+</section>
+{{- end}}
+{{- with .Data.actions}}
+<section data-floe-look="panel"><h2 id="actions">{{word "actions"}} <span class="count">{{word "done"}} {{$.Calc.actions_done}} / {{len .}}</span></h2>
+<div data-floe-look="table"><table>
+<thead><tr><th scope="col">{{word "action"}}</th><th scope="col">{{word "owner"}}</th><th scope="col">{{word "due"}}</th></tr></thead>
+<tbody>
+{{- range .}}
+<tr{{if .done}} class="done"{{end}}><td>{{if .done}}<span data-floe-part="cell" data-floe-tone="good">{{word "done"}}</span> {{end}}{{markdownLine .what}}</td><td class="owner">{{.owner}}</td><td class="due">{{.due}}</td></tr>
+{{- end}}
+</tbody>
+</table></div>
+</section>
+{{- end}}
+</div>
+{{- end}}
+<section class="topics"><h2 id="topics">{{word "topics"}}</h2>
+<ol data-floe-look="numbered">
+{{- range .Data.topics}}
+<li><h3>{{markdownLine .title}}</h3>{{with .text}}{{.}}{{end}}</li>
+{{- end}}
+</ol>
+</section>
+{{- with .Data.next}}
+<p class="next"><b>{{word "next"}}</b> {{markdownLine .}}</p>
+{{- end}}
+{{- range $m := .Data.more}}
+<section><h2>{{$m.heading}}</h2>
+{{- range $m.parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
+</main>
+</body>
+</html>

@@ -1,3 +1,4 @@
-:scope { border-top: 3px solid var(--washi-shu); --code-head-bg: none; }
+/* A vermilion stroke over its top; its language in a vermilion seal */
+:scope { background: linear-gradient(90deg, var(--washi-shu), color-mix(in srgb, var(--washi-shu) 50%, transparent) 60%, transparent) top / 100% 4px no-repeat, var(--code-bg); --code-head-bg: none; }
 :scope figcaption { border: 0; font-family: var(--font); }
-:scope .lang { background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }
+:scope .lang { background: var(--washi-shu); border: 1.5px solid var(--washi-shu); color: var(--on-fill); }

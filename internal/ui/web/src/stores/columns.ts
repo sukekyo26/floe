@@ -4,6 +4,7 @@ import { createStore, type Store } from '@/lib/store';
 import { openPage as pageOpen, type OpenAt, type OpenPage } from '@/stores/open-page';
 import type { Screen } from '@/types/screen';
 import { listShown } from '@/utils/column-widths';
+import { onPlainPress } from '@/utils/plain-press';
 
 // The two columns left of the page, the viewer's, kept in the browser: their widths in px (null for the default, whose
 // bounds are in rem) and whether each is open
@@ -28,6 +29,8 @@ export interface ColumnsStore {
   keep: () => void;
   // show opens or folds the column named and keeps it so
   show: (name: ColumnName, open: boolean) => void;
+  // unfold opens the shelf and the list and keeps them so
+  unfold: () => void;
   // listOpen tells whether the list shows (listShown)
   listOpen: () => boolean;
 }
@@ -75,8 +78,20 @@ export function createColumns({
       set(name === 'shelf' ? { open } : { listOpen: open });
       keep();
     },
+    unfold: () => {
+      set({ open: true, listOpen: true });
+      keep();
+    },
     listOpen: () => listShown(screen(), store().get().listOpen, openPage.picked.get() !== null),
   };
 }
 
 export const columns = createColumns();
+
+// barPress is a plain press of a link of the bar (the logo and the way between the screens): the screen it goes to, the
+// page drawn anew, shows the columns open, which a reload keeps (the user's choice), then after does what its link keeps
+export const barPress = (after?: () => void) =>
+  onPlainPress(() => {
+    columns.unfold();
+    after?.();
+  });

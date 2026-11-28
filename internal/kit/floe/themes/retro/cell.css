@@ -1,1 +1,2 @@
-:scope { border: 1.5px solid currentColor; }
+/* A button of grey standing up, its word in its tone: its own ground, so the face around it does not colour it */
+:scope { background: var(--rt-button); color: var(--tone); --face: initial; --on-face: initial; border: 1px solid; border-color: var(--rt-edge); }

@@ -81,7 +81,7 @@ export const toldAt = (m: Mistake): string =>
   (m.file ? `${[m.file, m.line, m.line && m.column].filter(Boolean).join(':')}: ` : '') + m.text;
 
 // themeCards are the cards of the default's choice or of a page's: unset is the first card's about, of a page's
-export function themeCards(read: ThemesRead | null, failed: string, picked: string | null, unset: string): Cards {
+export function themeCards(read: ThemesRead | null, failed: string, pageTheme: string | null): Cards {
   if (failed) return { now: { kind: 'failed', why: failed }, cards: [], checked: null, mistakes: [] };
   if (!read) return { now: { kind: 'reading' }, cards: [], checked: null, mistakes: [] };
   if (read.drawing) {
@@ -90,12 +90,12 @@ export function themeCards(read: ThemesRead | null, failed: string, picked: stri
   }
   const cards = (now: (name: string) => boolean) =>
     read.themes.map((th) => ({ name: th.name, about: th.about, dir: th.dir, now: now(th.name) }));
-  if (picked !== null) {
-    const there = !picked || read.themes.some((th) => th.name === picked);
+  if (pageTheme !== null) {
+    const there = read.themes.some((th) => th.name === pageTheme);
     return {
-      now: there ? { kind: 'pageMore' } : { kind: 'pickedGone', name: picked },
-      cards: [{ name: '', about: unset, dir: '', now: false }, ...cards(() => false)],
-      checked: there ? picked : null,
+      now: there ? { kind: 'pageMore' } : { kind: 'pickedGone', name: pageTheme },
+      cards: cards(() => false),
+      checked: there ? pageTheme : null,
       mistakes: [],
     };
   }

@@ -1,3 +1,2 @@
-:scope thead th { border-bottom: var(--retro-frame) var(--fg); font-family: var(--display); font-size: 0.95rem; }
-:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface)); }
-:scope { --table-head-bg: none; --table-head-fg: var(--fg); --table-rule: none; }
+:scope { --table-head-bg: var(--quiet); --table-head-fg: var(--fg); background: var(--surface); border: 1px solid; border-color: var(--rt-edge); --floe-inset: var(--rt-up); }
+:scope thead th { border: 1px solid; border-color: var(--rt-edge); font-weight: 700; }

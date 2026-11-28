@@ -19,7 +19,7 @@ func TestUITaskAddCategory(t *testing.T) { //nolint:paralleltest // the browser 
 	s := newSite(t)
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
-	publish := func(slug, task string) {
+	publish := func(slug, task string, more ...string) {
 		t.Helper()
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
 		project := "proj"
@@ -27,14 +27,14 @@ func TestUITaskAddCategory(t *testing.T) { //nolint:paralleltest // the browser 
 			t.Fatal(err)
 		}
 		if task != "" {
-			s.floe(t, "task", "--slug", slug, "--task", task)
+			s.floe(t, append([]string{"task", "--slug", slug, "--task", task}, more...)...)
 		}
 	}
-	publish("own", "S300")
+	publish("own", "S300", "--new")
 	for _, slug := range []string{"memo-a", "memo-b", "memo-c", "memo-d", "memo-e", "memo-f", "memo-g"} {
 		publish(slug, "")
 	}
-	publish("other", "S301")
+	publish("other", "S301", "--new")
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Title", "--categories", "設計", "--categories", "レビュー")
 	b.size(1280, 900, false)
 	defer b.unsize()

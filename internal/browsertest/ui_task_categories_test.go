@@ -40,6 +40,9 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 			if category != "" {
 				args = append(args, "--category", category)
 			}
+			if p[0] == "plan-a" || p[0] == "other-a" {
+				args = append(args, "--new")
+			}
 			s.floe(t, args...)
 		}
 	}

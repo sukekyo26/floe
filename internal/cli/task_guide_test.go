@@ -40,9 +40,9 @@ func TestTaskGuideExamples(t *testing.T) {
 	for _, slug := range []string{"design-notes", "old-notes", "api-notes"} {
 		ready("publish", slug+".yaml")
 	}
-	ready("task", "--task", "#131", "--title", "Price table")
+	ready("task", "--task", "#131", "--title", "Price table", "--new")
 	ready("task", "--slug", "design-notes", "--task", "#130", "--title", "Fix login", "--state", "doing",
-		"--url", "https://example.com/issues/482", "--category", "designs")
+		"--url", "https://example.com/issues/482", "--category", "designs", "--new")
 
 	doc, err := os.ReadFile("../../docs/agents/tasks.md")
 	if err != nil {

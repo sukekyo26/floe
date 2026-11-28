@@ -17,7 +17,7 @@ import (
 func TestUIBarNarrow(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	s.floe(t, "publish", s.page(t, "a.yaml", "T a", ""), "--slug", "a")
-	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "One")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "One", "--new")
 	s.floe(t, "task", "--project", "home", "--task", "#1", "--state", "doing")
 	b := newBrowser(t, s.Base, "ja")
 	defer b.unsize()

@@ -14,24 +14,24 @@ func TestRenderedLists(t *testing.T) { //nolint:paralleltest // the browser test
 	s := newSite(t)
 	b := s.b
 	s.own(t, listsKitAll(t))
-	design, err := os.ReadFile("../kit/floe/templates/design/example.yaml")
+	techSpec, err := os.ReadFile("../kit/floe/templates/tech-spec/example.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
 	decided := `(() => { const c = getComputedStyle(document.querySelector('.decided'));
   return [c.display, c.listStyleType, c.paddingInlineStart, c.rowGap].join(' '); })()`
-	designFile := s.write(t, "design.yaml", string(design))
-	s.floe(t, "publish", designFile, "--slug", "lists-design-plain", "--theme", "plain")
-	b.navigate("/a/lists-design-plain/?raw")
+	techSpecFile := s.write(t, "tech-spec.yaml", string(techSpec))
+	s.floe(t, "publish", techSpecFile, "--slug", "lists-tech-spec-plain", "--theme", "plain")
+	b.navigate("/a/lists-tech-spec-plain/?raw")
 	wantDecided := b.eval(decided)
-	s.floe(t, "publish", designFile, "--slug", "lists-design-theme", "--theme", "lists")
-	b.navigate("/a/lists-design-theme/?raw")
+	s.floe(t, "publish", techSpecFile, "--slug", "lists-tech-spec-theme", "--theme", "lists")
+	b.navigate("/a/lists-tech-spec-theme/?raw")
 	if got := b.eval(decided); got != wantDecided {
 		t.Errorf("a look's list under the theme's rule for lists: %s, want %s, as without it", got, wantDecided)
 	}
-	designMine := s.write(t, "design-mine.yaml", strings.Replace(string(design), "template: design\n", "template: lists-design\n", 1))
-	s.floe(t, "publish", designMine, "--slug", "lists-design-page", "--theme", "plain")
-	b.navigate("/a/lists-design-page/?raw")
+	techSpecMine := s.write(t, "tech-spec-mine.yaml", strings.Replace(string(techSpec), "template: tech-spec\n", "template: lists-tech-spec\n", 1))
+	s.floe(t, "publish", techSpecMine, "--slug", "lists-tech-spec-page", "--theme", "plain")
+	b.navigate("/a/lists-tech-spec-page/?raw")
 	if got := b.eval(decided); got != "flex upper-roman 32px 16px" {
 		t.Errorf("a look's list under its template's rule for lists: %s, want flex upper-roman 32px 16px, the template's", got)
 	}

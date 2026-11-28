@@ -44,7 +44,7 @@ func TestCheck(t *testing.T) {
 		_, _, gone := files.Read(filepath.Join(dir, "gone.yaml"))
 		code, _, stderr := run(dir, "check", "b.yaml", "a.yaml", "page.html", "", "gone.yaml", "c.yaml")
 		want := []string{
-			`b.yaml:2:11: unknown template "reprot"; use adr, design, handoff, postmortem, report, runbook, slides`,
+			`b.yaml:2:11: unknown template "reprot"; use adr, design, handoff, meeting, postmortem, prd, report, runbook, slides, tech-spec`,
 			"floe: page.html is not a data file (.yaml or .yml)",
 			"floe: argument 4 is an empty path; give a data file (.yaml or .yml), and check that a variable written for it is set",
 			"gone.yaml: " + testfs.Words(t, gone),
@@ -76,7 +76,7 @@ func TestWarnings(t *testing.T) {
 		errs string
 	}{
 		{[]string{"check", "w.yaml", "./w.yaml"}, 0, warning},
-		{[]string{"check", "b.yaml", "w.yaml"}, 1, `b.yaml:2:11: unknown template "reprot"; use adr, design, handoff, postmortem, report, runbook, slides` + "\n" + warning},
+		{[]string{"check", "b.yaml", "w.yaml"}, 1, `b.yaml:2:11: unknown template "reprot"; use adr, design, handoff, meeting, postmortem, prd, report, runbook, slides, tech-spec` + "\n" + warning},
 		{[]string{"render", "w.yaml"}, 0, warning},
 	} {
 		if code, _, errs := run(dir, tt.args...); code != tt.code || errs != tt.errs {

@@ -23,11 +23,12 @@
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 /* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
-   its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
-   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem), and 1.1em as large as
-   adr's (and near postmortem's), its h2 told from them by nothing; lower them if that matters */
-:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
-:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
+   its own outside the box of its Markdown: smaller than every heading of a template it stands under, the least of which
+   is 1.1rem (adr's sections, runbook's steps), and smaller by level, h4 to h6 as h3.
+   LIMIT: h1 is as large as a question of tech-spec (1.05rem) over it, in an option's card, which the card tells apart */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.05em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) :is(h3, h4, h5, h6) { font-size: 0.95em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -207,8 +208,9 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 :scope {
-  /* default's own, here and not in its palette, which lies under every theme's */
-  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* default's own, here and not in its palette, which lies under every theme's. Light, so that what lies straight on
+     it reads; under 30% its edge melts into the page's ground */
+  --default-panel: color-mix(in srgb, var(--line) 37%, var(--bg));
   /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and the radius rule follows the
@@ -373,10 +375,10 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
    silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
    text's box after the title, and what a note drawn in HTML holds is counted from after the word.
-   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
-   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language; make
+   it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
-  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius); max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius);
 }
 :scope::before {
   content: "i"; content: "i" / ""; border-radius: 50%;
@@ -617,10 +619,16 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A tile paler than its tone's soft colour, holding all it says, in a thin edge of its tone a little deeper than that
+   colour, drawn within the note to --default-pad. The colours are mixed here, not in base.css, as --tone-soft is each
+   note's own and the root's would take the root's tone */
 :scope {
-  border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
+  background: color-mix(in srgb, var(--tone-soft) 45%, var(--surface)); --floe-mark: 1.75rem;
+  --floe-inset: inset 0 0 0 var(--default-pad) color-mix(in srgb, var(--tone) 15%, var(--tone-soft));
+  --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface);
 }
-:scope::before { border-radius: var(--radius-small); background: var(--surface); color: var(--tone); }
+/* A line's code on the tile takes its quiet ground, as the tile would melt into it */
+:scope code { background: var(--quiet); }
 }
 }
 </style>

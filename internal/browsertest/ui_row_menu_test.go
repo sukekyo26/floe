@@ -67,7 +67,7 @@ func TestUIRowMenuItems(t *testing.T) { //nolint:paralleltest // the browser tes
 	s := newSite(t)
 	b := s.b
 	s.floe(t, "publish", s.page(t, "a.yaml", "T a", ""), "--slug", "a")
-	s.floe(t, "task", "--slug", "a", "--task", "#1")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--new")
 	b.navigate("/")
 	const row = "document.querySelector('#list li[data-slug=a]')"
 	const menu = row + ".querySelector('[data-testid=more]')"

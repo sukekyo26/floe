@@ -16,7 +16,7 @@ floe draws a page from a YAML data file you write, checks it, and serves it at t
 
 ## Writing a page
 
-1. Pick a template from `floe template list`: the one made for the page's purpose if there is one (`design` for a design document, `handoff`, `runbook`, …), else `report`. Read its example and schema before writing: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the file's structure, not a fixed set of parts.
+1. Pick a template from `floe template list`: the one made for the page's purpose if there is one (`prd` for what to build and how it is known to be done, `tech-spec` for how it is built, `design` for how the screens look, `meeting` for minutes, `handoff`, `runbook`, …), else `report`. Read its example and schema before writing: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the file's structure, not a fixed set of parts.
 2. Name the file for the page, as `db-choice.yaml` (*The data file*).
 3. Choose parts from `floe part list` that the template's schema allows where you put them (*Picking parts*). A part MUST NOT hold a key its schema does not list: look up the keys of each part the example does not show, in `floe part list` or, where it lists none (`chart`, `stats`, `diagram`, …), in `floe part show <part> schema.json`.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until none is left (*Reading mistakes*). `warning:` lines are advice: a file with only those is done.
@@ -48,11 +48,11 @@ sections:
 
 ## Documents in a repository
 
-A document a repository keeps is a YAML file with `template` and `lang` at its top, in a repository that draws its pages: its AGENTS.md, CLAUDE.md, README, CI or scripts speak of floe, or it has a page committed beside the file. Run `floe repository guide` first, and follow it. Do not edit the `.html` there, and do not publish such a file.
+A document a repository keeps is a YAML file with `template` and `lang` at its top, in a repository that draws its pages: it has `.floe/repository.yaml` at its root, its AGENTS.md, CLAUDE.md, README, CI or scripts speak of floe, or it has a page committed beside the file. Run `floe repository guide` first, and follow it. Do not edit the `.html` there, and do not publish such a file.
 
 ## Publishing
 
-`floe publish db-choice.yaml` serves the page and prints its URL. To have the page as an HTML file instead, without publishing it, `floe render db-choice.yaml` writes `db-choice.html` beside it (a document a repository keeps is drawn with the command `floe repository guide` has you find, which keeps the repository's settings).
+`floe publish db-choice.yaml` serves the page and prints its URL. To have the page as an HTML file instead, without publishing it, `floe render db-choice.yaml` writes `db-choice.html` beside it (a document a repository keeps is drawn with `floe repository render`, which draws with the repository's templates, as `floe repository guide` says).
 
 ### The page's project
 
@@ -122,11 +122,11 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 - When the user types an ID, run `floe task --project <project> --task "<ID>"`, which tells a task in any state: it is a new task only when floe says there is none (`no task #20 in project app`). For a task there is, leave the words after its ID unused.
 - A category name the user types that is one of the task's categories but for upper and lower case is that category, named as read from `floe task`; one that matches none is a new category.
 - Put the page there without reading `floe task guide`: `floe task --slug <slug> --task "<ID>"`, the ID `#` and all (`--task "#12"`), with `--category '<name>'` for a category.
-- Give `--title '<title>'` for a new task only: given for a task there is, it changes that task's title.
+- For a new task, add `--new --title '<title>'` to that command: floe makes a task by `--new` alone. Do not give `--title` for a task there is: it changes that task's title.
 
 ## Themes
 
-- Do not write `theme` unless the user names a theme for the page: the user picks themes on the management page, at the root of the page's URL.
+- Do not write `theme` unless the user names a theme for the page: the user picks themes on the management page, at the root of the page's URL. A `theme` (or `--theme`) changes a stored page's theme only when it names another than the last publish did.
 - When you give the user a URL, run `floe theme default`. If it prints a name, say nothing of themes. If it prints nothing, tell the user once in the conversation that the default theme for new pages can be chosen in the management page's settings (the gear in the page list's bar).
 
 ## Picking parts

@@ -2,13 +2,15 @@
 
 A theme is a directory of CSS files that changes a page's colours, typefaces and the look of the parts, by setting variables and writing rules. A data file selects a theme with `theme:`, as it selects one of floe's. This doc says what each file and variable changes, how a change takes effect, and what `floe theme check` refuses.
 
+In a repository with `.floe/repository.yaml`, put `floe repository` before every command of this doc and set no `FLOE_*_DIR`: its themes are in `.floe/themes`, and without it floe reads and writes your own.
+
 ## Where themes are
 
-- A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`) (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path), holding the theme's files. `floe theme new <name>` makes the smallest one: an empty `palette.css` to fill in. A file directly in `FLOE_THEMES_DIR` is ignored without a message.
+- A theme is a directory in your themes' directory, `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), or `.floe/themes` under `floe repository` (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path), holding the theme's files. `floe theme new <name>` makes the smallest one: an empty `palette.css` to fill in. A file directly in your themes' directory is ignored without a message.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes.
 - A theme directory, and anything in it, MUST NOT be a link to a directory (a link to a file is read).
-- `FLOE_THEMES_DIR` MUST NOT be the directory of your parts or templates (`FLOE_PARTS_DIR`, `FLOE_TEMPLATES_DIR`), contain it, or be in it: floe would read the files of one as those of the other.
-- A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*).
+- Your themes' directory MUST NOT be the directory of your parts or templates, contain it, or be in it: floe would read the files of one as those of the other.
+- A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*). `floe repository` uses no server: in a repository, make the theme in place with `floe repository theme new` and check it with `floe repository theme check`.
 
 ## Files
 
@@ -52,7 +54,7 @@ Set in `palette.css`. A palette may set properties of the root too (`default` se
 | `--code-bg`, `--code-fg`, `--code-prompt` | The background of code and a terminal (always dark), their text, and a terminal's prompt | `#1b2120`, `#e2e9e7`, `#b5e05a` |
 | `--code-add`, `--code-del` | A diff's lines added and removed | `#6fcf97`, `#f2b8b5` |
 | `--chart-1`, `--chart-2`, `--chart-3`, `--chart-4` | The colours of a chart's series, in order | `#008fa3`, `#c2660a`, `#6157d9`, `#c8366f` |
-| `--text-width` | The width a page of one column grows to (a template sets its column to it by `--column-width: var(--text-width)`), and a note's maximum width in every template | `56rem` |
+| `--text-width` | The width a page of one column grows to (a template sets its column to it by `--column-width: var(--text-width)`) | `56rem` |
 | `--page-width`, `--page-pad` | The width of the column a page is centred in, and the pad each side of it | `96rem`, `16px` |
 
 ### floe's own variables
@@ -81,13 +83,11 @@ floe sets these on `:root` in its lowest layer, under every palette. Set them on
 
 ### Section headings
 
-The templates `report` and `design` read these on a section's heading, for the sides their `page.css` sets, which win over a theme's `base.css`; floe sets none. Set them on `:scope` in `base.css`, and the other sides on `section > h2` there.
+The template `report` reads this on a section's heading, for the side its `page.css` sets, which wins over a theme's `base.css`; floe sets none. Set it on `:scope` in `base.css`, and the other sides on `section > h2` there.
 
 | Variable | Read in | What it changes | Without it |
 |---|---|---|---|
 | `--floe-heading-top` | `report` | The padding above the heading | `1.3rem` |
-| `--floe-heading-start` | `design` | The padding between the heading's left line and its words | `0.7rem` |
-| `--floe-heading-edge` | `design` | The heading's left line, a border | `4px solid var(--accent)` |
 
 ### Part variables
 
@@ -95,8 +95,8 @@ Set a part's variable on the root `:scope` of the theme's file of that part, or 
 
 | Variable | Set in | What it changes | Default |
 |---|---|---|---|
-| `--floe-mark` | The file of the part or look that draws the row | The size of a row's marker, its frame within | note `1.6rem`, numbered `2rem`, links `1lh`, marked `1.15rem`, timeline `0.7rem`, cards `1.75rem` (a card's number, on :scope.numbered) |
-| `--floe-mark-gap` | The same file | The gap between a row's marker and its text | note `0.85rem`, numbered `1rem`, links `0.25rem`, marked `0.3rem`, checklist `0.65rem`, timeline `0.65rem` |
+| `--floe-mark` | The file of the part or look that draws the row | The size of a row's marker, its frame within | note `1.6rem`, numbered `2rem`, marked `1.15rem`, timeline `0.7rem`, cards `1.75rem` (a card's number, on :scope.numbered) |
+| `--floe-mark-gap` | The same file | The gap between a row's marker and its text | note `0.85rem`, numbered `1rem`, marked `0.3rem`, checklist `0.65rem`, timeline `0.65rem` |
 | `--cards-gap` | `cards.css` | The space between what a card holds | `0.4rem` |
 | `--checks-gap` | `checks.css` | The space between what an item of `checks` holds | `0.35rem` |
 | `--entries-row-gap` | `entries.css` | The space between the lines of an entry's title and tags | `0.2rem` |
@@ -122,7 +122,7 @@ Each item gives the action, then the reason in parentheses.
 
 ### Page and column
 
-- Leave `--column-width` to the template's `page.css` (a theme that sets it in its palette widens the column only of a template that sets none: report, design, handoff and postmortem; adr's and runbook's `page.css` win over it, and so does a report's with contents, `main:has(> .body) { --column-width: 100%; }`; floe does not check it).
+- Leave `--column-width` to the template's `page.css` (a theme that sets it in its palette widens the column only of a template that sets none: report, tech-spec, prd, design, handoff, meeting and postmortem; adr's and runbook's `page.css` win over it, and so does a report's with contents, `main:has(> .body) { --column-width: 100%; }`; floe does not check it).
 
 ### Colours
 
@@ -140,9 +140,9 @@ Each item gives the action, then the reason in parentheses.
 - Leave the space between parts to `--floe-room` (floe sets it on `:root`; a `gap` on the root of `cards.css` or `tabs.css` changes it).
 - Do not write a word in a `content` string; use symbols (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 
-### Rows: note, numbered, timeline, links, marked
+### Rows: note, numbered, timeline, marked
 
-- Size a row's marker (the symbol of a note, the ring of numbered, the dot of timeline, the sign of links, the letters of `marked`, which `checklist` takes) with `--floe-mark` and `--floe-mark-gap`, and hide it with `content: none` (its column then takes no space).
+- Size a row's marker (the symbol of a note, the ring of numbered, the dot of timeline, the letters of `marked`, which `checklist` takes) with `--floe-mark` and `--floe-mark-gap`, and hide it with `content: none` (its column then takes no space).
 - Do not set `display`, `gap` or `grid-template` on a row with a marker in the file of a part (`timeline.css`): floe lays the marker out in the layer `floe.marks`, under that file, so the rule wins over it without a word. In the file of a look (`marked.css`, on an element that is not a part's box, such as the `<ul>` of a template) the same rule loses to `floe.marks` and changes nothing.
 
 ### cards
@@ -188,7 +188,7 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 
 `floe theme check` checks every theme of yours and the parts, looks and shared schemas of yours, as `floe part check` does (a theme's `<name>.css` needs its part). It prints every mistake and exits with code 1 when there is one. For a theme it refuses:
 
-- a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or `FLOE_THEMES_DIR` equal to, containing or inside the directory of your parts or templates;
+- a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or your themes' directory equal to, containing or inside the directory of your parts or templates;
 - a file or a directory of a name floe does not read (*Files*; a name beginning with `.` is skipped), and a file floe cannot read (a link with no target, a file without permission, a FIFO or a device);
 - a `theme.yaml` that is not keys and values, a key other than `description:`, or a `description:` that is not text;
 - in a CSS file: CSS floe cannot read (a block, string, comment or `url()` left open at the end of the file, a `}` that closes no block, a string that runs past its line), an `@import`, an escape (`\`) outside a string, a `url()` or a comment, or a `url()` that is not one address or one quoted string alone (`url("a.png" x)`, `url(a b)`);
