@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"floe/internal/i18n"
 	"floe/internal/kit"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -130,7 +131,7 @@ func TestLatestRebuild(t *testing.T) {
 	want := filepath.Join("<tmp>", "dir", "mine", "page.html") +
 		`:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"` + "\n" +
 		filepath.Join("<tmp>", "store", "m", "<source>", "data.yaml") +
-		`: page "m" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`
+		": " + i18n.EnglishCatalog().Msg("store_rebuild_kept", "m")
 	if got != want {
 		t.Errorf("rebuild told\n%s\nwant\n%s", got, want)
 	}

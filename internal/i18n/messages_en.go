@@ -274,7 +274,7 @@ var messagesEN = map[string]string{
 	"store_link_empty":            "the path to link is empty; give the absolute path of an HTML or data file",
 	"store_file_empty":            "the path of the data file to publish is empty; give the path of a .yaml or .yml file",
 	"store_image_under_image":     `the image "%[1]s" is under "%[2]s", which is an image too, and a stored page cannot keep both: rename one of them`,
-	"store_rebuild_kept":          `page "%s" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+	"store_rebuild_kept":          `page "%s" keeps the page it had: fix the data file it was published from and publish it again, fix the template, or choose the page another theme (Theme in its menu on the management page)`,
 
 	"daemon_kept_answering":    "the server on port %d is still running; stop it yourself (the process %d, if it runs on this machine), and the next floe command that uses the server starts its own",
 	"daemon_port_taken":        "port %d is used by another program; set FLOE_PORT to a free port",
