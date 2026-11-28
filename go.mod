@@ -3,7 +3,7 @@ module floe
 go 1.27.4
 
 require (
-	github.com/chromedp/cdproto v0.160.8
+	github.com/chromedp/cdproto v0.160.10
 	github.com/chromedp/chromedp v0.24.0
 	github.com/expr-lang/expr v1.18.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
