@@ -319,10 +319,13 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope > li { display: flex; flex-wrap: wrap; gap: 0 0.5rem; align-items: baseline; min-width: 0; }
 :scope a {
   display: inline-flex; gap: 0.45rem; align-items: baseline; min-width: 0; max-width: 100%;
-  border: 1px solid var(--links-line); border-radius: var(--radius-small); padding: 0.05rem 0.55rem;
+  border: 1px solid var(--links-line); border-radius: var(--radius-small); padding: 0.4rem 0.55rem;
   color: var(--links-title); text-decoration: none; outline-color: var(--links-to);
 }
 :scope a:hover { border-color: var(--links-to); }
+/* Its words cut to the capitals' top and the baseline, so that the padding centres them in the frame: a line box holds
+   Japanese letters low, and they looked so */
+:scope a > * { text-box: trim-both cap alphabetic; }
 :scope .title { font-weight: 700; min-width: 0; text-decoration: underline 1px; text-underline-offset: 0.2em; }
 :scope a:hover .title { text-decoration-thickness: 2px; }
 :scope .to { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--links-to); white-space: nowrap; }
