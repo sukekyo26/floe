@@ -1,0 +1,509 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Password reset</title>
+<style>
+@layer floe.defaults, floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
+@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways on screen instead, as a table does, keeps its words whole there, and folds its lines on paper.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line unless what holds it sets --floe-pill-wrap: normal, still overflows.
+   Give such a part a layout for narrow screens, as keys has */
+/* Print keeps every ground, the page's too, as the screen draws it: a light text on a fill would be lost on white
+   paper. The prefixed name is for a Chromium before 136, as a VS Code's may be.
+   LIMIT: no test fails without the prefixed name, as the Chrome of the tests reads both */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+/* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
+   its own outside the box of its Markdown: smaller than every heading of a template it stands under, the least of which
+   is 1.1rem (adr's sections, runbook's steps), and smaller by level, h4 to h6 as h3.
+   LIMIT: h1 is as large as a question of tech-spec (1.05rem) over it, in an option's card, which the card tells apart */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.05em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) :is(h3, h4, h5, h6) { font-size: 0.95em; }
+p, ul, ol { margin: 0; }
+/* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
+h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+/* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
+   --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
+   its own) and the focus ring in it take them, as the accent and its soft ground would sink into the fill. What a part
+   holds draws on the part's own ground, without them, nor a --floe-pill-wrap set around the part; the part's box stays
+   in the face, its ring too. An element that paints a light ground of its own (a panel, a note) sets its text's colour
+   with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
+   no ground of its own writes it as var(--on-face, …) */
+:where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
+   its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
+   its blocks; empty Markdown draws no box. page.css reaches in a template's box, to arrange it, not in a
+   text's. What a quote or a list holds is spaced below.
+   LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
+   what it holds, and page.css stops at the part's box there; floe's templates place none so */
+[data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
+a { color: var(--on-face, var(--accent)); }
+/* LIMIT: a part draws a ring of focus or a pick by outline on its box (options' cards): a theme that draws a
+   decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
+   or ::before */
+:focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
+/* What a browser draws in its own monospace stays the page's size: with no font size set on the page, a browser sizes
+   monospace alone from 13px, and the same named twice from the page's */
+kbd, samp, tt { font-family: monospace, monospace; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
+/* On screen, a box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that
+   a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writes
+   overflow-x: auto with it, under @media screen. On paper, where what scrolls is not read, nothing scrolls: pre folds
+   its lines, and a part that scrolls on screen folds what it holds within the paper's width.
+   LIMIT: what folds no word on paper (a table's heads and cells, a column of numbers or of pills, a tree's note and its
+   depth, a field's name, a finding's level) reaches past the paper when its longest words are wider, and Chrome prints
+   the whole page smaller. In a grid's column of a fixed least width (cards side by side, columns) it reaches past its
+   card or column instead, over the next or out of the theme's frame, the page no wider until it reaches past the paper
+   there, when the whole page prints smaller again.
+   LIMIT: a box a grid's item holds (cards', or columns' long code or table), sent on to the next page at a page's end,
+   leaves the item as short as before, and what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
+   LIMIT: such a box shrinks to its border and padding (code's pre, which leaves its padding to its lines, to its border
+   alone) on screen where its content sets the width; give the place a width if floe places one so.
+   Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
+   or fit-content, a table's cell of auto width, justify-items or justify-self start in a grid, an item of a flex row
+   on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so: tree's list
+   is fit-content on screen but holds no box that scrolls. chart, keys and timeline (container-type: inline-size, to lay
+   out by their own width) shrink so in such a place too, to their padding */
+pre {
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
+  padding: 0.9rem 1rem; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+@media screen { pre { overflow-x: auto; contain: inline-size; } }
+@media print { pre { white-space: pre-wrap; overflow-wrap: break-word; } }
+pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (a block that scrolls): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
+   the room a part leaves around it and what text keeps clear of it at its right are defaults.css's alone: a part that
+   lies text under it keeps --floe-copy-room after its longest line, as code does */
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+/* Text a screen reader reads that the page does not show: the copy button's status, and .floe-hidden, the words that
+   tell what a mark of CSS means (a step done, a pro, a file added), which the mark itself is not read for (/ "").
+   It stands at the corner of what places it, or the page's, so that where its text would run widens no page.
+   LIMIT: text selected on the page and copied takes these words too; add user-select: none if that comes to matter.
+   LIMIT: a phone's screen reader (VoiceOver, TalkBack) moves its highlight onto the box it reads, so at each hidden word
+   the page may jump to that corner; floe's pages are read in a desktop's browser. Place each beside its text (its
+   ancestor positioned) if a phone's screen reader comes to be used */
+.floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, columns, a column's
+   title and parts, cards) floe leaves --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+   side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
+   shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
+   --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
+   none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
+   LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestLookRule/shadow-cast measures, no rule refuses.
+   LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
+   --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
+   leave the part's box */
+@property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
+@property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+[data-floe-part], [data-floe-look], blockquote {
+  box-shadow:
+    var(--floe-shadow-x, 0px) var(--floe-shadow-y, 0px) var(--floe-shadow-blur, 0px) var(--floe-shadow-spread, 0px) var(--floe-shadow-color),
+    var(--floe-inset);
+}
+}
+</style>
+<style>
+@layer floe.defaults {
+/* The defaults of the variables floe sets on the page's root, in floe.defaults, the lowest layer, under every palette,
+   as default's palette lies under every theme's: a theme that sets one on :scope in its palette.css or base.css wins
+   over it. Only a plain :root's --floe-* are here, without !important nor an at-rule (TestLintRule/defaults-root): a
+   style here would lose to whatever a theme writes, and !important turns the order of the layers round */
+/* A pill's corners round no more than 3/4 of its line, more than half its height on one line (half a line, its
+   padding and frame) and less on two: a pill of one line stays round at both ends, and one that wraps is a label.
+   LIMIT: a line box over about 1.3 lines (a fallback face of letters, kana or emoji) leaves a one-line pill straight sides.
+   Only the faces of the tests are measured */
+:root { --floe-pill-end: 0.75lh; }
+/* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
+   rows, and the look table and facts take it. floe's themes leave it as it is, so that rows are as tall in every theme */
+:root { --floe-row-pad: 0.4rem; }
+/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
+   sides of a row of the look rows. floe's themes leave it as it is and pad no box; a theme's frame around a box pads the
+   element it paints inside by it (default's tree) */
+:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
+/* The copy button's size, the room a part leaves around it and what text keeps clear of it at its right (base.css
+   draws the button, and keeps no room on paper, over the palette).
+   LIMIT: --floe-copy-room set in a theme's base.css, a layer over base.css's print, holds on paper too */
+:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
+/* The space between parts that stand one after another, which a box's shadow reaches no further than (base.css) */
+:root { --floe-room: 0.75rem; }
+/* The small text of parts, in two steps: small (a pill, a chip, a ring's number, a key, a table's heading, a term, a
+   date, a count, a note beside a value) and an aside, a little larger (a card's or a step's words, a note's title, a
+   tab's name, a value's unit). The text of code (code's lines, a tree's names, code in a pill) follows code's size
+   instead, and a diagram's, in its SVG, the diagram's units.
+   LIMIT: in rem, small text in large text (a slide's heading, swiss's large quote) is no larger */
+:root { --floe-text-small: 0.8rem; --floe-text-aside: 0.9rem; }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:scope {
+  --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
+  /* A quiet ground within a box of the surface: a table's head, a bar's track, a keycap.
+     LIMIT: one melting into its box's ground is seen, not measured; a theme that paints a box near it sets it there */
+  --quiet: color-mix(in srgb, var(--line) 45%, var(--surface));
+  --chart-1: #008fa3; --chart-2: #c2660a; --chart-3: #6157d9; --chart-4: #c8366f;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #b5e05a; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  /* The column a template centres its page in: its width, without the pad each side of it */
+  --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+:scope {
+  /* default's own, here and not in its palette, which lies under every theme's. Light, so that what lies straight on
+     it reads; under 30% its edge melts into the page's ground */
+  --default-panel: color-mix(in srgb, var(--line) 30%, var(--bg));
+  /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
+     corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
+     LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and the radius rule follows the
+     corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
+  /* A quote's ground, and the quiet ground within it, the other way round: the panel's on the page and on a face of the
+     surface, the surface in a panel; each box that turns --quiet turns them with it */
+  --default-quote: var(--default-panel); --default-quote-quiet: var(--surface);
+  --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
+}
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) {
+blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
+blockquote::before { content: "“"; content: "“" / ""; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="cell"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (defaults.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (defaults.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each link a small frame on a line, wrapping: where it goes, its title underlined as a link is, and ↗ for one that
+   leaves floe; a few words beside the frame. The frame is the link, so that its reach and ring are the whole of it.
+   It has no ground of its own, not to stand out as a button: its colours come from a face's text colour on the root,
+   where base.css has not yet taken the face away from what the box holds, as tabs' do.
+   LIMIT: the URL itself is not shown, so a printed page tells only the host or docs. Print it under the frame if pages
+   come to be read on paper */
+:scope {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline;
+  --links-title: var(--on-face, var(--fg)); --links-to: var(--on-face, var(--accent));
+  --links-words: var(--on-face, var(--muted)); --links-line: var(--on-face, var(--line));
+}
+:scope > li { display: flex; flex-wrap: wrap; gap: 0 0.5rem; align-items: baseline; min-width: 0; }
+:scope a {
+  display: inline-flex; gap: 0.45rem; align-items: baseline; min-width: 0; max-width: 100%;
+  border: 1px solid var(--links-line); border-radius: var(--radius-small); padding: 0.4rem 0.55rem;
+  color: var(--links-title); text-decoration: none; outline-color: var(--links-to); line-height: 1.3;
+}
+:scope a:hover { border-color: var(--links-to); }
+/* Its words cut to the capitals' top and the baseline, so that the padding centres them in the frame: a line box holds
+   Japanese letters low, and they looked so */
+/* LIMIT: a browser without text-box (Firefox before 154) keeps the line box: the words sit a little low and a frame of
+   one line is some 37px tall. Drop the line-height of 1.3 when every browser cuts the words */
+:scope a > * { text-box: trim-both cap alphabetic; }
+:scope .title { font-weight: 700; min-width: 0; text-decoration: underline 1px; text-underline-offset: 0.2em; }
+:scope a:hover .title { text-decoration-thickness: 2px; }
+:scope .to { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--links-to); white-space: nowrap; }
+:scope .out { font-size: var(--floe-text-small); color: var(--links-to); }
+:scope .text { font-size: var(--floe-text-aside); color: var(--links-words); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="tags"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Short values in a row, spaced, not parted by a character, which a wrapped line would begin with. The words are
+   smaller, not the code in them, which stays as large as in a table's cell. A long pill wraps rather than overflow: set
+   on each value, as base.css sets it back on what a part's box holds, the values themselves when a part takes the look */
+:scope { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); }
+:scope > span { min-width: 0; --floe-pill-wrap: normal; }
+:scope code { font-size: 0.86rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="cell"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
+@layer floe.page.defaults {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+body { margin: 0; }
+.floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+/* A board: the goals' measures large under the title, the scope as a map of the actors, the system and what stays
+   outside, then every requirement as a card in a lane of its priority, its acceptance criteria hanging under it.
+   LIMIT: the map and the lanes stack under 900px; a width just over it is not looked at */
+body { line-height: 1.7; padding-block: 0 4rem; }
+/* The head without a fill: the goals' measures in the accent, a heavy rule under it */
+.head { padding-block: 2rem 1.8rem; border-bottom: 4px solid var(--fg); }
+.head .floe-column { display: grid; gap: 0.6rem; justify-items: start; }
+.meta { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; align-items: baseline; font-size: 0.85rem; color: var(--muted); }
+.head h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.2; }
+.summary { font-size: 1.05rem; max-width: 46rem; }
+.related { display: flex; flex-wrap: wrap; gap: var(--floe-room); align-items: baseline; }
+.goals { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.8rem 2.5rem; margin-top: 0.4rem; }
+.goals li { display: grid; gap: 0.1rem; max-width: 22rem; }
+.goals b { font-size: 1.5rem; line-height: 1.3; color: var(--accent); }
+.goals span { font-size: 0.88rem; }
+main { display: grid; gap: 2.6rem; padding-top: 2.2rem; }
+main section { display: grid; gap: var(--floe-room); align-content: start; }
+main > section > h2, .foot section > h2 { font-size: 1.2rem; }
+.label { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.12em; color: var(--accent); }
+.related .label, .outside .label { color: var(--muted); }
+/* The scope's map: who uses it, the system's boundary with what it does, and what stays outside */
+.map { display: grid; grid-template-columns: minmax(12rem, 1fr) 2.5rem minmax(0, 2fr) minmax(12rem, 1fr); gap: 1rem; align-items: center; }
+.actors { display: grid; gap: var(--floe-room); }
+.actors ul { list-style: none; padding: 0; display: grid; gap: var(--floe-room); }
+.actors li { display: grid; padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius-pill); }
+.actors li span { font-size: 0.85rem; color: var(--muted); }
+.arrow { height: 2px; background: var(--accent); position: relative; }
+.arrow::after { content: "▶"; content: "▶" / ""; position: absolute; right: -0.4rem; top: -0.72rem; color: var(--accent); font-size: 0.9rem; }
+.system { border: 3px solid var(--accent); border-radius: var(--radius); padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.6rem; min-height: 10rem; align-content: center; }
+.chip { border: 1px solid var(--accent); border-radius: var(--radius-small); padding: 0.15rem 0.6rem; }
+.outside { border: 2px dashed var(--line); border-radius: var(--radius); padding: var(--floe-pad-block) var(--floe-pad-inline); color: var(--muted); display: grid; gap: 0.4rem; }
+.outside ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+.outside li { text-decoration: line-through; text-decoration-thickness: 1px; }
+/* The abbreviations, small under the heading where they first stand */
+.abbr { font-size: 0.8rem; color: var(--muted); }
+/* The lanes of priority. The lane's rule is its heading's, not the lane's: a lane with a border would hold the
+   shadows of the cards in it */
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.lane { display: grid; gap: var(--floe-room); }
+.lane h3 { font-size: 1rem; padding-top: 0.6rem; border-top: 5px solid var(--tone); }
+.card { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.35rem; align-content: start; }
+.card .top { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.8rem; }
+.id { font-family: var(--mono); font-weight: 800; color: var(--accent); }
+.who, .more { color: var(--muted); }
+.card .title { font-weight: 700; }
+.more { font-size: 0.88rem; display: block; }
+.target { font-family: var(--mono); font-size: 1.3rem; font-weight: 800; }
+/* Each requirement's acceptance criteria hang under its card: the number, the action and the outcome in bold */
+.verify { list-style: none; padding: 0.5rem 0 0; display: grid; gap: 0.35rem; border-top: 1px solid var(--line); font-size: 0.88rem; }
+.verify li { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 0 0.4rem; }
+.verify .no { font-family: var(--mono); font-size: 0.8rem; grid-row: span 2; }
+.verify .given { color: var(--muted); }
+.foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: 2rem; align-items: start; }
+.foot section { gap: 0.6rem; }
+.glossary { display: grid; gap: 0.5rem; }
+.glossary dt { font-weight: 700; }
+.glossary dd { margin: 0; }
+@media (max-width: 900px) {
+  .map, .board { grid-template-columns: 1fr; }
+  .arrow { display: none; }
+}
+}
+}
+</style>
+</head>
+<body>
+<header class="head">
+<div class="floe-column">
+<p class="meta"><span class="kind" data-floe-part="cell">Product requirements</span><span>In review</span><span>Version 0.3</span><span>Owner Accounts team</span><span>2030-05-14</span></p>
+<h1 id="password-reset">Password reset</h1><p class="summary">Members who forget their password sign back in by a link in an email, without asking support.</p><div class="related"><p class="label">Related documents</p><ul data-floe-part="links">
+<li><a href="docs/password-reset-spec.html"><span class="to">docs</span><span class="title">Tech spec: reset links and tokens</span></a><span class="text">How it is built</span></li>
+<li><a href="/a/password-reset-design/"><span class="to">docs</span><span class="title">Design: the reset screens</span></a><span class="text">Screens and wording</span></li>
+</ul></div>
+<ul class="goals" aria-label="Goals"><li><b>900 a month → under 200</b><span>Fewer support requests about forgotten passwords</span></li><li><b>1 day → under 10 min</b><span>Members back in sooner</span></li></ul>
+</div>
+</header>
+<main class="floe-column">
+<section aria-labelledby="scope"><h2 id="scope">Scope</h2>
+<div class="map">
+<div class="actors"><p class="label">Actors</p><ul><li data-floe-look="panel"><b>Member</b><span>Forgets their password and signs back in by themselves</span></li><li data-floe-look="panel"><b>Support agent</b><span>Points members to the reset and checks its history</span></li><li data-floe-look="panel"><b>Operator</b><span>Watches the number of resets and signs of abuse</span></li></ul></div>
+<div class="arrow" aria-hidden="true"></div>
+<div class="system"><p class="label">The system</p><p data-floe-look="tags"><span class="chip">Starting a reset from the sign-in screen</span><span class="chip">An email with a link that works once</span><span class="chip">A screen to choose a new password</span><span class="chip">A notice that the password changed</span><span class="chip">Support&#39;s history of resets</span></p></div>
+<div class="outside"><p class="label">Out of scope</p><ul><li>Checking who someone is by SMS or phone</li><li>Changing the registered email</li><li>Signing in without a password, such as passkeys</li></ul></div>
+</div>
+</section>
+<section aria-labelledby="functional"><h2 id="functional">Functional requirements</h2>
+<p class="abbr">FR = Functional Requirement, AC = Acceptance Criteria</p>
+<div class="board">
+<div class="lane" data-floe-tone="bad">
+<h3><span data-floe-part="cell" data-floe-tone="bad">Must</span></h3>
+<article class="card" data-floe-look="panel" id="FR-1"><p class="top"><span class="id">FR-1</span><span class="who">Member</span></p>
+<p class="title">Start a reset from the sign-in screen</p>
+<ol class="verify" aria-label="Acceptance criteria"><li><span class="no">AC1</span><span><span class="given">A member who cannot sign in, </span>they enter their registered email and send it</span><b>an email with a reset link arrives within 5 minutes</b></li></ol></article>
+<article class="card" data-floe-look="panel" id="FR-2"><p class="top"><span class="id">FR-2</span><span class="who">Member</span></p>
+<p class="title">Send a link that works once to the registered email</p>
+<ol class="verify" aria-label="Acceptance criteria"><li><span class="no">AC1</span><span><span class="given">A member who cannot sign in, </span>they enter their registered email and send it</span><b>an email with a reset link arrives within 5 minutes</b></li><li><span class="no">AC2</span><span>someone enters an email that is not registered</span><b>the screen shows the <strong>same</strong> words as for a registered one, and no email is sent</b></li></ol></article>
+<article class="card" data-floe-look="panel" id="FR-3"><p class="top"><span class="id">FR-3</span><span class="who">Member</span></p>
+<p class="title">Choose a new password from the link and stay signed in</p><p class="more">Sessions on other devices end</p>
+<ol class="verify" aria-label="Acceptance criteria"><li><span class="no">AC1</span><span><span class="given">A member signed in on another device too, </span>they choose a new password from the link</span><b>they are signed in, and the other session ends</b></li></ol></article>
+</div>
+<div class="lane" data-floe-tone="warn">
+<h3><span data-floe-part="cell" data-floe-tone="warn">Should</span></h3>
+<article class="card" data-floe-look="panel" id="FR-4"><p class="top"><span class="id">FR-4</span><span class="who">Member</span></p>
+<p class="title">Tell the member by email that the password changed</p>
+<ol class="verify" aria-label="Acceptance criteria"><li><span class="no">AC1</span><span>a member changes their password</span><b>a notice arrives at their email</b></li></ol></article>
+<article class="card" data-floe-look="panel" id="FR-5"><p class="top"><span class="id">FR-5</span><span class="who">Support agent</span></p>
+<p class="title">See a member&#39;s history of resets</p>
+<p><span data-floe-part="cell" data-floe-tone="warn">No acceptance criteria</span></p></article>
+</div>
+<div class="lane" data-floe-tone="muted">
+<h3><span data-floe-part="cell" data-floe-tone="muted">Could</span></h3>
+<article class="card" data-floe-look="panel" id="FR-6"><p class="top"><span class="id">FR-6</span><span class="who">Operator</span></p>
+<p class="title">See the number of resets by month</p>
+<p><span data-floe-part="cell" data-floe-tone="warn">No acceptance criteria</span></p></article>
+</div>
+</div>
+</section>
+<section aria-labelledby="nonfunctional"><h2 id="nonfunctional">Non-functional requirements</h2>
+<p class="abbr">NFR = Non-Functional Requirement</p>
+<div class="board">
+<div class="lane" data-floe-tone="bad">
+<h3><span data-floe-part="cell" data-floe-tone="bad">Must</span></h3>
+<article class="card" data-floe-look="panel" id="NFR-1"><p class="top"><span class="id">NFR-1</span><span class="who">Performance</span></p>
+<p class="title">The email arrives soon after it is sent</p><p class="target">under 5 min</p>
+<ol class="verify" aria-label="Acceptance criteria"><li><span class="no">AC1</span><span><span class="given">A member who cannot sign in, </span>they enter their registered email and send it</span><b>an email with a reset link arrives within 5 minutes</b></li></ol></article>
+<article class="card" data-floe-look="panel" id="NFR-2"><p class="top"><span class="id">NFR-2</span><span class="who">Security</span></p>
+<p class="title">A link ends soon and works once</p><p class="target">30 min, once</p>
+<ol class="verify" aria-label="Acceptance criteria"><li><span class="no">AC1</span><span><span class="given">A member with a reset link, </span>they open it a second time, or 31 minutes after it was sent</span><b>the screen says the link has ended and offers to send another</b></li></ol></article>
+<article class="card" data-floe-look="panel" id="NFR-3"><p class="top"><span class="id">NFR-3</span><span class="who">Security</span></p>
+<p class="title">The screens never tell whether an email is registered</p>
+<ol class="verify" aria-label="Acceptance criteria"><li><span class="no">AC1</span><span>someone enters an email that is not registered</span><b>the screen shows the <strong>same</strong> words as for a registered one, and no email is sent</b></li></ol></article>
+</div>
+<div class="lane" data-floe-tone="warn">
+<h3><span data-floe-part="cell" data-floe-tone="warn">Should</span></h3>
+<article class="card" data-floe-look="panel" id="NFR-4"><p class="top"><span class="id">NFR-4</span><span class="who">Availability</span></p>
+<p class="title">Works at night too</p><p class="target">99.9% a month</p>
+<p><span data-floe-part="cell" data-floe-tone="warn">No acceptance criteria</span></p></article>
+<article class="card" data-floe-look="panel" id="NFR-5"><p class="top"><span class="id">NFR-5</span><span class="who">Usability</span></p>
+<p class="title">Every step works on a phone</p><p class="target">360px wide</p>
+<ol class="verify" aria-label="Acceptance criteria"><li><span class="no">AC1</span><span>a member goes through every step on a phone 360px wide</span><b>nothing scrolls sideways</b></li></ol></article>
+</div>
+</div>
+</section>
+<section aria-labelledby="background"><h2 id="background">Background</h2><div data-floe-markdown=""><p>Today a member who forgets their password can only <strong>ask support</strong>. Support checks who they are and sends a
+temporary password, which takes a day on average.</p>
+<p>Last month 30% of support requests, about 900, were this, and some members stopped using the service meanwhile.</p></div></section>
+<div class="foot"><section aria-labelledby="constraints"><h2 id="constraints">Constraints</h2><ul><li>Emails go out through the mail provider in use today</li><li>Members&#39; data stays in today&#39;s database</li><li>It ships in the release at the end of June</li></ul></section><section aria-labelledby="glossary"><h2 id="glossary">Glossary</h2><dl class="glossary"><div><dt>Reset link</dt><dd>The link in the email to a screen that sets a new password, good for one use</dd></div><div><dt>Notice</dt><dd>The email that tells a member their password changed, with the time and the device</dd></div></dl></section><section aria-labelledby="open"><h2 id="open">Open questions</h2><ol><li>May members with two-step sign-in reset by the email link alone?<span class="more">Answers: Security team</span></li><li>How long is the history of resets (FR-5) kept?<span class="more">Answers: Support lead</span></li></ol></section>
+</div>
+<section aria-labelledby="more-0"><h2 id="more-0">Release plan</h2>
+<div data-floe-text=""><p>It goes to 5% of members first, then to everyone after a week without a rise in support requests.</p></div>
+</section>
+</main>
+
+
+</body></html>

@@ -1,0 +1,61 @@
+/* A board: the goals' measures large under the title, the scope as a map of the actors, the system and what stays
+   outside, then every requirement as a card in a lane of its priority, its acceptance criteria hanging under it.
+   LIMIT: the map and the lanes stack under 900px; a width just over it is not looked at */
+body { line-height: 1.7; padding-block: 0 4rem; }
+/* The head without a fill: the goals' measures in the accent, a heavy rule under it */
+.head { padding-block: 2rem 1.8rem; border-bottom: 4px solid var(--fg); }
+.head .floe-column { display: grid; gap: 0.6rem; justify-items: start; }
+.meta { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; align-items: baseline; font-size: 0.85rem; color: var(--muted); }
+.head h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.2; }
+.summary { font-size: 1.05rem; max-width: 46rem; }
+.related { display: flex; flex-wrap: wrap; gap: var(--floe-room); align-items: baseline; }
+.goals { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.8rem 2.5rem; margin-top: 0.4rem; }
+.goals li { display: grid; gap: 0.1rem; max-width: 22rem; }
+.goals b { font-size: 1.5rem; line-height: 1.3; color: var(--accent); }
+.goals span { font-size: 0.88rem; }
+main { display: grid; gap: 2.6rem; padding-top: 2.2rem; }
+main section { display: grid; gap: var(--floe-room); align-content: start; }
+main > section > h2, .foot section > h2 { font-size: 1.2rem; }
+.label { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.12em; color: var(--accent); }
+.related .label, .outside .label { color: var(--muted); }
+/* The scope's map: who uses it, the system's boundary with what it does, and what stays outside */
+.map { display: grid; grid-template-columns: minmax(12rem, 1fr) 2.5rem minmax(0, 2fr) minmax(12rem, 1fr); gap: 1rem; align-items: center; }
+.actors { display: grid; gap: var(--floe-room); }
+.actors ul { list-style: none; padding: 0; display: grid; gap: var(--floe-room); }
+.actors li { display: grid; padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius-pill); }
+.actors li span { font-size: 0.85rem; color: var(--muted); }
+.arrow { height: 2px; background: var(--accent); position: relative; }
+.arrow::after { content: "▶"; content: "▶" / ""; position: absolute; right: -0.4rem; top: -0.72rem; color: var(--accent); font-size: 0.9rem; }
+.system { border: 3px solid var(--accent); border-radius: var(--radius); padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.6rem; min-height: 10rem; align-content: center; }
+.chip { border: 1px solid var(--accent); border-radius: var(--radius-small); padding: 0.15rem 0.6rem; }
+.outside { border: 2px dashed var(--line); border-radius: var(--radius); padding: var(--floe-pad-block) var(--floe-pad-inline); color: var(--muted); display: grid; gap: 0.4rem; }
+.outside ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+.outside li { text-decoration: line-through; text-decoration-thickness: 1px; }
+/* The abbreviations, small under the heading where they first stand */
+.abbr { font-size: 0.8rem; color: var(--muted); }
+/* The lanes of priority. The lane's rule is its heading's, not the lane's: a lane with a border would hold the
+   shadows of the cards in it */
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.lane { display: grid; gap: var(--floe-room); }
+.lane h3 { font-size: 1rem; padding-top: 0.6rem; border-top: 5px solid var(--tone); }
+.card { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.35rem; align-content: start; }
+.card .top { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.8rem; }
+.id { font-family: var(--mono); font-weight: 800; color: var(--accent); }
+.who, .more { color: var(--muted); }
+.card .title { font-weight: 700; }
+.more { font-size: 0.88rem; display: block; }
+.target { font-family: var(--mono); font-size: 1.3rem; font-weight: 800; }
+/* Each requirement's acceptance criteria hang under its card: the number, the action and the outcome in bold */
+.verify { list-style: none; padding: 0.5rem 0 0; display: grid; gap: 0.35rem; border-top: 1px solid var(--line); font-size: 0.88rem; }
+.verify li { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 0 0.4rem; }
+.verify .no { font-family: var(--mono); font-size: 0.8rem; grid-row: span 2; }
+.verify .given { color: var(--muted); }
+.foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: 2rem; align-items: start; }
+.foot section { gap: 0.6rem; }
+.glossary { display: grid; gap: 0.5rem; }
+.glossary dt { font-weight: 700; }
+.glossary dd { margin: 0; }
+@media (max-width: 900px) {
+  .map, .board { grid-template-columns: 1fr; }
+  .arrow { display: none; }
+}
