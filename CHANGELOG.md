@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Change the install commands to `curl -fsSL https://floe-3cf.pages.dev/install.sh | sh` and, on Windows, `irm https://floe-3cf.pages.dev/install.ps1 | iex`; the former `raw.githubusercontent.com` URLs keep working. The CI examples in docs/repository.md take the installer from this URL too, and pin the release with `FLOE_VERSION` alone.
+
 ## [0.5.0] - 2026-11-28
 
 ### Added

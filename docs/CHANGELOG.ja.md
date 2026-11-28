@@ -6,6 +6,10 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+### 変更
+
+- 変更：floe を入れるコマンドを `curl -fsSL https://floe-3cf.pages.dev/install.sh | sh`、Windows は `irm https://floe-3cf.pages.dev/install.ps1 | iex` にした。前の `raw.githubusercontent.com` の URL もそのまま使える。docs/repository.ja.md の CI の例も、この URL からインストーラーを取り、入れるリリースは `FLOE_VERSION` だけで決める。
+
 ## [0.5.0] - 2026-11-28
 
 ### 追加
