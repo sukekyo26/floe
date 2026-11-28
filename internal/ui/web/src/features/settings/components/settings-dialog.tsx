@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose } from '@/components/dialog';
-import { BackChevronIcon, ChevronIcon, SettingsIcon, TaskModeIcon, ThemeIcon } from '@/components/icons';
+import { BackChevronIcon, ChevronIcon, InfoIcon, SettingsIcon, TaskModeIcon, ThemeIcon } from '@/components/icons';
 import { ThemeCard } from '@/features/settings/components/theme-card';
 import { themeWrites as pageWrites, type ThemeWrites } from '@/features/settings/stores/choose-theme';
 import { settings as pageSettings, type Settings } from '@/features/settings/stores/settings';
@@ -52,7 +52,6 @@ function NowLine({ now }: { readonly now: Now }) {
         <>
           {t('ui_theme_now_label')}
           <b className="text-fg">{now.name}</b>
-          {t('ui_theme_now_more')}
         </>
       );
     case 'gone':
@@ -246,6 +245,20 @@ export function SettingsDialog({
               <ChevronIcon />
             </button>
           ))}
+        </div>
+        {/* The default theme is for the pages stored from now on alone: said over the cards, as its name was read as all
+            the pages' */}
+        <div
+          id="theme-keep"
+          role="note"
+          hidden={!view.themes || page !== null}
+          className="flex items-start gap-3 rounded-menu border border-new/40 bg-new-soft px-4 py-3 text-small text-fg [&>svg]:mt-0.5 [&>svg]:size-5 [&>svg]:flex-none [&>svg]:text-new"
+        >
+          <InfoIcon />
+          <span className="grid gap-0.5">
+            <b className="text-body">{t('ui_theme_keep')}</b>
+            <span>{t('ui_theme_keep_more')}</span>
+          </span>
         </div>
         <p id="theme-now" hidden={!view.themes} className="m-0 text-small text-muted">
           <NowLine now={cards.now} />

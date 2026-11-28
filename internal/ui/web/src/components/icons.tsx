@@ -186,6 +186,13 @@ export const HelpIcon = () => (
     <path d="M12 17.2v.01" />
   </Line>
 );
+export const InfoIcon = () => (
+  <Line width={2}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5.5" />
+    <path d="M12 7.6v.01" />
+  </Line>
+);
 export const ChevronIcon = () => (
   <Line width={2}>
     <path d="m9 6 6 6-6 6" />
